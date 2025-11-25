@@ -282,7 +282,7 @@ dependencies = [
 [[package]]
 org = "ballerina"
 name = "observe"
-version = "1.6.0"
+version = "1.5.1"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"}
 ]
@@ -322,17 +322,16 @@ modules = [
 [[package]]
 org = "ballerina"
 name = "task"
-version = "2.11.0"
+version = "2.7.0"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"},
-	{org = "ballerina", name = "time"},
-	{org = "ballerina", name = "uuid"}
+	{org = "ballerina", name = "time"}
 ]
 
 [[package]]
 org = "ballerina"
 name = "time"
-version = "2.8.0"
+version = "2.7.0"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"}
 ]
@@ -425,7 +424,7 @@ modules = [
 ]
 
 [[package]]
-org = "wso2"
+org = "opensuperapp"
 name = "superapp_mobile_service"
 version = "1.0.0"
 dependencies = [
@@ -440,10 +439,10 @@ dependencies = [
 	{org = "ballerinax", name = "mysql.driver"}
 ]
 modules = [
-	{org = "wso2", packageName = "superapp_mobile_service", moduleName = "superapp_mobile_service"},
-	{org = "wso2", packageName = "superapp_mobile_service", moduleName = "superapp_mobile_service.authorization"},
-	{org = "wso2", packageName = "superapp_mobile_service", moduleName = "superapp_mobile_service.database"},
-	{org = "wso2", packageName = "superapp_mobile_service", moduleName = "superapp_mobile_service.entity"},
-	{org = "wso2", packageName = "superapp_mobile_service", moduleName = "superapp_mobile_service.scim"}
+	{org = "opensuperapp", packageName = "superapp_mobile_service", moduleName = "superapp_mobile_service"},
+	{org = "opensuperapp", packageName = "superapp_mobile_service", moduleName = "superapp_mobile_service.authorization"},
+	{org = "opensuperapp", packageName = "superapp_mobile_service", moduleName = "superapp_mobile_service.database"},
+	{org = "opensuperapp", packageName = "superapp_mobile_service", moduleName = "superapp_mobile_service.entity"},
+	{org = "opensuperapp", packageName = "superapp_mobile_service", moduleName = "superapp_mobile_service.scim"}
 ]
 
