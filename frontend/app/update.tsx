@@ -32,6 +32,10 @@ const UpdateScreen = () => {
 
   const handleUpdatePress = () => {
     // Open Play Store or App Store link
+    if (versions.length === 0) {
+      console.warn("No version data available");
+      return;
+    }
     Linking.openURL(versions[0].downloadUrl);
   };
 

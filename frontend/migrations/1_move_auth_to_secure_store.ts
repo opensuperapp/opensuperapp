@@ -89,7 +89,7 @@ export const migrateAppExchangesToSecureStore = async () => {
           await saveExchangedToken(app.appId, app.exchangedToken);
         }
       }
-      void persistAppsWithoutTokens(parsedApps);
+      await persistAppsWithoutTokens(parsedApps);
     }
   }
 };

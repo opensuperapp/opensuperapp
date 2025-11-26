@@ -15,7 +15,7 @@ Modern organizations and platforms often evolve into ecosystems, hosting multipl
 OpenSuperApp fills that gap by providing all the core building blocks required for **Super App development**:
 
 - Unified authentication and access control,
-- Coomunication between super app via a **Native Bridge**,
+- Communication between super app via a **Native Bridge**,
 - Centralized configuration and analytics.
 
 By bringing together these capabilities, OpenSuperApp helps you build flexible, composable, and secure ecosystems — without reinventing infrastructure for each app.

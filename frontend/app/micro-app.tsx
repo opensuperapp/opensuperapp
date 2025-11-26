@@ -87,7 +87,7 @@ const MicroApp = () => {
   const [token, setToken] = useState<string | null>();
   const dispatch = useDispatch();
   const router = useRouter();
-  const pendingTokenRequests: ((token: string) => void)[] = [];
+  const pendingTokenRequests = useRef<((token: string) => void)[]>([]);
   const [webUri, setWebUri] = useState<string>(
     isIos ? DEVELOPER_APP_IOS_DEFAULT_URL : DEVELOPER_APP_ANDROID_DEFAULT_URL
   );
@@ -172,8 +172,8 @@ const MicroApp = () => {
     sendResponseToWeb("resolveToken", token);
 
     // Resolve any pending token requests
-    while (pendingTokenRequests.length > 0) {
-      const resolve = pendingTokenRequests.shift();
+    while (pendingTokenRequests.current.length > 0) {
+      const resolve = pendingTokenRequests.current.shift();
       resolve?.(token);
     }
   };
@@ -303,7 +303,7 @@ const MicroApp = () => {
     } catch (error) {
       const errMessage =
         error instanceof Error ? error.message : "Unknown error";
-      sendResponseToWeb("rejectSaveLocalData", errMessage);
+      sendResponseToWeb("rejectGetLocalData", errMessage);
     }
   };
 
@@ -479,7 +479,7 @@ const MicroApp = () => {
         case TOPIC.TOKEN:
           token
             ? sendTokenToWebView(token)
-            : pendingTokenRequests.push(sendTokenToWebView);
+            : pendingTokenRequests.current.push(sendTokenToWebView);
           break;
         case TOPIC.QR_REQUEST:
           setScannerVisible(true);

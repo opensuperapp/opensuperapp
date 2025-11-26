@@ -79,6 +79,34 @@ export const disableFCMToken = createAsyncThunk(
 );
 
 /**
+ * Clears the last sent FCM token from the secure store.
+ */
+export const clearLastSentFcmToken = createAsyncThunk(
+  "device/clearLastSentFcmToken",
+  async () => {
+    try {
+      await deleteItemAsync(LAST_SENT_FCM_TOKEN);
+    } catch (error) {
+      console.error(
+        "Error occurred while clearing last sent FCM token:",
+        error
+      );
+    }
+  }
+);
+
+export const setLastSentFCMToken = createAsyncThunk(
+  "device/setLastSentFCMToken",
+  async (fcmToken: string) => {
+    try {
+      await setItemAsync(LAST_SENT_FCM_TOKEN, fcmToken);
+    } catch (error) {
+      console.error("Error occurred while setting last sent FCM token:", error);
+    }
+  }
+);
+
+/**
  * Pushes the FCM token to the backend. This is called when the user is authenticated.
  */
 export const pushFcmToken = createAsyncThunk(
@@ -98,6 +126,7 @@ export const pushFcmToken = createAsyncThunk(
       );
 
       if (response?.status === 200) {
+        await setLastSentFCMToken(fcmToken);
         return response.data;
       } else {
         console.warn("Failed to push FCM token");
@@ -119,10 +148,6 @@ const deviceSlice = createSlice({
       state.isPushingToken = false;
       state.fcmPushError = null;
       state.lastSentFCMToken = null;
-      const deleteLastFCMToken = async () => {
-        await deleteItemAsync(LAST_SENT_FCM_TOKEN);
-      };
-      deleteLastFCMToken();
     },
   },
   extraReducers: (builder) => {
@@ -137,10 +162,6 @@ const deviceSlice = createSlice({
       .addCase(pushFcmToken.fulfilled, (state, action) => {
         state.isPushingToken = false;
         state.lastSentFCMToken = action.meta.arg.fcmToken;
-        const setLastSentFCMToken = async () => {
-          await setItemAsync(LAST_SENT_FCM_TOKEN, action.meta.arg.fcmToken);
-        };
-        setLastSentFCMToken();
       })
       .addCase(pushFcmToken.rejected, (state, action) => {
         state.isPushingToken = false;

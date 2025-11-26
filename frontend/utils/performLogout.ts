@@ -16,7 +16,10 @@
 import { APPS, USER_INFO } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { resetAll } from "@/context/slices/authSlice";
-import { clearDeviceState } from "@/context/slices/deviceSlice";
+import {
+  clearDeviceState,
+  clearLastSentFcmToken,
+} from "@/context/slices/deviceSlice";
 import { persistor } from "@/context/store";
 import { logout } from "@/services/authService";
 import { clearNotifications } from "@/services/scheduledNotifications";
@@ -37,6 +40,7 @@ export const performLogout = createAsyncThunk(
       await persistor.purge(); // Clear redux-persist storage
       dispatch(resetAll()); // Reset Redux state completely
       dispatch(clearDeviceState()); // Reset device state
+      dispatch(clearLastSentFcmToken()); // Clear last sent FCM token
 
       await AsyncStorage.removeItem(APPS);
       await deleteItemAsync(USER_INFO);

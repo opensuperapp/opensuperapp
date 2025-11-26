@@ -59,7 +59,11 @@ const FloatingSparkle = ({ sparkle }: { sparkle: any }) => {
   const translateX = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
 
+  const isMounted = useRef(true);
+
   const animate = () => {
+    if (!isMounted.current) return;
+
     opacity.setValue(0.2);
     scale.setValue(0.3);
     translateX.setValue(0);
@@ -90,11 +94,18 @@ const FloatingSparkle = ({ sparkle }: { sparkle: any }) => {
         delay: sparkle.delay,
         useNativeDriver: true,
       }),
-    ]).start(() => animate());
+    ]).start(() => {
+      if (isMounted.current) {
+        animate();
+      }
+    });
   };
 
   useEffect(() => {
     animate();
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
 
   return (

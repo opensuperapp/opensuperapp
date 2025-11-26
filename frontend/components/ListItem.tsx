@@ -121,9 +121,11 @@ const ListItem = React.memo(
               {description}
             </Text>
             <View style={styles.bottomTextContainer}>
-              <Text style={styles.versionText} allowFontScaling={false}>
-                Version {versions[0].version}
-              </Text>
+              {versions.length > 0 && (
+                <Text style={styles.versionText} allowFontScaling={false}>
+                  Version {versions[0].version}
+                </Text>
+              )}
               {downloading && (
                 <View style={styles.updatingContainer}>
                   <Text style={styles.updatingText}>

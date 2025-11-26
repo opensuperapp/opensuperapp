@@ -52,7 +52,7 @@ export const getVersions = createAsyncThunk(
       );
 
       if (response?.data) return response.data;
-      else rejectWithValue("Version data not found");
+      else return rejectWithValue("Version data not found");
     } catch (error) {
       return rejectWithValue(error);
     }

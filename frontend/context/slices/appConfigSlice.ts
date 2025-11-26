@@ -39,7 +39,7 @@ export const getAppConfigurations = createAsyncThunk(
       );
 
       if (response?.data) return response.data;
-      else rejectWithValue("App configs not found");
+      else return rejectWithValue("App configs not found");
     } catch (error) {
       return rejectWithValue(error);
     }
