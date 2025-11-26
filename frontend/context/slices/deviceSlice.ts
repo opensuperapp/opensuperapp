@@ -95,17 +95,6 @@ export const clearLastSentFcmToken = createAsyncThunk(
   }
 );
 
-export const setLastSentFCMToken = createAsyncThunk(
-  "device/setLastSentFCMToken",
-  async (fcmToken: string) => {
-    try {
-      await setItemAsync(LAST_SENT_FCM_TOKEN, fcmToken);
-    } catch (error) {
-      console.error("Error occurred while setting last sent FCM token:", error);
-    }
-  }
-);
-
 /**
  * Pushes the FCM token to the backend. This is called when the user is authenticated.
  */
@@ -126,7 +115,7 @@ export const pushFcmToken = createAsyncThunk(
       );
 
       if (response?.status === 200) {
-        await setLastSentFCMToken(fcmToken);
+        await setItemAsync(LAST_SENT_FCM_TOKEN, fcmToken);
         return response.data;
       } else {
         console.warn("Failed to push FCM token");
