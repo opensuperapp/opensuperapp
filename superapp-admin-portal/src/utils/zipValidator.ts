@@ -6,7 +6,7 @@
  */
 
 // Configuration
-const DEFAULT_MAX_SIZE_MB = 10;
+const DEFAULT_MAX_SIZE_MB = 20;
 // Guard import.meta for environments where it may be undefined (e.g., Cypress unit runner)
 const __env: any = (typeof import.meta !== 'undefined' && (import.meta as any) && (import.meta as any).env)
   ? (import.meta as any).env

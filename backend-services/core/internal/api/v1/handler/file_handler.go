@@ -5,10 +5,15 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"path/filepath"
 
 	fileservice "github.com/opensuperapp/opensuperapp/backend-services/core/plugins/file-service"
 
 	"github.com/go-chi/chi/v5"
+)
+
+const (
+	uploadFileMaxSize = 20 << 20 // 20 MB
 )
 
 type FileHandler struct {
@@ -28,14 +33,17 @@ func NewFileHandler(fileService fileservice.FileService) *FileHandler {
 
 // UploadFile handles file upload via binary body
 func (h *FileHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
-	fileName := r.URL.Query().Get("fileName") // TODO: sanitize
+	fileName := r.URL.Query().Get("fileName")
+	fileName = filepath.Base(fileName) // Sanitize: strip directory components
 
 	if fileName == "" {
 		http.Error(w, "fileName query parameter is required", http.StatusBadRequest)
 		return
 	}
 
-	content, err := io.ReadAll(r.Body) // limiting happens at the admin portal , thus not limiting here
+	// Defense-in-depth: limit request body size
+	r.Body = http.MaxBytesReader(w, r.Body, uploadFileMaxSize)
+	content, err := io.ReadAll(r.Body)
 	if err != nil {
 		slog.Error("Error reading file content from request body", "error", err)
 		http.Error(w, "error in reading file content from request body", http.StatusBadRequest)
@@ -68,7 +76,7 @@ func (h *FileHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 
 // DeleteFile handles file deletion by fileName
 func (h *FileHandler) DeleteFile(w http.ResponseWriter, r *http.Request) {
-	fileName := r.URL.Query().Get("fileName") // TODO: sanitize filename
+	fileName := filepath.Base(r.URL.Query().Get("fileName"))
 	if fileName == "" {
 		http.Error(w, "fileName query parameter is required", http.StatusBadRequest)
 		return
@@ -87,7 +95,7 @@ func (h *FileHandler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 // DownloadMicroAppFile handles public file download
 // Note: This handler is only called when FileServiceType is "db", so the service will always be database as the file service
 func (h *FileHandler) DownloadMicroAppFile(w http.ResponseWriter, r *http.Request) {
-	fileName := chi.URLParam(r, "fileName")
+	fileName := filepath.Base(chi.URLParam(r, "fileName"))
 	if fileName == "" {
 		http.Error(w, "fileName parameter is required", http.StatusBadRequest)
 		return
@@ -107,7 +115,7 @@ func (h *FileHandler) DownloadMicroAppFile(w http.ResponseWriter, r *http.Reques
 	}
 
 	w.Header().Set("Content-Type", "application/octet-stream")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", fileName)) // TODO: sanitize fileName
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", fileName))
 	w.WriteHeader(http.StatusOK)
 
 	if _, err := w.Write(content); err != nil {
