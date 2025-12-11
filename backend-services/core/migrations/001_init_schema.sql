@@ -241,7 +241,7 @@ CREATE TABLE `notification_logs` (
 CREATE TABLE `o_auth2_clients` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Internal auto-increment ID',
   `client_id` VARCHAR(255) NOT NULL COMMENT 'OAuth2 client ID',
-  `client_secret` VARCHAR(255) NOT NULL COMMENT 'OAuth2 client secret (hashed)',
+  `client_secret` TEXT NOT NULL COMMENT 'OAuth2 client secret (bcrypt hashed, ~60 chars)',
   `name` VARCHAR(255) NOT NULL COMMENT 'Client name/description',
   `scopes` VARCHAR(1024) DEFAULT NULL COMMENT 'Allowed scopes (comma-separated)',
   `is_active` TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Active status (1=active, 0=inactive)',

@@ -11,7 +11,7 @@ import (
 type OAuth2Client struct {
 	ID           uint           `gorm:"primaryKey" json:"id"`
 	ClientID     string         `gorm:"type:varchar(255);uniqueIndex;not null" json:"client_id"`
-	ClientSecret string         `gorm:"not null" json:"-"` // Hashed secret
+	ClientSecret string         `gorm:"type:text;not null" json:"-"` // Bcrypt hashed secret (~60 chars)
 	Name         string         `gorm:"not null" json:"name"`
 	Scopes       string         `json:"scopes"` // Comma-separated scopes
 	IsActive     bool           `gorm:"default:true" json:"is_active"`

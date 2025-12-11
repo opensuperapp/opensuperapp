@@ -2,8 +2,6 @@ package handler
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +12,7 @@ import (
 	"github.com/opensuperapp/opensuperapp/backend-services/token-service/internal/models"
 	"github.com/opensuperapp/opensuperapp/backend-services/token-service/internal/services"
 
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -36,10 +35,13 @@ func setupTestDB(t *testing.T) *gorm.DB {
 
 // seedTestClient creates a test OAuth2 client
 func seedTestClient(t *testing.T, db *gorm.DB) *models.OAuth2Client {
-	// Hash the secret using SHA256 (same as in handler)
+	// Hash the secret using bcrypt (same as in handler)
 	secret := "test-secret"
-	hash := sha256.Sum256([]byte(secret))
-	hashedSecret := hex.EncodeToString(hash[:])
+	hash, err := bcrypt.GenerateFromPassword([]byte(secret), 12)
+	if err != nil {
+		t.Fatalf("Failed to hash secret: %v", err)
+	}
+	hashedSecret := string(hash)
 
 	client := &models.OAuth2Client{
 		ClientID:     "test-client",

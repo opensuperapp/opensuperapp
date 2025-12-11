@@ -2,10 +2,10 @@ package handler
 
 import (
 	"crypto/rand"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"net/http"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -37,11 +37,24 @@ func limitRequestBody(w http.ResponseWriter, r *http.Request, maxBytes int64) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
 }
 
-func hashSecret(secret string) string {
-	// In production, use bcrypt or argon2.
-	// For simplicity here use SHA256.
-	hash := sha256.Sum256([]byte(secret))
-	return hex.EncodeToString(hash[:])
+// hashSecret hashes a plaintext secret using bcrypt with a secure cost factor.
+// The bcrypt algorithm automatically generates a per-secret salt and includes it
+// in the output hash. The returned hash is safe to store in the database.
+// Cost factor 12 provides a good balance of security and performance (~250ms).
+func hashSecret(secret string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(secret), 12)
+	if err != nil {
+		return "", err
+	}
+	return string(hash), nil
+}
+
+// checkSecret verifies a plaintext secret against a bcrypt hash.
+// This function provides constant-time comparison (timing-safe) automatically
+// via bcrypt's internal implementation, preventing timing attacks.
+// Returns nil if the secret matches the hash, otherwise returns an error.
+func checkSecret(secret, hash string) error {
+	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(secret))
 }
 
 // generateSecureSecret generates a cryptographically secure random secret

@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"crypto/subtle"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -118,9 +117,8 @@ func (h *OAuthHandler) Token(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify Secret (Hash comparison)
-	hashedSecret := hashSecret(clientSecret)
-	if subtle.ConstantTimeCompare([]byte(hashedSecret), []byte(OAuth2client.ClientSecret)) != 1 {
+	// Verify Secret using bcrypt (provides constant-time comparison)
+	if err := checkSecret(clientSecret, OAuth2client.ClientSecret); err != nil {
 		slog.Warn("Invalid client secret", "client_id", clientID)
 		writeError(w, http.StatusUnauthorized, errInvalidClient, "")
 		return
@@ -178,8 +176,13 @@ func (h *OAuthHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Hash the secret for storage
-	hashedSecret := hashSecret(clientSecret)
+	// Hash the secret for storage using bcrypt
+	hashedSecret, err := hashSecret(clientSecret)
+	if err != nil {
+		slog.Error("Failed to hash client secret", "error", err)
+		writeError(w, http.StatusInternalServerError, errServerError, "failed to hash client secret")
+		return
+	}
 
 	// Create the new client
 	newClient := models.OAuth2Client{

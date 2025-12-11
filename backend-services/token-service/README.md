@@ -160,7 +160,7 @@ Frontend              │                                     │
 
 ### Security Features
 
-- ✅ **Hashed Client Secrets** - Secrets stored as SHA256 hashes
+- ✅ **Hashed Client Secrets** - Secrets stored using bcrypt with per-secret salts
 - ✅ **Request Body Limits** - Protection against large payload attacks
 - ✅ **Structured Logging** - JSON logs with `slog` for audit trails
 - ✅ **Key ID (kid) in JWT Header** - Enables key identification for validation
@@ -391,8 +391,9 @@ curl -X POST http://localhost:8081/oauth/clients \
 
 - **Secure Generation**: Client secrets are generated using cryptographically secure random number generation (`crypto/rand`)
 - **32-Character Length**: Secrets contain 32 alphanumeric characters (a-z, A-Z, 0-9)
-- **Hashed Storage**: Secrets are hashed using SHA-256 before being stored in the database
+- **Hashed Storage**: Secrets are hashed using bcrypt (cost factor 12) with automatic per-secret salts before being stored in the database
 - **One-Time Visibility**: The plain text secret is only returned once and cannot be retrieved later
+- **Timing Attack Protection**: Secret verification uses bcrypt's constant-time comparison
 
 ### 3. User Context Token Endpoint
 
@@ -634,21 +635,30 @@ curl -X POST "http://localhost:8081/admin/active-key?key_id=prod-key-2024-q2"
 
 ### Client Secret Storage
 
-Client secrets are stored as SHA256 hashes:
+Client secrets are stored using **bcrypt** password hashing with automatic per-secret salts:
 
 ```go
 // Registration (admin process)
-hash := sha256.Sum256([]byte(rawSecret))
-storedHash := hex.EncodeToString(hash[:])
+hash, err := bcrypt.GenerateFromPassword([]byte(rawSecret), 12)
+if err != nil {
+    return err
+}
+storedHash := string(hash) // ~60 chars, includes salt
 
 // Validation (during token request)
-hash := sha256.Sum256([]byte(providedSecret))
-if hex.EncodeToString(hash[:]) != storedHash {
-    return error
+err := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(providedSecret))
+if err != nil {
+    return error // Invalid secret
 }
 ```
 
-> **Note:** For higher security, consider upgrading to bcrypt or argon2.
+**Security benefits:**
+- Automatic per-secret salts (prevents rainbow table attacks)
+- Configurable cost factor (currently 12 = ~250ms)
+- Constant-time comparison (prevents timing attacks)
+- Future-proof (cost can increase as hardware improves)
+- Industry standard (OWASP recommended)
+
 
 ---
 
@@ -660,7 +670,7 @@ if hex.EncodeToString(hash[:]) != storedHash {
 CREATE TABLE oauth2_clients (
     id           BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     client_id    VARCHAR(255) NOT NULL UNIQUE,
-    client_secret VARCHAR(255) NOT NULL,  -- SHA256 hash
+    client_secret TEXT NOT NULL,  -- Bcrypt hash (~60 chars)
     name         VARCHAR(255) NOT NULL,
     scopes       TEXT,
     is_active    BOOLEAN DEFAULT TRUE,
@@ -676,8 +686,8 @@ CREATE TABLE oauth2_clients (
 
 ```sql
 INSERT INTO oauth2_clients (client_id, client_secret, name, scopes, is_active) VALUES
-('microapp-news', '<sha256-hash>', 'News Microapp', 'notifications:send users:read', true),
-('microapp-events', '<sha256-hash>', 'Events Microapp', 'notifications:send', true);
+('microapp-news', '<bcrypt-hash>', 'News Microapp', 'notifications:send users:read', true),
+('microapp-events', '<bcrypt-hash>', 'Events Microapp', 'notifications:send', true);
 ```
 
 ---
