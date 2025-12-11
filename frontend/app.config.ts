@@ -19,6 +19,8 @@ import type { ExpoConfig } from "expo/config";
 /* Firebase configuration for push notifications */
 import fs from "fs";
 import path from "path";
+import { withFirebase } from "./integrations/firebase/withFirebase";
+import withAndroidNotificationIconConfiguration from "./integrations/android-notifications/withAndroidNotificationIconConfiguration";
 
 const PRODUCTION = "production";
 const DEVELOPMENT = "development";
@@ -202,4 +204,15 @@ const config: ExpoConfig = {
   assetBundlePatterns: ["**/*"],
 };
 
-export default config;
+// Conditionally apply integration plugins based on environment variables
+let finalConfig = config;
+
+if (process.env.ENABLE_FIREBASE === "true") {
+  finalConfig = withFirebase(finalConfig);
+}
+
+if (process.env.ENABLE_ANDROID_NOTIFICATIONS === "true") {
+  finalConfig = withAndroidNotificationIconConfiguration(finalConfig);
+}
+
+export default finalConfig;
