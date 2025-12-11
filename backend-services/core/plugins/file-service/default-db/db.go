@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 	"log/slog"
+	"net/url"
 
 	fileservice "github.com/opensuperapp/opensuperapp/backend-services/core/plugins/file-service"
 
@@ -94,7 +95,7 @@ func (s *DBFileService) GetDownloadURL(fileName string) (string, error) {
 	if fileName == "" {
 		return "", fmt.Errorf("DBFileService: fileName is required")
 	}
-	return fmt.Sprintf("%s/public/micro-app-files/download/%s", s.baseURL, fileName), nil
+	return fmt.Sprintf("%s/public/micro-app-files/download/%s", s.baseURL, url.PathEscape(fileName)), nil
 }
 
 // GetBlobContent retrieves the blob content of a file by fileName
