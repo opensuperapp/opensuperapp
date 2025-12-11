@@ -27,6 +27,7 @@ import { setUserInfo } from "@/context/slices/userInfoSlice";
 import { performLogout } from "@/utils/performLogout";
 import { initializeTelemetry } from "@/telemetry/telemetryService";
 import { recordAppStartTime } from "@/telemetry/metrics";
+import { buildAppsWithTokens } from "@/utils/exchangedTokenRehydrator";
 
 /**
  * Component to handle app initialization
@@ -52,7 +53,12 @@ function AppInitializer({ onReady }: { onReady: () => void }) {
           AsyncStorage.getItem(USER_INFO),
         ]);
 
-        if (savedApps) dispatch(setApps(JSON.parse(savedApps)));
+        if (savedApps) {
+          // Rehydrate apps with their exchanged tokens from SecureStore
+          const apps = JSON.parse(savedApps);
+          const appsWithTokens = await buildAppsWithTokens(apps);
+          dispatch(setApps(appsWithTokens));
+        }
         if (savedUserInfo) dispatch(setUserInfo(JSON.parse(savedUserInfo)));
 
         dispatch(getVersions(handleLogout));

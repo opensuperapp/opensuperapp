@@ -17,6 +17,11 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { APPS, DEFAULT_VIEWING_MODE } from "@/constants/Constants";
 import { DisplayMode } from "@/types/navigation";
+import {
+  saveExchangedToken,
+  deleteExchangedToken,
+  persistAppsWithoutTokens,
+} from "@/utils/exchangedTokenStore";
 
 export type Version = {
   version: string;
@@ -102,11 +107,17 @@ const appsSlice = createSlice({
         app.displayMode = displayMode || DEFAULT_VIEWING_MODE;
         if (exchangedToken) {
           app.exchangedToken = exchangedToken;
-        } else app.exchangedToken = "";
+          // Save exchanged token to SecureStore
+          saveExchangedToken(appId, exchangedToken);
+        } else {
+          app.exchangedToken = "";
+          // Remove exchanged token from SecureStore
+          deleteExchangedToken(appId);
+        }
       }
 
-      // Ensure state is saved in AsyncStorage immediately
-      AsyncStorage.setItem(APPS, JSON.stringify(state.apps));
+      // Save apps to AsyncStorage without tokens
+      persistAppsWithoutTokens(state.apps);
     },
     updateExchangedToken: (
       state,
@@ -114,10 +125,14 @@ const appsSlice = createSlice({
     ) => {
       const { appId, exchangedToken } = action.payload;
       const app = state.apps.find((app) => app.appId === appId);
-      if (app) app.exchangedToken = exchangedToken;
+      if (app) {
+        app.exchangedToken = exchangedToken;
+        // Save exchanged token to SecureStore
+        saveExchangedToken(appId, exchangedToken);
+      }
 
-      // Ensure state is saved in AsyncStorage immediately
-      AsyncStorage.setItem(APPS, JSON.stringify(state.apps));
+      // Save apps to AsyncStorage without tokens
+      persistAppsWithoutTokens(state.apps);
     },
   },
 });

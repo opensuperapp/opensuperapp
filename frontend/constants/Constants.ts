@@ -87,6 +87,12 @@ export const isAndroid = Platform.OS === "android";
 export const isIos = Platform.OS === "ios";
 export const FULL_SCREEN_VIEWING_MODE = "fullscreen";
 export const DEFAULT_VIEWING_MODE = "default";
+// Keys for Secure Store
+export const ACCESS_TOKEN = "secure_access_token";
+export const REFRESH_TOKEN = "secure_refresh_token";
+export const ID_TOKEN = "secure_id_token";
+export const EXPIRES_AT_KEY = "secure_expires_at";
+export const AUTH_EMAIL_KEY = "secure_auth_email";
 // OpenTelemetry Configuration
 export const OTEL_ENABLED = process.env.EXPO_PUBLIC_OTEL_ENABLED === "true";
 export const OTEL_COLLECTOR_URL =
