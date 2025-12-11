@@ -96,17 +96,13 @@ func NewRouter(db *gorm.DB, cfg *config.Config) http.Handler {
 
 	// User Authenticated Routes (validates against External IDP)
 	r.Route(userRoutesPrefix, func(r chi.Router) {
-		if externalIDPValidator != nil {
-			r.Use(auth.AuthMiddleware(externalIDPValidator))
-		}
+		r.Use(auth.AuthMiddleware(externalIDPValidator))
 		r.Mount("/", v1.NewUserRouter(db, fcmService, fileService, userService, cfg))
 	})
 
 	// Service Routes (validates against Internal IDP)
 	r.Route(serviceRoutesPrefix, func(r chi.Router) {
-		if internalIDPValidator != nil {
-			r.Use(auth.ServiceOAuthMiddleware(internalIDPValidator))
-		}
+		r.Use(auth.ServiceOAuthMiddleware(internalIDPValidator))
 		r.Mount("/", v1.NewServiceRouter(db, fcmService))
 	})
 

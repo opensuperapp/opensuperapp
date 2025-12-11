@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
+	"mime"
 	"net/http"
 
 	"github.com/go-playground/validator/v10"
@@ -36,7 +37,8 @@ func validateStruct(w http.ResponseWriter, s any) bool {
 // Validates that the Content-Type header is application/json.
 func validateContentType(w http.ResponseWriter, r *http.Request) bool {
 	contentType := r.Header.Get("Content-Type")
-	if contentType != "application/json" {
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil || mediaType != "application/json" {
 		http.Error(w, "Content-Type must be application/json", http.StatusUnsupportedMediaType)
 		return false
 	}
