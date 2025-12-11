@@ -13,6 +13,10 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+
+// Enable TypeScript compilation for config plugins
+require('ts-node/register');
+
 import "dotenv/config";
 import type { ExpoConfig } from "expo/config";
 

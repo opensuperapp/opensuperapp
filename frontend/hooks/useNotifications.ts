@@ -95,8 +95,6 @@ export function useNotifications() {
          */
         const registerDeviceWithBackend = async () => {
             const token = await getDevicePushToken();
-            console.log("[useNotifications] Device token:", token);
-
             if (!token) {
                 console.warn("[useNotifications] Failed to get device token");
                 return;
