@@ -13,13 +13,33 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { CLIENT_ID, REDIRECT_URI, TOKEN_URL } from "@/constants/Constants";
+import { CLIENT_ID, REDIRECT_URI, TOKEN_URL, AUTHORIZATION_URL, REVOCATION_URL, ISSUER } from "@/constants/Constants";
 
-export const AUTH_CONFIG = {
-  issuer: TOKEN_URL,
+const BASE_CONFIG = {
   clientId: CLIENT_ID,
   redirectUrl: REDIRECT_URI,
   scopes: ["openid", "profile", "email", "groups"],
   postLogoutRedirectUrl: REDIRECT_URI,
   iosPrefersEphemeralSession: true,
-};
+} as const;
+
+// Prefer explicit serviceConfiguration when endpoints are provided via env
+export const AUTH_CONFIG = AUTHORIZATION_URL && TOKEN_URL
+  ? {
+      ...BASE_CONFIG,
+      serviceConfiguration: {
+        authorizationEndpoint: AUTHORIZATION_URL,
+        tokenEndpoint: TOKEN_URL,
+        ...(REVOCATION_URL ? { revocationEndpoint: REVOCATION_URL } : {}),
+      },
+    }
+  : ISSUER
+  ? {
+      ...BASE_CONFIG,
+      issuer: ISSUER,
+    }
+  : {
+      // Fallback to previous behavior to avoid breaking existing setups
+      ...BASE_CONFIG,
+      issuer: TOKEN_URL,
+    };

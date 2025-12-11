@@ -14,9 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 import { BASE_URL, USER_CONFIGURATIONS } from "@/constants/Constants";
-import { removeDuplicatesFromUserConfigs } from "@/utils/removeDuplicates";
 import { apiRequest } from "@/utils/requestHandler";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as secureStorage from "@/utils/secureStorage";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 
 interface AppArrangement {
@@ -48,28 +47,16 @@ export const getUserConfigurations = createAsyncThunk(
   async (onLogout: () => Promise<void>, { rejectWithValue }) => {
     try {
       const response = await apiRequest(
-        { url: `${BASE_URL}/users/user-configs`, method: "GET" },
+        { url: `${BASE_URL}/users/app-configs`, method: "GET" },
         onLogout
       );
 
       if (response?.status === 200 && response?.data) {
-        // Remove duplicates from configValue arrays in response
-        const cleanedResponseData = removeDuplicatesFromUserConfigs(
-          response.data
-        );
-        // Persist without email
-        const sanitizedUserConfigs = cleanedResponseData.map(
-          (config: UserConfig) => {
-            const { email, ...rest } = config;
-            return rest;
-          }
-        );
-
-        await AsyncStorage.setItem(
+        await secureStorage.setItem(
           USER_CONFIGURATIONS,
-          JSON.stringify(sanitizedUserConfigs)
+          JSON.stringify(response.data)
         );
-        return cleanedResponseData;
+        return response.data;
       } else {
         return [];
       }

@@ -13,9 +13,6 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
-import { Ionicons } from "@expo/vector-icons";
-import React from "react";
 import {
   StyleSheet,
   Text,
@@ -23,6 +20,9 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import React from "react";
+import { Colors } from "@/constants/Colors";
+import { Ionicons } from "@expo/vector-icons";
 
 const CameraPermission = ({
   handlePress,

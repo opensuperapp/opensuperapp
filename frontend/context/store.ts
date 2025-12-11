@@ -13,63 +13,58 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import { configureStore, combineReducers } from "@reduxjs/toolkit";
+import { persistStore, persistReducer } from "redux-persist";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { combineReducers, configureStore } from "@reduxjs/toolkit";
-import { createTransform, persistReducer, persistStore } from "redux-persist";
-import appConfigReducer from "./slices/appConfigSlice";
-import appReducer, { MicroApp } from "./slices/appSlice";
+import appReducer from "./slices/appSlice";
 import authReducer from "./slices/authSlice";
-import deviceReducer from "./slices/deviceSlice";
 import userConfigReducer from "./slices/userConfigSlice";
-import userInfoReducer from "./slices/userInfoSlice";
 import versionReducer from "./slices/versionSlice";
+import userInfoReducer from "./slices/userInfoSlice";
+import notificationReducer from "./slices/notificationSlice";
 
-// Strip exchangedToken from the apps array BEFORE persisting
-const stripExchangedTokens = createTransform(
-  (inbound: { apps?: MicroApp[] }) => {
-    if (!inbound?.apps) return inbound;
-    return {
-      ...inbound,
-      apps: inbound.apps.map((a) => ({ ...a, exchangedToken: "" })),
-    };
-  },
-  (outbound: { apps?: MicroApp[] }) => outbound,
-  { whitelist: ["apps"] }
-);
+// Note: Redux persist uses AsyncStorage for all slices due to SecureStore's 2048 byte limit
+// Individual sensitive values (AUTH_DATA, USER_CONFIGURATIONS) are stored separately in SecureStore
+// via the secureStorage wrapper in utils/secureStorage.ts
+
+const authPersistConfig = {
+  key: "auth",
+  storage: AsyncStorage,
+  // Security: Do not persist tokens in AsyncStorage; keep only non-sensitive fields
+  whitelist: ["email"],
+};
 
 const appsPersistConfig = {
   key: "apps",
   storage: AsyncStorage,
-  whitelist: ["apps"],
-  transforms: [stripExchangedTokens],
+  whitelist: ["installedApps"],
 };
 
 const userConfigPersistConfig = {
   key: "user-config",
   storage: AsyncStorage,
-  whitelist: ["user-config"],
+  whitelist: ["configurations"],
 };
 
 const userInfoPersistConfig = {
   key: "user-info",
   storage: AsyncStorage,
-  whitelist: ["user-info"],
+  whitelist: ["userInfo"],
 };
 
-const appConfigPersistConfig = {
-  key: "app-config",
+const notificationPersistConfig = {
+  key: "notification",
   storage: AsyncStorage,
-  whitelist: ["configs", "defaultMicroAppIds", "appScopes"],
+  whitelist: ["deviceToken", "permissionGranted", "isRegistered"],
 };
 
 const appReducerCombined = combineReducers({
-  auth: authReducer,
+  auth: persistReducer(authPersistConfig, authReducer),
   apps: persistReducer(appsPersistConfig, appReducer),
   userConfig: persistReducer(userConfigPersistConfig, userConfigReducer),
   version: versionReducer,
   userInfo: persistReducer(userInfoPersistConfig, userInfoReducer),
-  device: deviceReducer,
-  appConfig: persistReducer(appConfigPersistConfig, appConfigReducer),
+  notification: persistReducer(notificationPersistConfig, notificationReducer),
 });
 
 const rootReducer = (

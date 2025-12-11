@@ -15,18 +15,13 @@
 // under the License.
 import "dotenv/config";
 import type { ExpoConfig } from "expo/config";
-import "tsx/cjs";
 
-/* Comment the lines below if you want to use Firebase for iOS or Android */
-import { withFirebase } from "./integrations/firebase/withFirebase";
-
-/* Custom plugin to configure Android notification small icon */
-import withAndroidNotificationIconConfiguration from "./integrations/android-notifications/withAndroidNotificationIconConfiguration";
+/* Firebase configuration for push notifications */
+import fs from "fs";
+import path from "path";
 
 const PRODUCTION = "production";
 const DEVELOPMENT = "development";
-const TRUE = "true";
-const FALSE = "false";
 
 const profile =
   process.env.EAS_BUILD_PROFILE ??
@@ -41,10 +36,7 @@ const APP_VERSION = process.env.APP_VERSION ?? "1.0.0";
 const BUNDLE_ID = process.env.BUNDLE_IDENTIFIER ?? "com.example";
 const ANDROID_PACKAGE = process.env.ANDROID_PACKAGE ?? "com.example";
 const IOS_URL_SCHEME = process.env.IOS_URL_SCHEME ?? "example.scheme";
-const ENABLE_FIREBASE = process.env.EXPO_PUBLIC_ENABLE_FIREBASE ?? FALSE;
-const ADD_ANDROID_NOTIFICATION_ICON =
-  process.env.EXPO_PUBLIC_ADD_ANDROID_NOTIFICATION_ICON ?? FALSE;
-const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID ?? ""; // Comment this if EAS is not used
+// const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID ?? ""; // Uncomment this if you use EAS
 
 /* =============== Firebase Configuration ===============
  *
@@ -63,10 +55,17 @@ const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID ?? ""; // Comment this if EAS 
  *     b) Place the files directly in a `google-services` directory at the root of your project
  *        You may need to create this directory)
  *
+ * 3.  After setting up your files, uncomment lines immediately below this comment section
+ *     and the corresponding `googleServicesFile` line(s) in the `ios` and/or `android` section(s) below.
  *
  * ======================================================= */
 
-let config: ExpoConfig = {
+const here = (...p: string[]) => path.resolve(__dirname, ...p);
+const fileIfExists = (p: string) => (fs.existsSync(p) ? p : undefined);
+const iosPlist = fileIfExists(here("google-services/GoogleService-Info.plist"));
+const androidJson = fileIfExists(here("google-services/google-services.json"));
+
+const config: ExpoConfig = {
   name: APP_NAME,
   slug: APP_SLUG,
   scheme: APP_SCHEME,
@@ -78,6 +77,7 @@ let config: ExpoConfig = {
     supportsTablet: true,
     requireFullScreen: true,
     bundleIdentifier: BUNDLE_ID,
+    googleServicesFile: iosPlist,
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       UIBackgroundModes: ["remote-notification"],
@@ -93,10 +93,18 @@ let config: ExpoConfig = {
   },
   android: {
     package: ANDROID_PACKAGE,
+    googleServicesFile: androidJson,
     permissions: [
+      // Core permissions already used by app
       "android.permission.CAMERA",
       "android.permission.RECORD_AUDIO",
-      "android.permission.POST_NOTIFICATIONS",
+      // Permissions for saving files to shared storage / downloads
+      // Note: WRITE_EXTERNAL_STORAGE is deprecated on newer Android versions
+      // but declaring it helps backward compatibility. For Android 11+ we're
+      // using Storage Access Framework where possible which doesn't require
+      // this permission.
+      "android.permission.READ_EXTERNAL_STORAGE",
+      "android.permission.WRITE_EXTERNAL_STORAGE",
     ],
     adaptiveIcon: {
       foregroundImage: "./assets/images/adaptive-icon.png",
@@ -123,10 +131,6 @@ let config: ExpoConfig = {
           compileSdkVersion: 35,
           targetSdkVersion: 35,
           minSdkVersion: 24,
-          extraMavenRepos: [
-            // https://github.com/invertase/notifee/issues/799#issuecomment-2569217836
-            "../../node_modules/@notifee/react-native/android/libs",
-          ],
         },
       },
     ],
@@ -162,6 +166,14 @@ let config: ExpoConfig = {
     ["expo-screen-orientation", { initialOrientation: "DEFAULT" }],
     ["expo-font", { fonts: ["./assets/fonts/SpaceMono-Regular.ttf"] }],
     [
+      "expo-notifications",
+      {
+        icon: "./assets/images/notification-icon.png",
+        color: "#476481",
+        sounds: [],
+      },
+    ],
+    [
       "@react-native-google-signin/google-signin",
       { iosUrlScheme: IOS_URL_SCHEME },
     ],
@@ -185,24 +197,9 @@ let config: ExpoConfig = {
   experiments: { typedRoutes: true },
   extra: {
     router: { origin: false },
-    eas: { projectId: EAS_PROJECT_ID }, // Comment this if EAS is not used
+    // eas: { projectId: EAS_PROJECT_ID }, // Uncomment this if you use EAS
   },
   assetBundlePatterns: ["**/*"],
 };
-
-/**
- * Configures the Expo config to use Firebase for iOS and Android.
- * Only if the ENABLE_FIREBASE environment variable is set to true.
- */
-if (ENABLE_FIREBASE === TRUE) {
-  config = withFirebase(config);
-}
-
-/**
- * Configure Android notification small icon
- */
-if (ADD_ANDROID_NOTIFICATION_ICON === TRUE) {
-  config = withAndroidNotificationIconConfiguration(config);
-}
 
 export default config;

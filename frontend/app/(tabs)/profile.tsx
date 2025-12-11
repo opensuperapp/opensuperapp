@@ -13,129 +13,40 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import Avatar from "@/components/Avatar";
-import ProfileListItem from "@/components/ProfileListItem";
-import SignInMessage from "@/components/SignInMessage";
-import { Colors } from "@/constants/Colors";
-import { ScreenPaths } from "@/constants/ScreenPaths";
-import { disableFCMToken } from "@/context/slices/deviceSlice";
-import { getUserInfo } from "@/context/slices/userInfoSlice";
-import { AppDispatch, RootState } from "@/context/store";
-import { useTrackActiveScreen } from "@/hooks/useTrackActiveScreen";
-import { logout } from "@/services/authService";
-import { BasicUserInfo } from "@/types/basicUserInfo.types";
-import { DecodedAccessToken } from "@/types/decodeAccessToken.types";
-import { performLogout } from "@/utils/performLogout";
-import { Ionicons } from "@expo/vector-icons";
-import Constants from "expo-constants";
-import { jwtDecode } from "jwt-decode";
-import React, { useCallback, useEffect, useState } from "react";
 import {
-  Alert,
-  Image,
-  SafeAreaView,
-  StyleSheet,
+  View,
   Text,
   TouchableOpacity,
   useColorScheme,
-  View,
+  StyleSheet,
+  Image,
 } from "react-native";
-import { useDispatch, useSelector } from "react-redux";
+import { SafeAreaView } from "react-native-safe-area-context";
+import React from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { Colors } from "@/constants/Colors";
+import Constants from "expo-constants";
+import ProfileListItem from "@/components/ProfileListItem";
+import Avatar from "@/components/Avatar";
+import { useTrackActiveScreen } from "@/hooks/useTrackActiveScreen";
+import { ScreenPaths } from "@/constants/ScreenPaths";
+import { useProfile } from "@/hooks/useProfile";
 
 /**
  * Settings screen displays user profile information when authenticated,
  * otherwise prompts user to sign in. Also allows user to log out.
  */
 const SettingsScreen = () => {
-  const dispatch = useDispatch<AppDispatch>();
-  const { accessToken } = useSelector((state: RootState) => state.auth);
-  const { userInfo } = useSelector((state: RootState) => state.userInfo);
   const colorScheme = useColorScheme();
   const styles = createStyles(colorScheme ?? "light");
   const version = Constants.expoConfig?.version;
-  const [basicUserInfo, setBasicUserInfo] = useState<BasicUserInfo>({
-    firstName: "",
-    lastName: "",
-    workEmail: "",
-    avatarUri: "",
-  });
 
   useTrackActiveScreen(ScreenPaths.PROFILE);
 
-  useEffect(() => {
-    if (userInfo) {
-      const qualityEmployeeThumbnail = userInfo.employeeThumbnail
-        ? userInfo.employeeThumbnail.split("=s100")[0]
-        : "";
-      setBasicUserInfo({
-        firstName: userInfo.firstName,
-        lastName: userInfo.lastName,
-        workEmail: userInfo.workEmail,
-        avatarUri: qualityEmployeeThumbnail,
-      });
-    }
-  }, [userInfo]);
-
-  useEffect(() => {
-    if (accessToken && !userInfo) {
-      dispatch(getUserInfo(logout));
-
-      try {
-        const decoded = jwtDecode<DecodedAccessToken>(accessToken);
-        setBasicUserInfo({
-          firstName: decoded.given_name || "",
-          lastName: decoded.family_name || "",
-          workEmail: decoded.email || "",
-          avatarUri: "",
-        });
-      } catch (error) {
-        console.error("Error decoding token", error);
-      }
-    }
-  }, [accessToken, dispatch]);
-
-  /**
-   * Handles user sign out with confirmation dialog.
-   */
-  const handleLogout = useCallback(() => {
-    Alert.alert(
-      "Confirm Sign Out",
-      "Are you sure you want to sign out from this app?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Sign Out",
-          style: "destructive",
-          onPress: async () => {
-            await dispatch(disableFCMToken());
-            await dispatch(performLogout());
-          },
-        },
-      ]
-    );
-  }, [dispatch]);
-
-  if (!accessToken) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.signInContainer}>
-          <View style={styles.overlay}>
-            <View style={styles.modal}>
-              <SignInMessage />
-            </View>
-          </View>
-          <View style={styles.bottomContainer}>
-            <View style={styles.versionContainer}>
-              <Text style={styles.versionText}>version {version}</Text>
-            </View>
-          </View>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const { basicUserInfo, handleLogout } = useProfile();
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       {/* User info */}
       <View style={styles.topContainer}>
         <View style={styles.avatarWrapper}>
@@ -200,23 +111,6 @@ const createStyles = (colorScheme: "light" | "dark") =>
       flex: 1,
       backgroundColor: Colors[colorScheme].primaryBackgroundColor,
       justifyContent: "space-between",
-    },
-    signInContainer: {
-      flex: 1,
-      justifyContent: "space-between",
-    },
-    overlay: {
-      flex: 1,
-      backgroundColor: Colors[colorScheme].primaryBackgroundColor,
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    modal: {
-      backgroundColor: Colors[colorScheme].primaryBackgroundColor,
-      padding: 30,
-      borderRadius: 16,
-      width: "90%",
-      alignItems: "center",
     },
     topContainer: {
       marginLeft: 10,

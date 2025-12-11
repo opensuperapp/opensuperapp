@@ -13,22 +13,17 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { APPS, USER_INFO } from "@/constants/Constants";
+import { APPS, AUTH_DATA, USER_INFO } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { resetAll } from "@/context/slices/authSlice";
-import {
-  clearDeviceState,
-  clearLastSentFcmToken,
-} from "@/context/slices/deviceSlice";
 import { persistor } from "@/context/store";
 import { logout } from "@/services/authService";
-import { clearNotifications } from "@/services/scheduledNotifications";
-import { clearAuthDataFromSecureStore } from "@/utils/authTokenStore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import SecureStorage from "@/utils/secureStorage";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { router } from "expo-router";
-import { deleteItemAsync } from "expo-secure-store";
 import { Alert } from "react-native";
+import { recordAuthLogout } from "@/telemetry/metrics";
 
 // Logout user
 export const performLogout = createAsyncThunk(
@@ -36,16 +31,13 @@ export const performLogout = createAsyncThunk(
   async (_, { dispatch }) => {
     try {
       await logout(); // Call Asgardeo logout
-      await clearAuthDataFromSecureStore();
+      recordAuthLogout(); // Record logout metric
       await persistor.purge(); // Clear redux-persist storage
       dispatch(resetAll()); // Reset Redux state completely
-      dispatch(clearDeviceState()); // Reset device state
-      dispatch(clearLastSentFcmToken()); // Clear last sent FCM token
 
+      await SecureStorage.removeItem(AUTH_DATA);
+      await AsyncStorage.removeItem(USER_INFO);
       await AsyncStorage.removeItem(APPS);
-      await deleteItemAsync(USER_INFO);
-      // Clear all scheduled notifications and stored notification data
-      await clearNotifications();
 
       Alert.alert(
         "Logout Successful",
@@ -53,7 +45,7 @@ export const performLogout = createAsyncThunk(
         [
           {
             text: "OK",
-            onPress: () => router.navigate(ScreenPaths.FEED),
+            onPress: () => router.navigate(ScreenPaths.LOGIN),
           },
         ],
         { cancelable: false }
