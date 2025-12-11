@@ -53,8 +53,13 @@ func Connect(cfg *config.Config) *gorm.DB {
 
 func Close(db *gorm.DB) {
 	sqlDB, err := db.DB()
-	if err == nil {
-		sqlDB.Close()
+	if err != nil {
+		slog.Error("Failed to get DB instance for closing", "error", err)
+		return
+	}
+	if err := sqlDB.Close(); err != nil {
+		slog.Error("Failed to close database connection", "error", err)
+	} else {
 		slog.Info("Database connection closed")
 	}
 }

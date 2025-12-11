@@ -47,6 +47,10 @@ func New(config map[string]any) (fileservice.FileService, error) {
 func (s *DBFileService) UploadFile(fileName string, content []byte) (string, error) {
 	slog.Info("Upserting file", "fileName", fileName, "size", len(content))
 
+	if fileName == "" {
+		return "", fmt.Errorf("DBFileService: fileName is required")
+	}
+
 	file := MicroAppFile{
 		FileName:    fileName,
 		BlobContent: content,
