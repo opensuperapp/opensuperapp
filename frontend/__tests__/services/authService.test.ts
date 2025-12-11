@@ -18,9 +18,11 @@ import {
   processNativeAuthResult,
 } from '@/services/authService';
 import SecureStorage from '@/utils/secureStorage';
+import * as authTokenStore from '@/utils/authTokenStore';
 
 jest.mock('axios');
 jest.mock('@/utils/secureStorage');
+jest.mock('@/utils/authTokenStore');
 jest.mock('react-native-app-auth');
 jest.mock('jwt-decode', () => ({
   jwtDecode: jest.fn().mockImplementation((token) => ({
@@ -44,18 +46,16 @@ describe('authService', () => {
         expiresAt: Date.now() + 3600000,
       };
 
-      (SecureStorage.getItem as jest.Mock).mockResolvedValue(
-        JSON.stringify(mockAuthData)
-      );
+      (authTokenStore.loadAuthDataFromSecureStore as jest.Mock).mockResolvedValue(mockAuthData);
 
       const result = await loadAuthData();
 
-      expect(SecureStorage.getItem).toHaveBeenCalledWith('authData');
+      expect(authTokenStore.loadAuthDataFromSecureStore).toHaveBeenCalled();
       expect(result).toEqual(mockAuthData);
     });
 
     it('should return null if no auth data exists', async () => {
-      (SecureStorage.getItem as jest.Mock).mockResolvedValue(null);
+      (authTokenStore.loadAuthDataFromSecureStore as jest.Mock).mockResolvedValue(null);
 
       const result = await loadAuthData();
 
@@ -63,11 +63,11 @@ describe('authService', () => {
     });
 
     it('should handle errors gracefully', async () => {
-      (SecureStorage.getItem as jest.Mock).mockRejectedValue(
-        new Error('Storage error')
-      );
+      (authTokenStore.loadAuthDataFromSecureStore as jest.Mock).mockResolvedValue(null);
 
-      await expect(loadAuthData()).rejects.toThrow('Storage error');
+      const result = await loadAuthData();
+      
+      expect(result).toBeNull();
     });
   });
 

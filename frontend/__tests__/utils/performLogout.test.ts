@@ -19,6 +19,8 @@ import { persistor } from "@/context/store";
 import { resetAll } from "@/context/slices/authSlice";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import SecureStorage from "@/utils/secureStorage";
+import * as authTokenStore from "@/utils/authTokenStore";
+import * as exchangedTokenStore from "@/utils/exchangedTokenStore";
 import { router } from "expo-router";
 import { Alert } from "react-native";
 
@@ -34,6 +36,8 @@ jest.mock("@/context/slices/authSlice", () => ({
   resetAll: jest.fn(() => ({ type: "auth/resetAll" })),
 }));
 jest.mock("@/utils/secureStorage");
+jest.mock("@/utils/authTokenStore");
+jest.mock("@/utils/exchangedTokenStore");
 jest.mock("expo-router", () => ({
   router: {
     navigate: jest.fn(),
@@ -49,13 +53,22 @@ describe("performLogout", () => {
 
   it("should perform a successful logout", async () => {
     (authService.logout as jest.Mock).mockResolvedValue(undefined);
+    (authTokenStore.clearAuthDataFromSecureStore as jest.Mock).mockResolvedValue(undefined);
+    (exchangedTokenStore.clearAllExchangedTokens as jest.Mock).mockResolvedValue(undefined);
 
-    await performLogout()(dispatch, () => {}, undefined);
+    const getState = () => ({
+      apps: {
+        apps: [{ appId: 'app1' }, { appId: 'app2' }]
+      }
+    });
+
+    await performLogout()(dispatch, getState as any, undefined);
 
     expect(authService.logout).toHaveBeenCalled();
     expect(persistor.purge).toHaveBeenCalled();
     expect(dispatch).toHaveBeenCalledWith(resetAll());
-    expect(SecureStorage.removeItem).toHaveBeenCalledWith("authData");
+    expect(authTokenStore.clearAuthDataFromSecureStore).toHaveBeenCalled();
+    expect(exchangedTokenStore.clearAllExchangedTokens).toHaveBeenCalledWith(['app1', 'app2']);
     expect(AsyncStorage.removeItem).toHaveBeenCalledWith("user-info");
     expect(AsyncStorage.removeItem).toHaveBeenCalledWith("apps");
     expect(Alert.alert).toHaveBeenCalledWith(
@@ -80,7 +93,13 @@ describe("performLogout", () => {
     (authService.logout as jest.Mock).mockRejectedValue(error);
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
-    await performLogout()(dispatch, () => {}, undefined);
+    const getState = () => ({
+      apps: {
+        apps: []
+      }
+    });
+
+    await performLogout()(dispatch, getState as any, undefined);
 
     expect(authService.logout).toHaveBeenCalled();
     expect(persistor.purge).not.toHaveBeenCalled();

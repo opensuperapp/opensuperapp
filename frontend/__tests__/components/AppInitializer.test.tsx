@@ -45,6 +45,22 @@ jest.mock("@/utils/performLogout", () => ({
   performLogout: jest.fn(() => ({ type: "auth/logout" })),
 }));
 
+jest.mock("@/telemetry/telemetryService", () => ({
+  initializeTelemetry: jest.fn(() => Promise.resolve()),
+}));
+
+jest.mock("@/telemetry/metrics", () => ({
+  recordAppStartTime: jest.fn(),
+}));
+
+jest.mock("@/utils/exchangedTokenRehydrator", () => ({
+  buildAppsWithTokens: jest.fn((apps) => Promise.resolve(apps)),
+}));
+
+jest.mock("@/utils/freshInstall", () => ({
+  handleFreshInstall: jest.fn(() => Promise.resolve()),
+}));
+
 describe("AppInitializer", () => {
   const dispatch = jest.fn(() => Promise.resolve());
   const onReady = jest.fn();
