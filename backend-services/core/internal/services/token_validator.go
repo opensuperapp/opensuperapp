@@ -33,6 +33,7 @@ type RSATokenValidator struct {
 	lastRefreshAttempt time.Time
 	httpClient         *http.Client
 	cachedJWKS         json.RawMessage
+	done               chan struct{}
 }
 
 type TokenClaims struct {
@@ -70,6 +71,7 @@ func NewTokenValidatorWithJWKSURL(jwksURL, issuer, audience string) (TokenValida
 		httpClient: &http.Client{
 			Timeout: defaultHTTPTimeout,
 		},
+		done: make(chan struct{}),
 	}
 
 	// Fetch keys on initialization
@@ -120,6 +122,11 @@ func (tv *RSATokenValidator) ValidateToken(tokenString string) (*TokenClaims, er
 	}
 
 	return claims, nil
+}
+
+// Close stops the background refresh goroutine and releases resources
+func (tv *RSATokenValidator) Close() {
+	close(tv.done)
 }
 
 // getKey returns the public key for the given kid.
@@ -239,9 +246,14 @@ func (tv *RSATokenValidator) backgroundRefresh() {
 	ticker := time.NewTicker(jwksRefreshInterval)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		if err := tv.refreshKeys(); err != nil {
-			slog.Warn("Background JWKS refresh failed", "error", err)
+	for {
+		select {
+		case <-tv.done:
+			return
+		case <-ticker.C:
+			if err := tv.refreshKeys(); err != nil {
+				slog.Warn("Background JWKS refresh failed", "error", err)
+			}
 		}
 	}
 }

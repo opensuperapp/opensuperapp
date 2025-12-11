@@ -40,6 +40,7 @@ func NewRouter(db *gorm.DB, cfg *config.Config) http.Handler {
 	)
 	if err != nil {
 		slog.Error("Failed to initialize External IDP Validator", "error", err)
+		panic("External IDP Validator is required but failed to initialize")
 	} else {
 		slog.Info("External IDP Validator initialized successfully", "issuer", cfg.ExternalIdPIssuer)
 	}
@@ -48,6 +49,7 @@ func NewRouter(db *gorm.DB, cfg *config.Config) http.Handler {
 	internalIDPValidator, err := services.NewTokenValidator(cfg.InternalIdPBaseURL, cfg.InternalIdPIssuer, cfg.InternalIdPAudience)
 	if err != nil {
 		slog.Error("Failed to initialize Internal IDP Validator", "error", err)
+		panic("Internal IDP Validator is required but failed to initialize")
 	} else {
 		slog.Info("Internal IDP Validator initialized successfully", "idp_url", cfg.InternalIdPBaseURL)
 	}
