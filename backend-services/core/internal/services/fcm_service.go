@@ -16,6 +16,8 @@ type FCMService struct {
 	client *messaging.Client
 }
 
+const maxTokensPerBatch = 500
+
 // NewFCMService initializes a new FCM service with Firebase Admin SDK
 func NewFCMService(credentialsPath string) (*FCMService, error) {
 	ctx := context.Background()
@@ -69,43 +71,65 @@ func (s *FCMService) SendNotificationToMultiple(
 		return 0, 0, nil
 	}
 
-	message := &messaging.MulticastMessage{
-		Tokens: tokens,
-		Notification: &messaging.Notification{
-			Title: title,
-			Body:  body,
-		},
-		Data: data,
-		APNS: &messaging.APNSConfig{
-			Payload: &messaging.APNSPayload{
-				Aps: &messaging.Aps{
-					Sound: "default",
-					Badge: intPtr(1),
+	var totalSuccess, totalFailure int
+
+	// Process tokens in batches of maxTokensPerBatch
+	for i := 0; i < len(tokens); i += maxTokensPerBatch {
+		end := i + maxTokensPerBatch
+		if end > len(tokens) {
+			end = len(tokens)
+		}
+
+		batch := tokens[i:end]
+
+		message := &messaging.MulticastMessage{
+			Tokens: batch,
+			Notification: &messaging.Notification{
+				Title: title,
+				Body:  body,
+			},
+			Data: data,
+			APNS: &messaging.APNSConfig{
+				Payload: &messaging.APNSPayload{
+					Aps: &messaging.Aps{
+						Sound: "default",
+						Badge: intPtr(1),
+					},
 				},
 			},
-		},
-		Android: &messaging.AndroidConfig{
-			Priority: "high",
-			Notification: &messaging.AndroidNotification{
-				Sound:        "default",
-				ChannelID:    "default",
-				Priority:     messaging.PriorityHigh,
-				DefaultSound: true,
+			Android: &messaging.AndroidConfig{
+				Priority: "high",
+				Notification: &messaging.AndroidNotification{
+					Sound:        "default",
+					ChannelID:    "default",
+					Priority:     messaging.PriorityHigh,
+					DefaultSound: true,
+				},
 			},
-		},
+		}
+
+		response, err := s.client.SendEachForMulticast(ctx, message)
+		if err != nil {
+			return totalSuccess, totalFailure, fmt.Errorf("error sending multicast message (batch %d-%d): %w", i, end, err)
+		}
+
+		totalSuccess += response.SuccessCount
+		totalFailure += response.FailureCount
+
+		slog.Info("Sent multicast message batch",
+			"batch_start", i,
+			"batch_end", end,
+			"batch_size", len(batch),
+			"success_count", response.SuccessCount,
+			"failure_count", response.FailureCount)
 	}
 
-	response, err := s.client.SendEachForMulticast(ctx, message)
-	if err != nil {
-		return 0, 0, fmt.Errorf("error sending multicast message: %w", err)
-	}
-
-	slog.Info("Successfully sent multicast message",
-		"success_count", response.SuccessCount,
-		"failure_count", response.FailureCount,
+	slog.Info("Successfully sent all multicast messages",
+		"total_success_count", totalSuccess,
+		"total_failure_count", totalFailure,
 		"total_tokens", len(tokens))
 
-	return response.SuccessCount, response.FailureCount, nil
+	return totalSuccess, totalFailure, nil
 }
 
 // Helper functions
