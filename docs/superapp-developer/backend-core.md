@@ -86,11 +86,10 @@ SERVER_PORT=9090                  # HTTP server port
 # External IDP (Asgardeo) - for user authentication
 EXTERNAL_IDP_JWKS_URL=https://api.asgardeo.io/t/your-org/oauth2/jwks
 EXTERNAL_IDP_ISSUER=https://api.asgardeo.io/t/your-org/oauth2/token
-EXTERNAL_IDP_AUDIENCE=your-client-id
 
 # Internal IDP (Token Service) - for service-to-service auth
 INTERNAL_IDP_BASE_URL=http://localhost:8081
-INTERNAL_IDP_ISSUER=superapp-idp
+INTERNAL_IDP_ISSUER=superapp
 INTERNAL_IDP_AUDIENCE=superapp-api
 
 # Service Configuration
