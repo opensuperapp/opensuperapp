@@ -73,12 +73,12 @@ DB_USER=root                      # MySQL username
 DB_PASSWORD=your_password         # MySQL password
 DB_HOST=localhost                 # Database host
 DB_PORT=3306                      # Database port
-DB_NAME=superapp_db              # Database name
-DB_MAX_OPEN_CONNS=25             # Max open connections
-DB_MAX_IDLE_CONNS=5              # Max idle connections
-DB_CONN_MAX_LIFETIME_MIN=30      # Connection max lifetime (minutes)
-DB_CONN_MAX_IDLE_TIME_MIN=5      # Connection max idle time (minutes)
-DB_CONNECT_RETRIES=5             # Connection retry attempts
+DB_NAME=superapp-database         # Database name
+DB_MAX_OPEN_CONNS=25              # Max open connections
+DB_MAX_IDLE_CONNS=5               # Max idle connections
+DB_CONN_MAX_LIFETIME_MIN=30       # Connection max lifetime (minutes)
+DB_CONN_MAX_IDLE_TIME_MIN=5       # Connection max idle time (minutes)
+DB_CONNECT_RETRIES=5              # Connection retry attempts
 
 # Server Configuration
 SERVER_PORT=9090                  # HTTP server port
@@ -185,16 +185,6 @@ go build -o bin/core-service cmd/server/main.go
 
 # Run binary
 ./bin/core-service
-```
-
-### Verify Service is Running
-
-```bash
-# Check health (if health endpoint exists)
-curl http://localhost:9090/api/v1/health
-
-# Check Swagger UI
-open http://localhost:9090/swagger/index.html
 ```
 
 ---
