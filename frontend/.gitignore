@@ -46,6 +46,3 @@ android/
 ios/
 
 app.json
-
-# google service(s) configuration(s)
-google-services/

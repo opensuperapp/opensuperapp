@@ -13,15 +13,15 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
 import React from "react";
 import {
   Modal,
-  StyleSheet,
-  TouchableWithoutFeedback,
-  useColorScheme,
   View,
+  StyleSheet,
+  useColorScheme,
+  TouchableWithoutFeedback,
 } from "react-native";
+import { Colors } from "@/constants/Colors";
 import SignInMessage from "./SignInMessage";
 
 /**

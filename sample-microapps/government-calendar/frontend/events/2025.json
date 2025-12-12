@@ -1,0 +1,260 @@
+[
+  {
+    "uid": "sl_102",
+    "summary": "Duruthu Full Moon Poya Day",
+    "categories": [
+      "Public",
+      "Bank"
+    ],
+    "start": "2025-01-13",
+    "end": "2025-01-14"
+  },
+  {
+    "uid": "sl_103",
+    "summary": "Tamil Thai Pongal Day",
+    "categories": [
+      "Public",
+      "Bank",
+      "Mercantile"
+    ],
+    "start": "2025-01-14",
+    "end": "2025-01-15"
+  },
+  {
+    "uid": "sl_104",
+    "summary": "Independence Day",
+    "categories": [
+      "Public",
+      "Bank",
+      "Mercantile"
+    ],
+    "start": "2025-02-04",
+    "end": "2025-02-05"
+  },
+  {
+    "uid": "sl_105",
+    "summary": "Nawam Full Moon Poya Day",
+    "categories": [
+      "Public",
+      "Bank"
+    ],
+    "start": "2025-02-12",
+    "end": "2025-02-13"
+  },
+  {
+    "uid": "sl_106",
+    "summary": "Maha Sivarathri Day",
+    "categories": [
+      "Public",
+      "Bank"
+    ],
+    "start": "2025-02-26",
+    "end": "2025-02-27"
+  },
+  {
+    "uid": "sl_107",
+    "summary": "Madin Full Moon Poya Day",
+    "categories": [
+      "Public",
+      "Bank"
+    ],
+    "start": "2025-03-13",
+    "end": "2025-03-14"
+  },
+  {
+    "uid": "sl_108",
+    "summary": "Id-Ul-Fitr (Ramazan Festival Day)",
+    "categories": [
+      "Public",
+      "Bank"
+    ],
+    "start": "2025-03-31",
+    "end": "2025-04-01"
+  },
+  {
+    "uid": "sl_109",
+    "summary": "Bak Full Moon Poya Day",
+    "categories": [
+      "Public",
+      "Bank"
+    ],
+    "start": "2025-04-12",
+    "end": "2025-04-13"
+  },
+  {
+    "uid": "sl_110",
+    "summary": "Day prior to Sinhala & Tamil New Year Day",
+    "categories": [
+      "Public",
+      "Bank",
+      "Mercantile"
+    ],
+    "start": "2025-04-13",
+    "end": "2025-04-14"
+  },
+  {
+    "uid": "sl_111",
+    "summary": "Sinhala & Tamil New Year Day",
+    "categories": [
+      "Public",
+      "Bank",
+      "Mercantile"
+    ],
+    "start": "2025-04-14",
+    "end": "2025-04-15"
+  },
+  {
+    "uid": "sl_112",
+    "summary": "Good Friday",
+    "categories": [
+      "Public",
+      "Bank"
+    ],
+    "start": "2025-04-18",
+    "end": "2025-04-19"
+  },
+  {
+    "uid": "sl_113",
+    "summary": "May Day (International Workers\u2019 Day)",
+    "categories": [
+      "Public",
+      "Bank",
+      "Mercantile"
+    ],
+    "start": "2025-05-01",
+    "end": "2025-05-02"
+  },
+  {
+    "uid": "sl_114",
+    "summary": "Vesak Full Moon Poya Day",
+    "categories": [
+      "Public",
+      "Bank"
+    ],
+    "start": "2025-05-12",
+    "end": "2025-05-13"
+  },
+  {
+    "uid": "sl_115",
+    "summary": "Day following Vesak Full Moon Poya Day",
+    "categories": [
+      "Public",
+      "Bank",
+      "Mercantile"
+    ],
+    "start": "2025-05-13",
+    "end": "2025-05-14"
+  },
+  {
+    "uid": "sl_116",
+    "summary": "Id-Ul-Alha (Hadji Festival Day)",
+    "categories": [
+      "Public",
+      "Bank"
+    ],
+    "start": "2025-06-07",
+    "end": "2025-06-08"
+  },
+  {
+    "uid": "sl_117",
+    "summary": "Poson Full Moon Poya Day",
+    "categories": [
+      "Public",
+      "Bank"
+    ],
+    "start": "2025-06-10",
+    "end": "2025-06-11"
+  },
+  {
+    "uid": "sl_118",
+    "summary": "Esala Full Moon Poya Day",
+    "categories": [
+      "Public",
+      "Bank"
+    ],
+    "start": "2025-07-10",
+    "end": "2025-07-11"
+  },
+  {
+    "uid": "sl_119",
+    "summary": "Nikini Full Moon Poya Day",
+    "categories": [
+      "Public",
+      "Bank"
+    ],
+    "start": "2025-08-08",
+    "end": "2025-08-09"
+  },
+  {
+    "uid": "sl_120",
+    "summary": "Milad-Un-Nabi (Holy Prophet\u2019s Birthday)",
+    "categories": [
+      "Public",
+      "Bank",
+      "Mercantile"
+    ],
+    "start": "2025-09-05",
+    "end": "2025-09-06"
+  },
+  {
+    "uid": "sl_121",
+    "summary": "Binara Full Moon Poya Day",
+    "categories": [
+      "Public",
+      "Bank"
+    ],
+    "start": "2025-09-07",
+    "end": "2025-09-08"
+  },
+  {
+    "uid": "sl_122",
+    "summary": "Vap Full Moon Poya Day",
+    "categories": [
+      "Public",
+      "Bank"
+    ],
+    "start": "2025-10-06",
+    "end": "2025-10-07"
+  },
+  {
+    "uid": "sl_123",
+    "summary": "Deepavali Festival Day",
+    "categories": [
+      "Public",
+      "Bank"
+    ],
+    "start": "2025-10-20",
+    "end": "2025-10-21"
+  },
+  {
+    "uid": "sl_124",
+    "summary": "Il Full Moon Poya Day",
+    "categories": [
+      "Public",
+      "Bank"
+    ],
+    "start": "2025-11-05",
+    "end": "2025-11-06"
+  },
+  {
+    "uid": "sl_125",
+    "summary": "Unduvap Full Moon Poya Day",
+    "categories": [
+      "Public",
+      "Bank"
+    ],
+    "start": "2025-12-04",
+    "end": "2025-12-05"
+  },
+  {
+    "uid": "sl_126",
+    "summary": "Christmas Day",
+    "categories": [
+      "Public",
+      "Bank",
+      "Mercantile"
+    ],
+    "start": "2025-12-25",
+    "end": "2025-12-26"
+  }
+]

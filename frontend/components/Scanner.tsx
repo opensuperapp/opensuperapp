@@ -13,18 +13,18 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
-import { CameraType, CameraView, useCameraPermissions } from "expo-camera";
-import { useEffect, useRef, useState } from "react";
 import {
+  View,
   AppState,
   Platform,
   StatusBar,
   StyleSheet,
-  Text,
   TouchableOpacity,
-  View,
+  Text,
 } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { CameraType, CameraView, useCameraPermissions } from "expo-camera";
+import { Colors } from "@/constants/Colors";
 import CameraPermission from "./CameraPermission";
 
 type ScannerProps = {

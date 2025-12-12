@@ -18,7 +18,7 @@ The `.maestro` directory is structured to hold all the necessary files for E2E t
 
 ```
 maestro/
-├── library.yml             #e2e test for the Library tab
+├── library.yml             # example E2E test file
 └── ... (other test files)
 ```
 
@@ -49,7 +49,7 @@ For example, to run the `library.yml` test:
 maestro test library.yml -e BUNDLE_IDENTIFIER=com.example.yourapp
 ```
 
-Note that the `library.yml` file requires the `BUNDLE_IDENTIFIER` variable to be injected into it.
+Note: the `library.yml` file requires the `BUNDLE_IDENTIFIER` variable to be injected.
 
 ### Injecting Variables
 

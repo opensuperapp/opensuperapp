@@ -16,31 +16,32 @@
 import { AUTH_CONFIG } from "@/config/authConfig";
 import {
   APPS,
+  AUTH_DATA,
+  AUTHENTICATOR_APP_ID,
+  BASE_URL,
   CLIENT_ID,
   LOGOUT_URL,
   REDIRECT_URI,
   SUCCESS,
   TOKEN_URL,
   USER_INFO,
+  USE_BACKEND_TOKEN_EXCHANGE,
 } from "@/constants/Constants";
 import { updateExchangedToken } from "@/context/slices/appSlice";
 import { AppDispatch } from "@/context/store";
-import { AppScope } from "@/types/appConfig.types";
 import createAuthRequestBody from "@/utils/authBody";
+import SecureStorage from "@/utils/secureStorage";
 import {
-  clearAuthDataFromSecureStore,
-  loadAuthDataFromSecureStore,
   saveAuthDataToSecureStore,
-  SecureAuthData,
+  loadAuthDataFromSecureStore,
+  clearAuthDataFromSecureStore,
 } from "@/utils/authTokenStore";
-import { clearAllExchangedTokens } from "@/utils/exchangedTokenStore";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import dayjs from "dayjs";
 import { jwtDecode } from "jwt-decode";
 import { Alert } from "react-native";
 import { logout as appLogout, AuthorizeResult } from "react-native-app-auth";
-
+import { recordAuthLogin, recordAuthTokenRefresh } from "@/telemetry/metrics";
 const GRANT_TYPE_AUTHORIZATION_CODE = "authorization_code";
 const GRANT_TYPE_REFRESH_TOKEN = "refresh_token";
 const GRANT_TYPE_TOKEN_EXCHANGE =
@@ -48,7 +49,8 @@ const GRANT_TYPE_TOKEN_EXCHANGE =
 const SUBJECT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt";
 const REQUESTED_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token";
 const MILLISECONDS_IN_A_SECOND = 1000;
-const SCOPE = "openid email groups profile";
+const SCOPE = "openid email groups";
+
 let refreshPromise: Promise<AuthData | null> | null = null;
 
 export interface DecodedIdToken {
@@ -104,7 +106,10 @@ export const getAccessToken = async (
           expiresAt: exp * MILLISECONDS_IN_A_SECOND,
         };
 
-        await saveAuthDataToSecureStore(authData as SecureAuthData); // Persist data
+        await saveAuthDataToSecureStore(authData); // Persist data
+
+        // Record login metric
+        recordAuthLogin("asgardeo");
         return authData;
       }
     } catch (err) {
@@ -124,13 +129,12 @@ export const refreshAccessToken = async (
 
   refreshPromise = (async () => {
     try {
-      const storedData = await loadAuthDataFromSecureStore();
-      if (!storedData) {
+      const authData = await loadAuthDataFromSecureStore();
+      if (!authData) {
         refreshPromise = null;
         return null;
       }
 
-      const authData: AuthData = storedData;
       if (!authData.refreshToken) {
         refreshPromise = null;
         return null;
@@ -180,11 +184,17 @@ export const refreshAccessToken = async (
           expiresAt: exp * MILLISECONDS_IN_A_SECOND,
         };
 
-        await saveAuthDataToSecureStore(updatedAuthData as SecureAuthData);
+        await saveAuthDataToSecureStore(updatedAuthData);
+
+        // Record token refresh metric
+        recordAuthTokenRefresh(true);
 
         refreshPromise = null;
         return updatedAuthData;
       }
+
+      // Record failed token refresh
+      recordAuthTokenRefresh(false);
 
       refreshPromise = null;
       return null;
@@ -212,16 +222,12 @@ export const refreshAccessToken = async (
 export const logout = async () => {
   try {
     // Retrieve stored authentication data
-    const secureData = await loadAuthDataFromSecureStore();
-    if (!secureData) {
+    const authData = await loadAuthDataFromSecureStore();
+    if (!authData) {
       console.error("No stored authentication data found.");
       return;
     }
-    const idToken = secureData?.idToken;
-    const appsJson = await AsyncStorage.getItem(APPS); // capture appIds BEFORE clearing APPS
-    const appIds = appsJson
-      ? (JSON.parse(appsJson) as { appId: string }[]).map((a) => a.appId)
-      : [];
+    const { idToken } = authData;
 
     if (!LOGOUT_URL) {
       throw new Error(
@@ -232,22 +238,21 @@ export const logout = async () => {
     // If idToken is missing, proceed with local logout
     if (!idToken) {
       console.warn("No idToken found. Performing local logout only.");
-      await clearAllExchangedTokens(appIds);
       await clearAuthDataFromSecureStore();
-      await AsyncStorage.removeItem(APPS);
-      await AsyncStorage.removeItem(USER_INFO);
+      await SecureStorage.removeItem(APPS);
+      await SecureStorage.removeItem(USER_INFO);
       return;
     }
 
     // Perform logout request
     await appLogout(AUTH_CONFIG, {
-      idToken,
+      idToken: idToken,
       postLogoutRedirectUrl: REDIRECT_URI,
     });
-    await clearAllExchangedTokens(appIds);
+
     await clearAuthDataFromSecureStore();
-    await AsyncStorage.removeItem(APPS);
-    await AsyncStorage.removeItem(USER_INFO);
+    await SecureStorage.removeItem(APPS);
+    await SecureStorage.removeItem(USER_INFO);
   } catch (error) {
     console.error("Error logging out from Asgardeo:", error);
     Alert.alert(
@@ -260,8 +265,64 @@ export const logout = async () => {
 
 // Restore auth data form secure storage
 export const loadAuthData = async (): Promise<AuthData | null> => {
-  const secureData = await loadAuthDataFromSecureStore();
-  return secureData ? (secureData as AuthData) : null;
+  return await loadAuthDataFromSecureStore();
+};
+
+export const getBackendToken = async (
+  microAppId: string,
+  onLogout: () => Promise<void>
+): Promise<string | null> => {
+  try {
+    const authData = await loadAuthDataFromSecureStore();
+    if (!authData) {
+      console.error("No stored authentication data found.");
+      return null;
+    }
+
+    let { accessToken } = authData;
+    if (!accessToken) {
+      console.error("No access token found in stored authentication data.");
+      return null;
+    }
+
+    if (isAccessTokenExpired(accessToken)) {
+      const newAuthData = await refreshAccessToken(onLogout);
+      if (!newAuthData?.accessToken) {
+        return null;
+      }
+      accessToken = newAuthData.accessToken;
+    }
+
+    const response = await axios.post(
+      `${BASE_URL}/token/exchange`,
+      {
+        microapp_id: microAppId,
+        scope: "backend_access",
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          // "x-jwt-assertion": accessToken, // for local development purposes
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (response.status === 200 && response.data) {
+      return response.data.access_token;
+    } else {
+      console.error(
+        `Backend token request failed: ${response.status} - ${response.data}`
+      );
+      return null;
+    }
+  } catch (error: any) {
+    console.error("Error fetching backend token:", error);
+    if (error.response?.status === 401) {
+      await onLogout();
+    }
+    return null;
+  }
 };
 
 // token exchange
@@ -270,13 +331,16 @@ export const tokenExchange = async (
   clientId: string,
   exchangedToken: string,
   appId: string,
-  onLogout: () => Promise<void>,
-  appScopes?: AppScope[]
+  onLogout: () => Promise<void>
 ) => {
   try {
-    // Find and append app specific scopes if available
-    const appScope = appScopes?.find((scope) => scope.appId === appId);
-    const selectedScopes = appScope ? `${SCOPE} ${appScope.scopes}` : SCOPE;
+    if (USE_BACKEND_TOKEN_EXCHANGE) {
+      const backendToken = await getBackendToken(appId, onLogout);
+      if (backendToken) {
+        dispatch(updateExchangedToken({ appId, exchangedToken: backendToken }));
+      }
+      return backendToken;
+    }
 
     if (!clientId || clientId === "CLIENT_ID") return null;
 
@@ -286,13 +350,13 @@ export const tokenExchange = async (
     }
 
     // Retrieve stored authentication data
-    const secureData = await loadAuthDataFromSecureStore();
-    if (!secureData?.accessToken) {
+    const authData = await loadAuthDataFromSecureStore();
+    if (!authData) {
       console.error("No stored authentication data found.");
       return null;
     }
 
-    let accessToken = secureData.accessToken;
+    let { accessToken } = authData;
     if (!accessToken) {
       console.error("No access token found in stored authentication data.");
       return null;
@@ -312,6 +376,10 @@ export const tokenExchange = async (
       }
       accessToken = newAuthData.accessToken;
     }
+
+    // Add internal_login scope for Authenticator micro app
+    const selectedScopes =
+      appId === AUTHENTICATOR_APP_ID ? `${SCOPE} internal_login` : SCOPE;
 
     // Function to attempt token exchange, with retry on 401 error
     const attemptTokenExchange = async (token: string) => {
@@ -399,6 +467,20 @@ const isAccessTokenExpired = (accessToken: string): boolean => {
 };
 
 /**
+ * Check if token is expired or expiring soon (within 30 seconds)
+ */
+export const isTokenExpiringSoon = (token: string): boolean => {
+  try {
+    const decoded = jwtDecode<{ exp: number }>(token);
+    const now = Math.floor(Date.now() / 1000);
+    const bufferTime = 60; // 60 seconds buffer
+    return now >= decoded.exp - bufferTime;
+  } catch {
+    return true; // Assume expired if decoding fails
+  }
+};
+
+/**
  * Process authentication data from react-native-app-auth
  */
 export const processNativeAuthResult = async (
@@ -418,7 +500,7 @@ export const processNativeAuthResult = async (
         expiresAt: exp * MILLISECONDS_IN_A_SECOND,
       };
 
-      await saveAuthDataToSecureStore(authData as SecureAuthData);
+      await saveAuthDataToSecureStore(authData);
       return authData;
     } else {
       console.error("Missing required tokens in auth result");

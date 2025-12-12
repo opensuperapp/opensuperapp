@@ -1,0 +1,13 @@
+[
+  {"appId":"app-1","name":"App 1","description":"Desc 1","promoText":"","iconUrl":"/icons/1.png","bannerImageUrl":"/banners/1.png","isMandatory":0,"versions":[],"roles":[]},
+  {"appId":"app-2","name":"App 2","description":"Desc 2","promoText":"","iconUrl":"/icons/2.png","bannerImageUrl":"/banners/2.png","isMandatory":0,"versions":[],"roles":[]},
+  {"appId":"app-3","name":"App 3","description":"Desc 3","promoText":"","iconUrl":"/icons/3.png","bannerImageUrl":"/banners/3.png","isMandatory":0,"versions":[],"roles":[]},
+  {"appId":"app-4","name":"App 4","description":"Desc 4","promoText":"","iconUrl":"/icons/4.png","bannerImageUrl":"/banners/4.png","isMandatory":0,"versions":[],"roles":[]},
+  {"appId":"app-5","name":"App 5","description":"Desc 5","promoText":"","iconUrl":"/icons/5.png","bannerImageUrl":"/banners/5.png","isMandatory":0,"versions":[],"roles":[]},
+  {"appId":"app-6","name":"App 6","description":"Desc 6","promoText":"","iconUrl":"/icons/6.png","bannerImageUrl":"/banners/6.png","isMandatory":0,"versions":[],"roles":[]},
+  {"appId":"app-7","name":"App 7","description":"Desc 7","promoText":"","iconUrl":"/icons/7.png","bannerImageUrl":"/banners/7.png","isMandatory":0,"versions":[],"roles":[]},
+  {"appId":"app-8","name":"App 8","description":"Desc 8","promoText":"","iconUrl":"/icons/8.png","bannerImageUrl":"/banners/8.png","isMandatory":0,"versions":[],"roles":[]},
+  {"appId":"app-9","name":"App 9","description":"Desc 9","promoText":"","iconUrl":"/icons/9.png","bannerImageUrl":"/banners/9.png","isMandatory":0,"versions":[],"roles":[]},
+  {"appId":"app-10","name":"App 10","description":"Desc 10","promoText":"","iconUrl":"/icons/10.png","bannerImageUrl":"/banners/10.png","isMandatory":0,"versions":[],"roles":[]},
+  {"appId":"app-11","name":"App 11","description":"Desc 11","promoText":"","iconUrl":"/icons/11.png","bannerImageUrl":"/banners/11.png","isMandatory":0,"versions":[],"roles":[]}
+]

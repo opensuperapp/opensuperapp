@@ -1,8 +1,0 @@
-[package]
-org = "opensuperapp"
-name = "superapp_mobile_service"
-version = "1.0.0"
-distribution = "2201.12.10"
-
-[build-options]
-observabilityIncluded = true

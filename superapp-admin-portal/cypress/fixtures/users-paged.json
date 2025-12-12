@@ -1,0 +1,12 @@
+{
+  "page": 1,
+  "pageSize": 5,
+  "total": 8,
+  "items": [
+    {"workEmail":"alice@example.com","firstName":"Alice","lastName":"Anderson","userThumbnail":"/avatars/alice.png","location":"NY"},
+    {"workEmail":"bob@example.com","firstName":"Bob","lastName":"Baker","userThumbnail":"/avatars/bob.png","location":"SF"},
+    {"workEmail":"carol@example.com","firstName":"Carol","lastName":"Clark","userThumbnail":"/avatars/carol.png","location":"LA"},
+    {"workEmail":"dave@example.com","firstName":"Dave","lastName":"Dawson","userThumbnail":"/avatars/dave.png","location":"NY"},
+    {"workEmail":"erin@example.com","firstName":"Erin","lastName":"Edwards","userThumbnail":"/avatars/erin.png","location":"SF"}
+  ]
+}

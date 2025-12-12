@@ -1,0 +1,177 @@
+[
+  {
+    "uid": "sl_26",
+    "summary": "Tamil Thai Pongal Day",
+    "categories": ["Public", "Bank", "Mercantile"],
+    "start": "2022-01-14",
+    "end": "2022-01-15"
+  },
+  {
+    "uid": "sl_27",
+    "summary": "Duruthu Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2022-01-17",
+    "end": "2022-01-18"
+  },
+  {
+    "uid": "sl_28",
+    "summary": "Independence Day",
+    "categories": ["Public", "Bank", "Mercantile"],
+    "start": "2022-02-04",
+    "end": "2022-02-05"
+  },
+  {
+    "uid": "sl_29",
+    "summary": "Nawam Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2022-02-16",
+    "end": "2022-02-17"
+  },
+  {
+    "uid": "sl_30",
+    "summary": "Maha sivarathri Day",
+    "categories": ["Public", "Bank"],
+    "start": "2022-03-01",
+    "end": "2022-03-02"
+  },
+  {
+    "uid": "sl_31",
+    "summary": "Madin Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2022-03-17",
+    "end": "2022-03-18"
+  },
+  {
+    "uid": "sl_32",
+    "summary": "Day prior to Sinhala & Tamil New Year Day",
+    "categories": ["Public", "Bank", "Mercantile"],
+    "start": "2022-04-13",
+    "end": "2022-04-14"
+  },
+  {
+    "uid": "sl_33",
+    "summary": "Sinhala & Tamil New Year Day",
+    "categories": ["Public", "Bank", "Mercantile"],
+    "start": "2022-04-14",
+    "end": "2022-04-15"
+  },
+  {
+    "uid": "sl_34",
+    "summary": "Good Friday",
+    "categories": ["Public", "Bank"],
+    "start": "2022-04-15",
+    "end": "2022-04-16"
+  },
+  {
+    "uid": "sl_35",
+    "summary": "Bak Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2022-04-16",
+    "end": "2022-04-17"
+  },
+  {
+    "uid": "sl_36",
+    "summary": "May Day",
+    "categories": ["Public", "Bank", "Mercantile"],
+    "start": "2022-05-01",
+    "end": "2022-05-02"
+  },
+  {
+    "uid": "sl_37",
+    "summary": "Id-Ul-Fitr (Ramazan Festival Day)",
+    "categories": ["Public", "Bank"],
+    "start": "2022-05-03",
+    "end": "2022-05-04"
+  },
+  {
+    "uid": "sl_38",
+    "summary": "Vesak Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2022-05-15",
+    "end": "2022-05-16"
+  },
+  {
+    "uid": "sl_39",
+    "summary": "Day following Vesak Full Moon Poya Day",
+    "categories": ["Public", "Bank", "Mercantile"],
+    "start": "2022-05-16",
+    "end": "2022-05-17"
+  },
+  {
+    "uid": "sl_40",
+    "summary": "Poson Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2022-06-14",
+    "end": "2022-06-15"
+  },
+  {
+    "uid": "sl_41",
+    "summary": "Id-Ul-Alha (Hadji Festival Day)",
+    "categories": ["Public", "Bank"],
+    "start": "2022-07-10",
+    "end": "2022-07-11"
+  },
+  {
+    "uid": "sl_42",
+    "summary": "Esala Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2022-07-13",
+    "end": "2022-07-14"
+  },
+  {
+    "uid": "sl_43",
+    "summary": "Nikini Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2022-08-11",
+    "end": "2022-08-12"
+  },
+  {
+    "uid": "sl_44",
+    "summary": "Binara Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2022-09-10",
+    "end": "2022-09-11"
+  },
+  {
+    "uid": "sl_45",
+    "summary": "Vap Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2022-10-09",
+    "end": "2022-10-10"
+  },
+  {
+    "uid": "sl_46",
+    "summary": "Milad-Un-Nabi (Holy Prophet\u2019s Birthday)",
+    "categories": ["Public", "Bank", "Mercantile"],
+    "start": "2022-10-09",
+    "end": "2022-10-10"
+  },
+  {
+    "uid": "sl_47",
+    "summary": "Deepavali Festival Day",
+    "categories": ["Public", "Bank"],
+    "start": "2022-10-24",
+    "end": "2022-10-25"
+  },
+  {
+    "uid": "sl_48",
+    "summary": "Il Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2022-11-07",
+    "end": "2022-11-08"
+  },
+  {
+    "uid": "sl_49",
+    "summary": "Unduvap Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2022-12-07",
+    "end": "2022-12-08"
+  },
+  {
+    "uid": "sl_50",
+    "summary": "Christmas Day",
+    "categories": ["Public", "Bank", "Mercantile"],
+    "start": "2022-12-25",
+    "end": "2022-12-26"
+  }
+]

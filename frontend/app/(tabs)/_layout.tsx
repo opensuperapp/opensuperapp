@@ -20,6 +20,8 @@ import { useRestoreLastTab } from "@/hooks/useRestoreLastTab";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { Platform } from "react-native";
+import { Href } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type TabType = {
   name: string;
@@ -28,6 +30,7 @@ type TabType = {
     title: string;
     icon: keyof typeof Ionicons.glyphMap;
     iconFocused: keyof typeof Ionicons.glyphMap;
+    href: Href | null;
   };
 };
 
@@ -39,15 +42,7 @@ const tabs: TabType[] = [
       title: "Feed",
       icon: "layers-outline",
       iconFocused: "layers-sharp",
-    },
-  },
-  {
-    name: "library",
-    options: {
-      headerShown: true,
-      title: "Library",
-      icon: "book-outline",
-      iconFocused: "book",
+      href: "/",
     },
   },
   {
@@ -57,6 +52,7 @@ const tabs: TabType[] = [
       title: "My Apps",
       icon: "apps-outline",
       iconFocused: "apps",
+      href: "/apps",
     },
   },
   {
@@ -66,6 +62,7 @@ const tabs: TabType[] = [
       title: "Profile",
       icon: "person-circle-outline",
       iconFocused: "person-circle",
+      href: "/profile",
     },
   },
 ];
@@ -73,6 +70,7 @@ const tabs: TabType[] = [
 export default function TabLayout() {
   // Load last active tab and navigate to it
   useRestoreLastTab();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -84,6 +82,18 @@ export default function TabLayout() {
         tabBarStyle: Platform.select({
           ios: {
             position: "absolute",
+            paddingTop: 5,
+          },
+          android: {
+            height: 60 + insets.bottom,
+            paddingTop: 5,
+            paddingBottom: insets.bottom,
+            borderTopWidth: 0,
+            elevation: 0,
+          },
+          default: {
+            height: 60,
+            paddingTop: 5,
           },
         }),
       }}
@@ -97,6 +107,7 @@ export default function TabLayout() {
             headerShown: tab.options.headerShown,
             title: tab.options.title,
             headerTitleAllowFontScaling: false,
+            href: tab.options.href,
             tabBarIcon: ({ focused, color }) => (
               <Ionicons
                 name={focused ? tab.options.iconFocused : tab.options.icon}

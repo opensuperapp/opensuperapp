@@ -1,0 +1,177 @@
+[
+  {
+    "uid": "sl_77",
+    "summary": "Tamil Thai Pongal Day",
+    "categories": ["Public", "Bank", "Mercantile"],
+    "start": "2024-01-15",
+    "end": "2024-01-16"
+  },
+  {
+    "uid": "sl_78",
+    "summary": "Duruthu Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2024-01-25",
+    "end": "2024-01-26"
+  },
+  {
+    "uid": "sl_79",
+    "summary": "Independence Day",
+    "categories": ["Public", "Bank", "Mercantile"],
+    "start": "2024-02-04",
+    "end": "2024-02-05"
+  },
+  {
+    "uid": "sl_80",
+    "summary": "Nawam Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2024-02-23",
+    "end": "2024-02-24"
+  },
+  {
+    "uid": "sl_81",
+    "summary": "Maha Sivarathri Day",
+    "categories": ["Public", "Bank"],
+    "start": "2024-03-08",
+    "end": "2024-03-09"
+  },
+  {
+    "uid": "sl_82",
+    "summary": "Madin Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2024-03-24",
+    "end": "2024-03-25"
+  },
+  {
+    "uid": "sl_83",
+    "summary": "Good Friday",
+    "categories": ["Public", "Bank"],
+    "start": "2024-03-29",
+    "end": "2024-03-30"
+  },
+  {
+    "uid": "sl_84",
+    "summary": "Id-Ul-Fitr (Ramazan Festival Day)",
+    "categories": ["Public", "Bank"],
+    "start": "2024-04-11",
+    "end": "2024-04-12"
+  },
+  {
+    "uid": "sl_85",
+    "summary": "Day prior to Sinhala & Tamil New Year Day",
+    "categories": ["Public", "Bank", "Mercantile"],
+    "start": "2024-04-12",
+    "end": "2024-04-13"
+  },
+  {
+    "uid": "sl_86",
+    "summary": "Sinhala & Tamil New Year Day",
+    "categories": ["Public", "Bank", "Mercantile"],
+    "start": "2024-04-13",
+    "end": "2024-04-14"
+  },
+  {
+    "uid": "sl_87",
+    "summary": "Bak Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2024-04-23",
+    "end": "2024-04-24"
+  },
+  {
+    "uid": "sl_88",
+    "summary": "May Day (International Workers\u2019 Day)",
+    "categories": ["Public", "Bank", "Mercantile"],
+    "start": "2024-05-01",
+    "end": "2024-05-02"
+  },
+  {
+    "uid": "sl_89",
+    "summary": "Vesak Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2024-05-23",
+    "end": "2024-05-24"
+  },
+  {
+    "uid": "sl_90",
+    "summary": "Day following Vesak Full Moon Poya Day",
+    "categories": ["Public", "Bank", "Mercantile"],
+    "start": "2024-05-24",
+    "end": "2024-05-25"
+  },
+  {
+    "uid": "sl_91",
+    "summary": "Id-Ul-Alha (Hadji Festival Day)",
+    "categories": ["Public", "Bank"],
+    "start": "2024-06-17",
+    "end": "2024-06-18"
+  },
+  {
+    "uid": "sl_92",
+    "summary": "Poson Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2024-06-21",
+    "end": "2024-06-22"
+  },
+  {
+    "uid": "sl_93",
+    "summary": "Esala Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2024-07-20",
+    "end": "2024-07-21"
+  },
+  {
+    "uid": "sl_94",
+    "summary": "Nikini Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2024-08-19",
+    "end": "2024-08-20"
+  },
+  {
+    "uid": "sl_95",
+    "summary": "Milad-Un-Nabi (Holy Prophet\u2019s Birthday)",
+    "categories": ["Public", "Bank", "Mercantile"],
+    "start": "2024-09-16",
+    "end": "2024-09-17"
+  },
+  {
+    "uid": "sl_96",
+    "summary": "Binara Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2024-09-17",
+    "end": "2024-09-18"
+  },
+  {
+    "uid": "sl_97",
+    "summary": "Vap Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2024-10-17",
+    "end": "2024-10-18"
+  },
+  {
+    "uid": "sl_98",
+    "summary": "Deepavali Festival Day",
+    "categories": ["Public", "Bank"],
+    "start": "2024-10-31",
+    "end": "2024-11-01"
+  },
+  {
+    "uid": "sl_99",
+    "summary": "Il Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2024-11-15",
+    "end": "2024-11-16"
+  },
+  {
+    "uid": "sl_100",
+    "summary": "Unduvap Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2024-12-14",
+    "end": "2024-12-15"
+  },
+  {
+    "uid": "sl_101",
+    "summary": "Christmas Day",
+    "categories": ["Public", "Bank", "Mercantile"],
+    "start": "2024-12-25",
+    "end": "2024-12-26"
+  }
+]

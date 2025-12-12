@@ -1,0 +1,113 @@
+site_name: Open SuperApp Framework 
+theme:
+  name: material
+  palette:
+    # Palette toggle for automatic mode
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+    
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: teal
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+  
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.footer
+    - toc.integrate
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+  
+  font:
+    text: Inter
+    code: JetBrains Mono
+  
+  icon:
+    logo: material/rocket-launch
+    repo: fontawesome/brands/github
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation: getting-started/installation.md
+  - For SuperApp Developers:
+      - Deployment Guide: superapp-developer/deployment.md
+      - Core Service: superapp-developer/backend-core.md
+      - Token Service: superapp-developer/backend-token-service.md
+      - Mobile App: superapp-developer/mobile-app.md
+      - Pluggable Services: superapp-developer/pluggable-services.md
+      - Observability Stack: superapp-developer/observability.md
+      - Architecture: architecture/overview.md
+  - For MicroApp Developers:
+      - Getting Started: microapp-developer/getting-started.md
+      - Push Notifications: microapp-developer/push-notifications.md
+  - For Admins:
+      - Admin Portal Guide: admin/portal-guide.md
+  - Bridge API Reference:
+    - Bridge Guide: microapp-developer/bridge-api.md
+  - Backend API Reference:
+      - Core Service API: api/reference.md
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - admonition
+  - pymdownx.details
+  - def_list
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - footnotes
+  - pymdownx.critic:
+      mode: accept
+  - pymdownx.caret
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.tilde
+  - attr_list
+  - md_in_html
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - tables
+  - attr_list
+  - md_in_html
+
+plugins:
+  - search
+
+extra:
+  generator: false

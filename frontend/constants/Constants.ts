@@ -13,21 +13,20 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Platform } from "react-native";
 
-// Environment flags
-export const TRUE = "true";
-export const FALSE = "false";
+import { Platform } from "react-native";
 
 export const CLIENT_ID = process.env.EXPO_PUBLIC_CLIENT_ID ?? "";
 export const REDIRECT_URI = process.env.EXPO_PUBLIC_REDIRECT_URI ?? "";
 export const TOKEN_URL = process.env.EXPO_PUBLIC_TOKEN_URL ?? "";
 export const LOGOUT_URL = process.env.EXPO_PUBLIC_LOGOUT_URL ?? "";
+export const AUTHORIZATION_URL = process.env.EXPO_PUBLIC_AUTHORIZATION_URL ?? "";
+export const REVOCATION_URL = process.env.EXPO_PUBLIC_REVOCATION_URL ?? "";
+export const ISSUER = process.env.EXPO_PUBLIC_ISSUER ?? "";
 export const BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL ?? "";
 export const MICRO_APP_STORAGE_DIR =
   process.env.EXPO_PUBLIC_MICRO_APP_STORAGE_DIR ?? "";
 export const ARTICLE_BASE_URL = process.env.EXPO_PUBLIC_ARTICLE_BASE_URL ?? "";
-export const LIBRARY_URL = process.env.EXPO_PUBLIC_LIBRARY_URL ?? "";
 export const GOOGLE_IOS_CLIENT_ID =
   process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? "";
 export const GOOGLE_ANDROID_CLIENT_ID =
@@ -40,14 +39,14 @@ export const GOOGLE_REFRESH_TOKEN_KEY =
   process.env.EXPO_PUBLIC_GOOGLE_REFRESH_TOKEN_KEY ?? "";
 export const GOOGLE_USER_INFO_KEY =
   process.env.EXPO_PUBLIC_GOOGLE_USER_INFO_KEY ?? "";
-export const LIBRARY_ARTICLE_FALLBACK_IMAGE =
-  process.env.EXPO_PUBLIC_LIBRARY_ARTICLE_FALLBACK_IMAGE ?? "";
-// Please note that the developer app-related URL is required only for the WSO2 Super App.
-export const DEVELOPER_APP_IOS_DEFAULT_URL =
-  process.env.EXPO_PUBLIC_DEVELOPER_APP_IOS_DEFAULT_URL ?? "";
-export const DEVELOPER_APP_ANDROID_DEFAULT_URL =
-  process.env.EXPO_PUBLIC_DEVELOPER_APP_ANDROID_DEFAULT_URL ?? "";
-export const ENABLE_FIREBASE = process.env.EXPO_PUBLIC_ENABLE_FIREBASE === TRUE;
+export const DEVELOPER_APP_DEFAULT_URL =
+  process.env.EXPO_PUBLIC_DEVELOPER_APP_DEFAULT_URL ?? "";
+// Interpret env as boolean: default true; set to "false" to disable
+export const USE_BACKEND_TOKEN_EXCHANGE =
+  (process.env.EXPO_PUBLIC_USE_BACKEND_TOKEN_EXCHANGE ?? "true") === "true";
+// Authenticator Micro App ID
+export const AUTHENTICATOR_APP_ID =
+  process.env.EXPO_PUBLIC_AUTHENTICATOR_APP_ID ?? "";
 export const GOOGLE_SCOPES = [
   "openid",
   "profile",
@@ -68,9 +67,6 @@ export const GOOGLE_DRIVE_FILE_DOWNLOAD_URL = (fileId: string) =>
 export const GOOGLE_TOKEN_INFO_URL = (accessToken: string) =>
   `${process.env.EXPO_PUBLIC_GOOGLE_TOKEN_INFO_URL ?? ""}${accessToken}`;
 export const EVENTS_URL = process.env.EXPO_PUBLIC_EVENTS_URL ?? "";
-export const LOCAL_NOTIFICATIONS_KEY =
-  process.env.EXPO_PUBLIC_LOCAL_NOTIFICATIONS_KEY ?? "";
-export const NOTIFICATION_LEAD_TIME_MINUTES = 10;
 
 export const SUCCESS = "success";
 export const APPS = "apps";
@@ -81,36 +77,35 @@ export const USER_CONFIGURATIONS = "user-configurations";
 export const APP_LIST_CONFIG_KEY = "superapp.apps.list";
 export const USER_INFO = "user-info";
 export const LAST_ACTIVE_PATH_KEY = "last-active-path";
-export const LIBRARY_STORAGE_KEY = "cached_library_feed";
-export const LIBRARY_TIMESTAMP_KEY = "cached_library_timestamp";
-export const LIBRARY_ARTICLE_FETCH_LIMIT = 12;
 export const EVENTS_STORAGE_KEY = "cached_events_feed";
 export const EVENTS_TIMESTAMP_KEY = "cached_events_timestamp";
 export const NEWS_URL = process.env.EXPO_PUBLIC_NEWS_URL ?? "";
 export const NEWS_STORAGE_KEY = "cached_news_feed";
 export const NEWS_TIMESTAMP_KEY = "cached_news_timestamp";
-export const APP_UPDATE_CHECK_TIMESTAMP_KEY = "app_update_check_timestamp";
+export const ALLOWED_BRIDGE_METHODS_CONFIG_KEY = "allowedFunctions";
+export const isAndroid = Platform.OS === "android";
+export const isIos = Platform.OS === "ios";
 export const FULL_SCREEN_VIEWING_MODE = "fullscreen";
 export const DEFAULT_VIEWING_MODE = "default";
-
 // Keys for Secure Store
-export const LAST_SENT_FCM_TOKEN = "last_sent_fcm_token";
 export const ACCESS_TOKEN = "secure_access_token";
 export const REFRESH_TOKEN = "secure_refresh_token";
 export const ID_TOKEN = "secure_id_token";
 export const EXPIRES_AT_KEY = "secure_expires_at";
 export const AUTH_EMAIL_KEY = "secure_auth_email";
-
-// Android Notification Configuration
-export const NOTIFICATION_CHANNEL_ID =
-  process.env.EXPO_PUBLIC_NOTIFICATION_CHANNEL_ID ??
-  "default_superapp_notification_channel";
-export const NOTIFICATION_CHANNEL_NAME =
-  process.env.EXPO_PUBLIC_NOTIFICATION_CHANNEL_NAME ??
-  "Default SuperApp Notification Channel";
-export const ANDROID_NOTIFICATION_SMALL_ICON_ACCENT_COLOR =
-  process.env.EXPO_PUBLIC_ANDROID_NOTIFICATION_SMALL_ICON_ACCENT_COLOR;
-
-// Platform
-export const isAndroid = Platform.OS === "android";
-export const isIos = Platform.OS === "ios";
+// OpenTelemetry Configuration
+export const OTEL_ENABLED = process.env.EXPO_PUBLIC_OTEL_ENABLED === "true";
+export const OTEL_COLLECTOR_URL =
+  process.env.EXPO_PUBLIC_OTEL_COLLECTOR_URL ?? "http://10.0.2.2:4318/";
+export const OTEL_SERVICE_NAME =
+  process.env.EXPO_PUBLIC_OTEL_SERVICE_NAME ?? "superapp-mobile";
+export const OTEL_SERVICE_VERSION =
+  process.env.EXPO_PUBLIC_OTEL_SERVICE_VERSION ?? "1.0.0";
+// Use API key authentication for secure OTLP endpoint
+// export const OTEL_API_KEY = process.env.EXPO_PUBLIC_OTEL_API_KEY ?? "";
+// Note: Increase export interval to save battery (60s = 60000ms)
+export const OTEL_EXPORT_INTERVAL =
+  parseInt(process.env.EXPO_PUBLIC_OTEL_EXPORT_INTERVAL ?? "10000", 10);
+// Note: Sample percentage (0.0-1.0) to reduce load at scale
+export const OTEL_SAMPLE_RATE =
+  parseFloat(process.env.EXPO_PUBLIC_OTEL_SAMPLE_RATE ?? "1.0");

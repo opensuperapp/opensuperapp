@@ -1,0 +1,16 @@
+[
+  {
+    "workEmail": "alice@example.com",
+    "firstName": "Alice",
+    "lastName": "A",
+    "userThumbnail": "/avatars/a.png",
+    "location": "NYC"
+  },
+  {
+    "workEmail": "bob@example.com",
+    "firstName": "Bob",
+    "lastName": "B",
+    "userThumbnail": "/avatars/b.png",
+    "location": "SF"
+  }
+]

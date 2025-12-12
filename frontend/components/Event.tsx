@@ -13,18 +13,6 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
-import { EventItem } from "@/hooks/useEventsFeed";
-import { Ionicons } from "@expo/vector-icons";
-import {
-  differenceInCalendarDays,
-  format,
-  isBefore,
-  isTomorrow,
-  isWithinInterval,
-  parseISO,
-} from "date-fns";
-import React from "react";
 import {
   Linking,
   StyleSheet,
@@ -33,7 +21,19 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import React from "react";
+import { Colors } from "@/constants/Colors";
+import { Ionicons } from "@expo/vector-icons";
+import { EventItem } from "@/hooks/useEventsFeed";
 import RemoteFallbackImage from "./RemoteFallbackImage";
+import {
+  format,
+  differenceInCalendarDays,
+  parseISO,
+  isTomorrow,
+  isBefore,
+  isWithinInterval,
+} from "date-fns";
 
 const getRelativeDateLabel = (
   startDateStr: string,

@@ -1,0 +1,4 @@
+workEmail,firstName,lastName,userThumbnail,location
+invalid-email,Alice,Anderson,,NYC
+,NoEmail,Lastname,,NYC
+bob@example.com,Bob,,,

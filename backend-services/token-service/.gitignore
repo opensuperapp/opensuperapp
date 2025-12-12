@@ -1,0 +1,48 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/cmd/server/server
+/token-issure-service
+
+# Go workspace file
+go.work
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Keys and Secrets
+*.pem
+!keys/dev/*_example_*.pem
+jwks.json
+!keys/dev/*_example_*.json
+
+# Keys directory (except dev examples)
+keys/
+!keys/dev/
+!keys/dev/README.md
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/

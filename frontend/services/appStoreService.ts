@@ -14,27 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 import {
-  APPS,
-  BASE_URL,
-  DEFAULT_VIEWING_MODE,
-  DOWNLOADED,
-  MICRO_APP_STORAGE_DIR,
-  NOT_DOWNLOADED,
-} from "@/constants/Constants";
-import {
-  addDownloading,
-  MicroApp,
-  removeDownloading,
-  setApps,
-  updateAppStatus,
-  updateDownloadProgress,
-} from "@/context/slices/appSlice";
-import { AppDispatch } from "@/context/store";
-import { buildAppsWithTokens } from "@/utils/exchangedTokenRehydrator";
-import { persistAppsWithoutTokens } from "@/utils/exchangedTokenStore";
-import { apiRequest } from "@/utils/requestHandler";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
   deleteAsync,
   documentDirectory,
   downloadAsync,
@@ -45,8 +24,27 @@ import {
   writeAsStringAsync,
 } from "expo-file-system";
 import JSZip from "jszip";
+import { AppDispatch } from "@/context/store";
+import {
+  addDownloading,
+  MicroApp,
+  removeDownloading,
+  setApps,
+  updateAppStatus,
+} from "@/context/slices/appSlice";
 import { Alert } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { apiRequest } from "@/utils/requestHandler";
+import {
+  APPS,
+  BASE_URL,
+  DOWNLOADED,
+  NOT_DOWNLOADED,
+  MICRO_APP_STORAGE_DIR,
+  DEFAULT_VIEWING_MODE,
+} from "@/constants/Constants";
 import { UpdateUserConfiguration } from "./userConfigService";
+import { getAccessToken } from "@/utils/requestHandler";
 // File handle services
 export const downloadMicroApp = async (
   dispatch: AppDispatch,
@@ -56,22 +54,16 @@ export const downloadMicroApp = async (
 ) => {
   try {
     dispatch(addDownloading(appId)); // Downloading status for indicator
-    dispatch(updateDownloadProgress({ appId, progress: 0 })); // Initialize progress
 
     if (!downloadUrl) {
       Alert.alert("Error", "Download URL is empty.");
       return;
     }
 
-    await downloadAndSaveFile(dispatch, appId, downloadUrl); // Download react production build
-    dispatch(updateDownloadProgress({ appId, progress: 70 }));
-
+    await downloadAndSaveFile(appId, downloadUrl); // Download react production build
     await unzipFile(dispatch, appId); // Unzip downloaded zip file
-    dispatch(updateDownloadProgress({ appId, progress: 90 }));
-
     await UpdateUserConfiguration(appId, DOWNLOADED, onLogout); // Update user configurations
-    dispatch(updateDownloadProgress({ appId, progress: 100 }));
-  } catch (error) {
+  } catch {
     await UpdateUserConfiguration(appId, NOT_DOWNLOADED, onLogout); // Update user configurations
     Alert.alert("Error", "Failed to download or save the file.");
   } finally {
@@ -79,28 +71,25 @@ export const downloadMicroApp = async (
   }
 };
 
-const downloadAndSaveFile = async (
-  dispatch: AppDispatch,
-  appId: string,
-  downloadUrl: string
-) => {
+const downloadAndSaveFile = async (appId: string, downloadUrl: string) => {
   const fileName = `${appId}.zip`;
   const customDir = `${documentDirectory}${MICRO_APP_STORAGE_DIR}/micro-apps/`;
 
   if (!(await getInfoAsync(customDir)).exists) {
     await makeDirectoryAsync(customDir, { intermediates: true });
   }
+  let accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    throw new Error("Access token not found");
+  }
 
   const fileUri = `${customDir}${fileName}`;
-
-  await downloadAsync(downloadUrl, fileUri, {
-    sessionType: 0,
-  });
-
-  for (let i = 0; i <= 60; i += 10) {
-    dispatch(updateDownloadProgress({ appId, progress: i }));
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
+  const headers = {
+    "Authorization": `Bearer ${accessToken}`,
+    // "x-jwt-assertion": `${accessToken}`, // for local development only
+  };
+  await downloadAsync(downloadUrl, fileUri, { headers });
 };
 
 const unzipFile = async (dispatch: AppDispatch, appId: string) => {
@@ -168,8 +157,8 @@ const unzipFile = async (dispatch: AppDispatch, appId: string) => {
     if (!indexPath) throw new Error("Index file not found");
 
     const microAppConfig = await getMicroAppConfig(extractedDir);
-    if (!microAppConfig.clientId) throw new Error("Client id not found");
-
+    // if (!microAppConfig.clientId) throw new Error("Client id not found");
+    if (!microAppConfig.clientId) console.warn("[appStoreService] Client id not found");
     const formattedUri = encodeURI(
       indexPath.startsWith("file://") ? indexPath : `file://${indexPath}`
     );
@@ -271,93 +260,67 @@ export const removeMicroApp = async (
       })
     );
     await UpdateUserConfiguration(appId, NOT_DOWNLOADED, onLogout); // Update user configurations
-  } catch (error) {
+  } catch {
     Alert.alert("Error", "Failed to remove the app.");
   }
 };
 
 // API services
-const loadStoredApps = async (): Promise<MicroApp[]> => {
-  const storedAppsJson = await AsyncStorage.getItem(APPS);
-  return storedAppsJson ? JSON.parse(storedAppsJson) : [];
-};
-
-const fetchLatestApps = async (
-  onLogout: () => Promise<void>
-): Promise<MicroApp[]> => {
-  const response = await apiRequest(
-    { url: `${BASE_URL}/micro-apps`, method: "GET" },
-    onLogout
-  );
-  return response?.data || [];
-};
-
-const shouldUpdateApp = (storedApp: MicroApp, latestApp: MicroApp): boolean => {
-  return (
-    storedApp.status === DOWNLOADED &&
-    storedApp.versions.length > 0 &&
-    latestApp.versions.length > 0 &&
-    latestApp.versions[0].version !== storedApp.versions[0].version
-  );
-};
-
-const mergeAppData = (latestApp: MicroApp, storedApp?: MicroApp): MicroApp => {
-  if (!storedApp) return latestApp;
-
-  return {
-    ...latestApp,
-    status: storedApp.status,
-    webViewUri: storedApp.webViewUri || "",
-    clientId: storedApp.clientId || "",
-    exchangedToken: storedApp.exchangedToken || "",
-    displayMode:
-      storedApp.displayMode || latestApp.displayMode || DEFAULT_VIEWING_MODE,
-  };
-};
-
 // Load app list and if updates available update apps
 export const loadMicroAppDetails = async (
   dispatch: AppDispatch,
-  onLogout: () => Promise<void>,
-  onUpdateStart?: (appId: string) => void,
-  onUpdateEnd?: (appId: string) => void
+  onLogout: () => Promise<void>
 ) => {
   try {
     // Load stored apps from AsyncStorage
-    const storedApps = await loadStoredApps();
+    const storedAppsJson = await AsyncStorage.getItem(APPS);
+    const storedApps: MicroApp[] = storedAppsJson
+      ? JSON.parse(storedAppsJson)
+      : [];
 
     // Dispatch stored apps initially
     dispatch(setApps(storedApps));
 
     // Fetch latest micro apps list from API
-    const latestApps = await fetchLatestApps(onLogout);
+    const response = await apiRequest(
+      { url: `${BASE_URL}/micro-apps`, method: "GET" },
+      onLogout
+    );
 
-    if (latestApps.length > 0) {
+    if (response?.data) {
       // Update apps list with status and webViewUri
-      const apps: MicroApp[] = latestApps.map((latestApp: MicroApp) => {
+      let apps: MicroApp[] = response.data.map((app: MicroApp) => {
         const storedApp = storedApps.find(
-          (stored) => stored.appId === latestApp.appId
+          (stored) => stored.appId === app.appId
         );
 
-        if (storedApp && shouldUpdateApp(storedApp, latestApp)) {
-          onUpdateStart?.(latestApp.appId);
+        if (storedApp && storedApp.versions.length > 0) {
+          // If new version available automatically update
+          if (app.versions[0].version !== storedApp.versions[0].version) {
+            downloadMicroApp(
+              dispatch,
+              app.appId,
+              app.versions?.[0]?.downloadUrl,
+              onLogout
+            );
+          }
 
-          downloadMicroApp(
-            dispatch,
-            latestApp.appId,
-            latestApp.versions[0].downloadUrl,
-            onLogout
-          ).finally(() => {
-            onUpdateEnd?.(latestApp.appId);
-          });
+          return {
+            ...app,
+            status: storedApp?.status,
+            webViewUri: storedApp?.webViewUri || "",
+            clientId: storedApp?.clientId || "",
+            exchangedToken: storedApp?.exchangedToken || "",
+            displayMode:
+              storedApp?.displayMode || app.displayMode || DEFAULT_VIEWING_MODE,
+          };
         }
-
-        return mergeAppData(latestApp, storedApp);
+        return app;
       });
 
       // Update Redux and AsyncStorage
-      dispatch(setApps(await buildAppsWithTokens(apps)));
-      await persistAppsWithoutTokens(apps);
+      dispatch(setApps(apps));
+      await AsyncStorage.setItem(APPS, JSON.stringify(apps));
     }
   } catch (error) {
     console.error("Error loading micro apps:", error);

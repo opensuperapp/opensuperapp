@@ -1,0 +1,18 @@
+/**
+ * Configuration Template
+ * 
+ * This file shows the structure of the config.js file.
+ * In Choreo deployment, config.js will be auto-generated with production values.
+ * For local development, see public/config.js
+ */
+
+window.configs = {
+  // Asgardeo Authentication
+  ASGARDEO_CLIENT_ID: 'your-client-id',
+  ASGARDEO_BASE_URL: 'https://api.asgardeo.io/t/your-org',
+  SIGN_IN_REDIRECT_URL: 'http://localhost:5173',
+  SIGN_OUT_REDIRECT_URL: 'http://localhost:5173',
+  
+  // Backend API
+  API_BASE_URL: 'http://localhost:8080',
+};

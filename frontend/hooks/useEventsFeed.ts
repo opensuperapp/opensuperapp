@@ -13,14 +13,14 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import { useEffect, useState } from "react";
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   EVENTS_STORAGE_KEY,
   EVENTS_TIMESTAMP_KEY,
   EVENTS_URL,
 } from "@/constants/Constants";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
-import { useEffect, useState } from "react";
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
 

@@ -13,11 +13,11 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import { useEffect, useState } from "react";
+import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LAST_ACTIVE_PATH_KEY } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
 
 const validPaths = Object.values(ScreenPaths);
 
