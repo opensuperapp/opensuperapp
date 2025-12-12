@@ -298,7 +298,8 @@ func (h *TokenHandler) requestMicroappToken(ctx context.Context, userEmail, micr
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		limitedBody := io.LimitReader(resp.Body, IdPResponseBodyLimit)
+		body, _ := io.ReadAll(limitedBody)
 		return "", 0, fmt.Errorf("IDP returned status %d: %s", resp.StatusCode, string(body))
 	}
 
