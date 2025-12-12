@@ -189,10 +189,14 @@ func parseUpsertPayload(body io.ReadCloser) ([]dto.UpsertUserRequest, bool, erro
 		return nil, false, err
 	}
 
+	trimmed := bytes.TrimSpace(rawBody)
+	if len(trimmed) == 0 {
+		return nil, false, fmt.Errorf("empty request body")
+	}
 	// Check if it's an array by looking at the first character
-	if len(rawBody) > 0 && rawBody[0] == '[' {
+	if trimmed[0] == '[' {
 		var requests []dto.UpsertUserRequest
-		if err := json.Unmarshal(rawBody, &requests); err != nil {
+		if err := json.Unmarshal(trimmed, &requests); err != nil {
 			return nil, true, err
 		}
 		return requests, true, nil
@@ -200,7 +204,7 @@ func parseUpsertPayload(body io.ReadCloser) ([]dto.UpsertUserRequest, bool, erro
 
 	// Single object
 	var request dto.UpsertUserRequest
-	if err := json.Unmarshal(rawBody, &request); err != nil {
+	if err := json.Unmarshal(trimmed, &request); err != nil {
 		return nil, false, err
 	}
 	return []dto.UpsertUserRequest{request}, false, nil
