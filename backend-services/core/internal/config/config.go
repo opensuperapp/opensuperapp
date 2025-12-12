@@ -60,8 +60,10 @@ type Config struct {
 	// User Service
 	UserServiceType string
 
-	// RawEnv stores all environment variables for plugins
-	RawEnv map[string]any
+	// rawEnv stores all environment variables for plugin configuration.
+	// This field is unexported to prevent direct access to sensitive data.
+	// Use GetPluginConfig() to access filtered configuration by prefix.
+	rawEnv map[string]any
 }
 
 func Load() *Config {
@@ -110,7 +112,7 @@ func Load() *Config {
 		// User Service
 		UserServiceType: getEnv("USER_SERVICE_TYPE", "db"),
 
-		RawEnv: rawEnv,
+		rawEnv: rawEnv,
 	}
 
 	slog.Info("Configuration loaded", "server_port", cfg.ServerPort, "db_host", cfg.DBHost)
@@ -158,9 +160,11 @@ func (c *Config) GetUserServiceConfig() map[string]any {
 }
 
 // GetPluginConfig returns a map of environment variables that start with the given prefix.
+// This provides controlled access to environment variables without exposing all secrets.
+// Only variables matching the prefix are returned, limiting exposure of sensitive data.
 func (c *Config) GetPluginConfig(prefix string) map[string]any {
 	filtered := make(map[string]any)
-	for k, v := range c.RawEnv {
+	for k, v := range c.rawEnv {
 		if strings.HasPrefix(k, prefix) {
 			filtered[k] = v
 		}

@@ -49,6 +49,7 @@ type RSATokenValidator struct {
 	httpClient         *http.Client
 	cachedJWKS         json.RawMessage
 	done               chan struct{}
+	closeOnce          sync.Once
 }
 
 type TokenClaims struct {
@@ -141,7 +142,7 @@ func (tv *RSATokenValidator) ValidateToken(tokenString string) (*TokenClaims, er
 
 // Close stops the background refresh goroutine and releases resources
 func (tv *RSATokenValidator) Close() {
-	close(tv.done)
+	tv.closeOnce.Do(func() { close(tv.done) })
 }
 
 // getKey returns the public key for the given kid.

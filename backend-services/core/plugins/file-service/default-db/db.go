@@ -16,6 +16,7 @@
 package db
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
@@ -65,7 +66,12 @@ func (s *DBFileService) UploadFile(fileName string, content []byte) (string, err
 	if fileName == "" {
 		return "", fmt.Errorf("DBFileService: fileName is required")
 	}
-
+	if len(fileName) > 255 {
+		return "", fmt.Errorf("DBFileService: fileName is too long (max 255)")
+	}
+	if content == nil {
+		content = []byte{}
+	}
 	file := MicroAppFile{
 		FileName:    fileName,
 		BlobContent: content,
@@ -125,7 +131,7 @@ func (s *DBFileService) GetBlobContent(fileName string) ([]byte, error) {
 	result := s.db.Where("file_name = ?", fileName).First(&file)
 
 	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			slog.Warn("File not found", "fileName", fileName)
 		} else {
 			slog.Error("Failed to retrieve blob content", "error", result.Error, "fileName", fileName)

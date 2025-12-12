@@ -50,7 +50,10 @@ func NewFileHandler(fileService fileservice.FileService) *FileHandler {
 func (h *FileHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 	fileName := r.URL.Query().Get("fileName")
 	fileName = filepath.Base(fileName) // Sanitize: strip directory components
-
+	if fileName == "." || fileName == ".." {
+		http.Error(w, "invalid fileName", http.StatusBadRequest)
+		return
+	}
 	if fileName == "" {
 		http.Error(w, "fileName query parameter is required", http.StatusBadRequest)
 		return
@@ -92,6 +95,10 @@ func (h *FileHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 // DeleteFile handles file deletion by fileName
 func (h *FileHandler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 	fileName := filepath.Base(r.URL.Query().Get("fileName"))
+	if fileName == "." || fileName == ".." {
+		http.Error(w, "invalid fileName", http.StatusBadRequest)
+		return
+	}
 	if fileName == "" {
 		http.Error(w, "fileName query parameter is required", http.StatusBadRequest)
 		return

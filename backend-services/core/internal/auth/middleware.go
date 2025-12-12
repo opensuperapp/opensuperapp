@@ -87,7 +87,11 @@ func extractBearerToken(r *http.Request) (string, bool) {
 		return "", false
 	}
 
-	return parts[1], true
+	token := strings.TrimSpace(parts[1])
+	if token == "" {
+		return "", false
+	}
+	return token, true
 }
 
 // Writes an error message as a JSON response with the given status code.
