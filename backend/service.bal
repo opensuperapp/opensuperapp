@@ -447,7 +447,7 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
     # + startIndex - Start index for pagination
     # + return - List of notifications or http:InternalServerError
     resource function get user/notifications(http:RequestContext ctx, int startIndex)
-        returns database:NotificationResponse[]|http:InternalServerError|http:NotFound {
+        returns database:NotificationResponse[]|http:InternalServerError {
         
         authorization:CustomJwtPayload|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
         if userInfo is error {
@@ -456,6 +456,10 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
                     message: ERR_MSG_USER_HEADER_NOT_FOUND
                 }
             };
+        }
+
+        if userInfo.groups is () {
+            return [];
         }
 
         database:Notification[]|error notifications = database:getNotifications(userInfo.groups ?: [], startIndex);
@@ -470,10 +474,7 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
         }
 
         if notifications.length() == 0 {
-            string customError = "No notifications found";
-            return <http:NotFound>{
-                body: {message: customError}
-            };
+            return [];
         }
 
         database:NotificationResponse[] notificationResponse = notifications.map(notification => {
