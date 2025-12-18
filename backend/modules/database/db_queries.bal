@@ -234,3 +234,33 @@ public isolated function getAppConfigsQuery() returns sql:ParameterizedQuery => 
     FROM 
         app_configs
 `;
+
+# Query to get notifications filtered by user groups.
+#
+# + groups - Array of user groups to match against target_roles
+# + startIndex - Start index for pagination
+# + return - Generated query to retrieve filtered notifications
+public isolated function getNotificationsQuery(string[] groups, int startIndex) returns sql:ParameterizedQuery {
+    sql:ParameterizedQuery filterQuery = `FIND_IN_SET(${groups[0]}, target_roles) > 0`;
+    foreach int i in 1 ..< groups.length() {
+        filterQuery = sql:queryConcat(filterQuery, ` OR FIND_IN_SET(${groups[i]}, target_roles) > 0`);
+    }
+
+    return sql:queryConcat(`
+        SELECT 
+            id,
+            title,
+            message,
+            target_roles,
+            created_by,
+            created_at
+        FROM 
+            push_notification
+        WHERE 
+            (`, filterQuery, `)
+        ORDER BY
+            created_at DESC
+        LIMIT ${'limit} OFFSET ${startIndex}
+    `);
+}
+

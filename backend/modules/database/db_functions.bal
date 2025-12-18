@@ -229,3 +229,15 @@ public isolated function addDefaultUserConfig(string email, string[] configValue
         isActive: 1
     };
 }
+
+# Get notifications filtered by user groups.
+#
+# + groups - Array of user groups
+# + startIndex - Start index for pagination
+# + return - Array of Notification or error
+public isolated function getNotifications(string[] groups, int startIndex) returns Notification[]|error {
+    sql:ParameterizedQuery query = getNotificationsQuery(groups, startIndex);
+    stream<Notification, sql:Error?> notificationStream = databaseClient->query(query);
+    return from Notification notification in notificationStream
+        select notification;
+}
