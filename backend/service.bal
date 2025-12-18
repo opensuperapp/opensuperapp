@@ -446,7 +446,7 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
     # + ctx - Request context
     # + startIndex - Start index for pagination
     # + return - List of notifications or http:InternalServerError
-    resource function get notifications(http:RequestContext ctx, int startIndex)
+    resource function get user/notifications(http:RequestContext ctx, int startIndex)
         returns database:NotificationResponse[]|http:InternalServerError|http:NotFound {
         
         authorization:CustomJwtPayload|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
