@@ -477,13 +477,12 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             return [];
         }
 
-        database:NotificationResponse[] notificationResponse = notifications.map(notification => {
-            id: notification.id,
-            title: notification.title,
-            message: notification.message,
-            createdAt: notification.createdAt
-        });
-
-        return notificationResponse;
+        return from database:Notification notification in notifications
+            select {
+                id: notification.id,
+                title: notification.title,
+                message: notification.message,
+                createdAt: notification.createdAt
+            };
     }
 }
