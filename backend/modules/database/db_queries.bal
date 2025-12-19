@@ -235,11 +235,11 @@ public isolated function getAppConfigsQuery() returns sql:ParameterizedQuery => 
         app_configs
 `;
 
-# Query to count notifications filtered by user groups.
+# Generates filter for target roles.
 #
 # + groups - Array of user groups to match against target_roles
 # + return - Generated filter query
-isolated function getTargetRolesFilterQuery(string[] groups) returns sql:ParameterizedQuery {
+isolated function generateTargetRolesFilters(string[] groups) returns sql:ParameterizedQuery {
     sql:ParameterizedQuery filterQuery = `FIND_IN_SET(${groups[0]}, target_roles) > 0`;
     foreach int i in 1 ..< groups.length() {
         filterQuery = sql:queryConcat(filterQuery, ` OR FIND_IN_SET(${groups[i]}, target_roles) > 0`);
@@ -248,7 +248,7 @@ isolated function getTargetRolesFilterQuery(string[] groups) returns sql:Paramet
 }
 
 public isolated function getNotificationsCountQuery(string[] groups) returns sql:ParameterizedQuery {
-    sql:ParameterizedQuery filterQuery = getTargetRolesFilterQuery(groups);
+    sql:ParameterizedQuery filterQuery = generateTargetRolesFilters(groups);
     return sql:queryConcat(`
         SELECT 
             COUNT(*) as count
@@ -266,7 +266,7 @@ public isolated function getNotificationsCountQuery(string[] groups) returns sql
 # + itemsPerPage - Items per page
 # + return - Generated query to retrieve filtered notifications
 public isolated function getNotificationsQuery(string[] groups, int startIndex, int itemsPerPage) returns sql:ParameterizedQuery {
-    sql:ParameterizedQuery filterQuery = getTargetRolesFilterQuery(groups);
+    sql:ParameterizedQuery filterQuery = generateTargetRolesFilters(groups);
     return sql:queryConcat(`
         SELECT 
             id,
