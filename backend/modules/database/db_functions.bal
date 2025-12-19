@@ -236,8 +236,8 @@ public isolated function addDefaultUserConfig(string email, string[] configValue
 # + startIndex - Start index for pagination
 # + return - Array of Notification or error
 public isolated function getNotifications(string[] groups, int startIndex) returns Notification[]|error {
-    sql:ParameterizedQuery query = getNotificationsQuery(groups, startIndex);
-    stream<Notification, sql:Error?> notificationStream = databaseClient->query(query);
+    stream<Notification, sql:Error?> notificationStream =
+        databaseClient->query(getNotificationsQuery(groups, startIndex));
     return from Notification notification in notificationStream
         select notification;
 }
