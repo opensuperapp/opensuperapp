@@ -169,8 +169,14 @@ public type AppConfig record {|
     string 'type?;
 |};
 
+# Record type for the notification count.
+public type NotificationsCount record {|
+    # Total number of notifications
+    int count;
+|};
+
 # Record type for the DB notification record.
-public type Notification record {|
+public type DbNotification record {|
     # Unique ID of the notification
     int id;
     # Title of the notification
@@ -188,8 +194,8 @@ public type Notification record {|
     string createdAt;
 |};
 
-# Record type for the notification response.
-public type NotificationResponse record {|
+# Record type for the notification response item.
+public type Notification record {|
     # Unique ID of the notification
     int id;
     # Title of the notification
@@ -198,4 +204,16 @@ public type NotificationResponse record {|
     string message;
     # Creation timestamp
     string createdAt;
+|};
+
+# Record type for the notification response.
+public type NotificationResponse record {|
+    # Array of notifications
+    Notification[] notifications;
+    # Total number of notifications
+    int totalResults;
+    # Start index of the response
+    int startIndex;
+    # Items per page
+    int itemsPerPage;
 |};

@@ -446,9 +446,9 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
     # + ctx - Request context
     # + startIndex - Start index for pagination
     # + return - List of notifications or http:InternalServerError
-    resource function get user/notifications(http:RequestContext ctx, int startIndex)
-        returns database:NotificationResponse[]|http:InternalServerError {
-        
+    resource function get user/notifications(http:RequestContext ctx, int startIndex, int itemsPerPage = 100)
+        returns database:NotificationResponse|http:InternalServerError {
+
         authorization:CustomJwtPayload|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
         if userInfo is error {
             return <http:InternalServerError>{
@@ -459,10 +459,15 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
         }
 
         if userInfo.groups is () {
-            return [];
+            return {
+                notifications: [],
+                totalResults: 0,
+                startIndex: 0,
+                itemsPerPage: 0
+            };
         }
 
-        database:Notification[]|error notifications = database:getNotifications(userInfo.groups ?: [], startIndex);
+        database:NotificationResponse|error notifications = database:getNotifications(userInfo.groups ?: [], startIndex, itemsPerPage);
         if notifications is error {
             string customError = "Error occurred while retrieving notifications";
             log:printError(customError, notifications);
@@ -473,16 +478,6 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        if notifications.length() == 0 {
-            return [];
-        }
-
-        return from database:Notification notification in notifications
-            select {
-                id: notification.id,
-                title: notification.title,
-                message: notification.message,
-                createdAt: notification.createdAt
-            };
+        return notifications;
     }
 }

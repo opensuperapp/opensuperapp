@@ -138,10 +138,10 @@ public isolated function updateUserConfigsByEmail(string email, UserConfig userC
     returns ExecutionSuccessResult|error {
 
     sql:ParameterizedQuery query = updateUserConfigsByEmailQuery(
-        email,
-        userConfig.configKey,
-        userConfig.configValue.toJsonString(),
-        userConfig.isActive);
+            email,
+            userConfig.configKey,
+            userConfig.configValue.toJsonString(),
+            userConfig.isActive);
     sql:ExecutionResult result = check databaseClient->execute(query);
     return result.cloneWithType(ExecutionSuccessResult);
 }
@@ -215,7 +215,7 @@ public isolated function getAppConfigs() returns AppConfig[]|error {
 }
 
 # Add default user configuration for a new user.
-# 
+#
 # + email - Email of the user
 # + configValues - Initial configuration values
 # + return - UserConfig with default settings, or an error if the operation fails
@@ -234,10 +234,18 @@ public isolated function addDefaultUserConfig(string email, string[] configValue
 #
 # + groups - Array of user groups
 # + startIndex - Start index for pagination
+# + itemsPerPage - Items per page
 # + return - Array of Notification or error
 public isolated function getNotifications(string[] groups, int startIndex, int itemsPerPage) returns NotificationResponse|error {
-    stream<Notification, sql:Error?> result =
+    NotificationsCount countRecord = check databaseClient->queryRow(getNotificationsCountQuery(groups));
+
+    if startIndex < 0 || startIndex >= countRecord.count {
+        return error(string `Invalid start index: ${startIndex}. Total results: ${countRecord.count}`);
+    }
+
+    stream<DbNotification, sql:Error?> result =
         databaseClient->query(getNotificationsQuery(groups, startIndex, itemsPerPage));
+
     Notification[] notifications = check from DbNotification notification in result
         select {
             id: notification.id,
@@ -245,13 +253,13 @@ public isolated function getNotifications(string[] groups, int startIndex, int i
             message: notification.message,
             createdAt: notification.createdAt
         };
-    NotificationsCount count = check databaseClient->queryRow(getNotificationsCountQuery(groups)); // need to add this query method
+
     return {
         notifications,
-        totalResults: count.totalResults,
+        totalResults: countRecord.count,
         startIndex,
         itemsPerPage: startIndex == 1
-            ? (count.totalResults < itemsPerPage ? count.totalResults : itemsPerPage)
+            ? (countRecord.count < itemsPerPage ? countRecord.count : itemsPerPage)
             : notifications.length()
     };
 }
