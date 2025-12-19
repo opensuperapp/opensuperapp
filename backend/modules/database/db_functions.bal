@@ -235,9 +235,23 @@ public isolated function addDefaultUserConfig(string email, string[] configValue
 # + groups - Array of user groups
 # + startIndex - Start index for pagination
 # + return - Array of Notification or error
-public isolated function getNotifications(string[] groups, int startIndex) returns Notification[]|error {
-    stream<Notification, sql:Error?> notificationStream =
-        databaseClient->query(getNotificationsQuery(groups, startIndex));
-    return from Notification notification in notificationStream
-        select notification;
+public isolated function getNotifications(string[] groups, int startIndex, int itemsPerPage) returns NotificationResponse|error {
+    stream<Notification, sql:Error?> result =
+        databaseClient->query(getNotificationsQuery(groups, startIndex, itemsPerPage));
+    Notification[] notifications = check from DbNotification notification in result
+        select {
+            id: notification.id,
+            title: notification.title,
+            message: notification.message,
+            createdAt: notification.createdAt
+        };
+    NotificationsCount count = check databaseClient->queryRow(getNotificationsCountQuery(groups)); // need to add this query method
+    return {
+        notifications,
+        totalResults: count.totalResults,
+        startIndex,
+        itemsPerPage: startIndex == 1
+            ? (count.totalResults < itemsPerPage ? count.totalResults : itemsPerPage)
+            : notifications.length()
+    };
 }
