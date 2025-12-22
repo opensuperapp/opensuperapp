@@ -37,6 +37,7 @@ import {
   DefaultTheme,
   ThemeProvider,
 } from "@react-navigation/native";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { lockAsync, OrientationLock } from "expo-screen-orientation";
@@ -93,6 +94,8 @@ function AppInitializer({ onReady }: { onReady: () => void }) {
 
   return null;
 }
+
+const queryClient = new QueryClient();
 
 // Main Root Layout
 export default function RootLayout() {
@@ -155,7 +158,7 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <>
+      <QueryClientProvider client={queryClient}>
         <Provider store={store}>
           <PersistGate loading={null} persistor={persistor}>
             <AppInitializer onReady={onAppLoadComplete} />
@@ -170,8 +173,8 @@ export default function RootLayout() {
             </Stack>
           </PersistGate>
         </Provider>
-        <StatusBar style="auto" />
-      </>
+      </QueryClientProvider>
+      <StatusBar style="auto" />
     </ThemeProvider>
   );
 }

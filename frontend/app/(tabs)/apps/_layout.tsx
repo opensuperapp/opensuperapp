@@ -13,15 +13,14 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import SparkleIcon from "@/components/FloatingSparkle";
 import { Colors } from "@/constants/Colors";
-import { DOWNLOADED, isAndroid, isIos } from "@/constants/Constants";
+import { DOWNLOADED } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { MicroApp } from "@/context/slices/appSlice";
 import { RootState } from "@/context/store";
 import { Ionicons } from "@expo/vector-icons";
 import { router, Stack } from "expo-router";
-import { TouchableOpacity } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import { useSelector } from "react-redux";
 
 export default function AppsStack() {
@@ -37,40 +36,30 @@ export default function AppsStack() {
         options={{
           headerTitle: "My Apps",
           headerRight: () => (
-            <>
-              {isIos && (
-                <>
-                  {localAppIds.length == 0 ? (
-                    <SparkleIcon />
-                  ) : (
-                    <TouchableOpacity
-                      onPress={() => router.push(ScreenPaths.STORE)}
-                      hitSlop={20}
-                      style={{ marginRight: 16 }}
-                    >
-                      <Ionicons
-                        name="storefront-outline"
-                        size={24}
-                        color={Colors.companyOrange}
-                      />
-                    </TouchableOpacity>
-                  )}
-                </>
-              )}
-              {isAndroid && (
-                <TouchableOpacity
-                  onPressIn={() => router.push(ScreenPaths.STORE)}
-                  hitSlop={20}
-                  style={{ marginRight: 16 }}
-                >
-                  <Ionicons
-                    name="storefront-outline"
-                    size={24}
-                    color={Colors.companyOrange}
-                  />
-                </TouchableOpacity>
-              )}
-            </>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 24 }}
+            >
+              <TouchableOpacity
+                onPress={() => router.push(ScreenPaths.STORE)}
+                hitSlop={20}
+              >
+                <Ionicons
+                  name="storefront-outline"
+                  size={24}
+                  color={Colors.companyOrange}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push(ScreenPaths.NOTIFICATIONS)}
+                hitSlop={20}
+              >
+                <Ionicons
+                  name="notifications-outline"
+                  size={24}
+                  color={Colors.companyOrange}
+                />
+              </TouchableOpacity>
+            </View>
           ),
         }}
       />
@@ -78,6 +67,13 @@ export default function AppsStack() {
         name="store"
         options={{
           headerTitle: "Store",
+          headerBackTitle: "My Apps",
+        }}
+      />
+      <Stack.Screen
+        name="notifications"
+        options={{
+          headerTitle: "Notifications",
           headerBackTitle: "My Apps",
         }}
       />
