@@ -445,8 +445,9 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
     #
     # + ctx - Request context
     # + startIndex - Start index for pagination
+    # + itemsPerPage - Items per page
     # + return - List of notifications or http:InternalServerError
-    resource function get user/notifications(http:RequestContext ctx, int startIndex, int itemsPerPage = 100)
+    resource function get user/notifications(http:RequestContext ctx, int startIndex, int itemsPerPage = NOTIFICATION_ITEMS_PER_PAGE)
         returns database:NotificationResponse|http:InternalServerError {
 
         authorization:CustomJwtPayload|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
@@ -458,7 +459,8 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        if userInfo.groups is () {
+        string[]? groups = userInfo.groups;
+        if groups is () {
             return {
                 notifications: [],
                 totalResults: 0,
@@ -467,7 +469,8 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        database:NotificationResponse|error notifications = database:getNotifications(userInfo.groups ?: [], startIndex, itemsPerPage);
+        database:NotificationResponse|error notifications =
+            database:getNotifications(groups, startIndex, itemsPerPage);
         if notifications is error {
             string customError = "Error occurred while retrieving notifications";
             log:printError(customError, notifications);
