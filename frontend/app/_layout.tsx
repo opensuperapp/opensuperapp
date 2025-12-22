@@ -22,6 +22,7 @@ import { setUserInfo } from "@/context/slices/userInfoSlice";
 import { getVersions } from "@/context/slices/versionSlice";
 import { AppDispatch, persistor, store } from "@/context/store";
 import { useColorScheme } from "@/hooks/useColorScheme";
+import { useNotifications } from "@/hooks/useNotifications";
 import { usePushNotificationHandler } from "@/hooks/usePushNotificationHandler";
 import { runMigrations } from "@/migrations/migrator";
 import { buildAppsWithTokens } from "@/utils/exchangedTokenRehydrator";
@@ -59,6 +60,11 @@ function AppInitializer({ onReady }: { onReady: () => void }) {
    * Handles push notification token lifecycle.
    */
   usePushNotificationHandler({ onLogout: handleLogout });
+
+  /**
+   * Prefetch notifications on app mount
+   */
+  useNotifications(handleLogout);
 
   useEffect(() => {
     const initialize = async () => {
