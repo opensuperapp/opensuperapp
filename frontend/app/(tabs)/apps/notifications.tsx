@@ -22,8 +22,16 @@ const Notifications = () => {
 
   const styles = createStyles(colorScheme);
 
-  const { notifications, isLoading, error, refresh, loadMore, hasMore } =
-    useNotifications(logout);
+  const {
+    notifications,
+    isLoading,
+    error,
+    refresh,
+    loadMore,
+    hasMore,
+    isRefetching,
+    isFetchingNextPage,
+  } = useNotifications(logout);
 
   const handleLoadMore = () => {
     if (hasMore) {
@@ -80,7 +88,10 @@ const Notifications = () => {
           renderItem={renderItem}
           keyExtractor={(item) => item.id.toString()}
           refreshControl={
-            <RefreshControl refreshing={isLoading} onRefresh={refresh} />
+            <RefreshControl
+              refreshing={isRefetching || isLoading}
+              onRefresh={refresh}
+            />
           }
           onEndReached={handleLoadMore}
           ListEmptyComponent={
@@ -96,9 +107,9 @@ const Notifications = () => {
                 justifyContent: "center",
               }}
             >
-              {isLoading && hasMore ? (
+              {isFetchingNextPage ? (
                 <ActivityIndicator size="small" />
-              ) : (
+              ) : hasMore ? null : (
                 <Text>You're all caught up! 🎉</Text>
               )}
             </View>

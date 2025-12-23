@@ -114,3 +114,6 @@ export const ANDROID_NOTIFICATION_SMALL_ICON_ACCENT_COLOR =
 // Platform
 export const isAndroid = Platform.OS === "android";
 export const isIos = Platform.OS === "ios";
+
+// Query Keys
+export const NOTIFICATIONS_QUERY_KEY = "notifications";

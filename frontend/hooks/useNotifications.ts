@@ -13,10 +13,10 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { BASE_URL } from "@/constants/Constants";
+import { BASE_URL, NOTIFICATIONS_QUERY_KEY } from "@/constants/Constants";
 import { apiRequest } from "@/utils/requestHandler";
-import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useCallback, useMemo } from "react";
 import { useNotificationStorage } from "./useNotificationStorage";
 
 export interface Notification {
@@ -38,82 +38,76 @@ export const NOTIFICATIONS_PER_PAGE = 10;
 
 export const useNotifications = (onLogout: () => Promise<void>) => {
   const { lastOpenedAt } = useNotificationStorage();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [startIndex, setStartIndex] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
 
-  const fetchNotifications = async (): Promise<NotificationResponse> => {
-    if (startIndex > 0 && !hasMore) {
-      return {
-        notifications: [],
-        totalResults: 0,
-        startIndex,
-        itemsPerPage: NOTIFICATIONS_PER_PAGE,
-      };
-    }
-
-    const response = await apiRequest(
-      {
-        url: `${BASE_URL}/user/notifications`,
-        method: "GET",
-        params: {
-          startIndex,
-          itemsPerPage: NOTIFICATIONS_PER_PAGE,
+  const fetchNotifications = useCallback(
+    async ({
+      pageParam,
+    }: {
+      pageParam: number;
+    }): Promise<NotificationResponse> => {
+      const response = await apiRequest(
+        {
+          url: `${BASE_URL}/user/notifications`,
+          method: "GET",
+          params: {
+            startIndex: pageParam,
+            itemsPerPage: NOTIFICATIONS_PER_PAGE,
+          },
         },
-      },
-      onLogout
-    );
-    return response?.data;
-  };
+        onLogout
+      );
+      return response?.data;
+    },
+    [onLogout]
+  );
 
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["notifications", startIndex],
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isRefetching,
+  } = useInfiniteQuery({
+    queryKey: [NOTIFICATIONS_QUERY_KEY],
     queryFn: fetchNotifications,
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => {
+      if (!lastPage) return undefined;
+      const nextIndex = lastPage.startIndex + lastPage.itemsPerPage;
+      return nextIndex < lastPage.totalResults ? nextIndex : undefined;
+    },
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    gcTime: 1000 * 60 * 30, // Keep in cache for 30 minutes
   });
 
-  useEffect(() => {
-    if (data?.notifications) {
-      const newNotifications: Notification[] = data.notifications.map(
-        (note) => {
-          const createdAtUtc = new Date(note.createdAt.replace(" ", "T") + "Z");
-          const isNew = lastOpenedAt
-            ? createdAtUtc > new Date(lastOpenedAt)
-            : true;
+  const notifications = useMemo(() => {
+    if (!data?.pages) return [];
 
-          return {
-            ...note,
-            isNew,
-          };
-        }
-      );
+    return data.pages
+      .flatMap((page) => page.notifications)
+      .map((note) => {
+        const createdAtUtc = new Date(note.createdAt.replace(" ", "T") + "Z");
+        const isNew = lastOpenedAt
+          ? createdAtUtc > new Date(lastOpenedAt)
+          : true;
 
-      if (startIndex === 0) {
-        setNotifications(newNotifications);
-      } else {
-        setNotifications((prev) => [...prev, ...newNotifications]);
-      }
-
-      console.log("tot notifications", notifications.length);
-
-      if (data?.totalResults !== undefined) {
-        const currentCount = startIndex + newNotifications.length;
-        setHasMore(currentCount < data.totalResults);
-      }
-    }
-  }, [data, lastOpenedAt, startIndex]);
-
-  const loadMore = () => {
-    if (!isLoading && hasMore) {
-      setStartIndex((prev) => prev + NOTIFICATIONS_PER_PAGE);
-    }
-  };
+        return {
+          ...note,
+          isNew,
+        };
+      });
+  }, [data?.pages, lastOpenedAt]);
 
   const refresh = async () => {
-    if (startIndex !== 0) {
-      setStartIndex(0);
-    } else {
-      await refetch();
+    await refetch();
+  };
+
+  const loadMore = () => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
     }
   };
 
@@ -121,12 +115,14 @@ export const useNotifications = (onLogout: () => Promise<void>) => {
 
   return {
     notifications,
-    totalResults: data?.totalResults || 0,
+    totalResults: data?.pages[0]?.totalResults || 0,
     unreadCount,
-    isLoading,
+    isLoading, // Initial load
+    isRefetching,
+    isFetchingNextPage,
     error,
     refresh,
     loadMore,
-    hasMore,
+    hasMore: hasNextPage,
   };
 };
