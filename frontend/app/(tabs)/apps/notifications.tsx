@@ -20,6 +20,7 @@ import { Colors } from "@/constants/Colors";
 import { Styles } from "@/constants/Styles";
 import { useNotifications } from "@/hooks/useNotifications";
 import { logout } from "@/services/authService";
+import { convertToUtc } from "@/utils/date";
 import { Ionicons } from "@expo/vector-icons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useIsFocused } from "@react-navigation/native";
@@ -71,7 +72,7 @@ export default function Notifications() {
   );
 
   const renderItem = ({ item }: any) => {
-    const itemTime = new Date(item.createdAt.replace(" ", "T") + "Z").getTime();
+    const itemTime = convertToUtc(item.createdAt).getTime();
     return (
       <NotificationItem
         item={item}

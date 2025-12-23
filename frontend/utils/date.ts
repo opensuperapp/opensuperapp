@@ -19,8 +19,8 @@
  * @param dateString - The date string to format.
  * @returns The formatted date string.
  */
-export const formatNotificationDate = (dateString: string) => {
-  const date = new Date(dateString.replace(" ", "T") + "Z");
+export const formatNotificationDate = (dateString: string): string => {
+  const date = convertToUtc(dateString);
   const now = new Date();
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
@@ -49,4 +49,13 @@ export const formatNotificationDate = (dateString: string) => {
   const year = date.getFullYear();
 
   return `${day} ${month} ${year} at ${time}`;
+};
+
+/**
+ * Converts a date string to a UTC date.
+ * @param dateString - The date string to convert.
+ * @returns The UTC date.
+ */
+export const convertToUtc = (dateString: string): Date => {
+  return new Date(dateString.replace(" ", "T") + "Z");
 };
