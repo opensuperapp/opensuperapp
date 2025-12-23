@@ -17,14 +17,12 @@ import { BASE_URL, NOTIFICATIONS_QUERY_KEY } from "@/constants/Constants";
 import { apiRequest } from "@/utils/requestHandler";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
-import { useNotificationStorage } from "./useNotificationStorage";
 
 export interface Notification {
   id: number;
   title: string;
   message: string;
   createdAt: string;
-  isNew?: boolean;
 }
 
 interface NotificationResponse {
@@ -36,12 +34,7 @@ interface NotificationResponse {
 
 export const NOTIFICATIONS_PER_PAGE = 10;
 
-export const useNotifications = (
-  onLogout: () => Promise<void>,
-  shouldUpdateLastOpened: boolean = false
-) => {
-  const { lastOpenedAt } = useNotificationStorage(shouldUpdateLastOpened);
-
+export const useNotifications = (onLogout: () => Promise<void>) => {
   const fetchNotifications = useCallback(
     async ({
       pageParam,
@@ -92,17 +85,11 @@ export const useNotifications = (
     return data.pages
       .flatMap((page) => page.notifications)
       .map((note) => {
-        const createdAtUtc = new Date(note.createdAt.replace(" ", "T") + "Z");
-        const isNew = lastOpenedAt
-          ? createdAtUtc > new Date(lastOpenedAt)
-          : true;
-
         return {
           ...note,
-          isNew,
         };
       });
-  }, [data?.pages, lastOpenedAt]);
+  }, [data?.pages]);
 
   const refresh = async () => {
     await refetch();
@@ -114,12 +101,9 @@ export const useNotifications = (
     }
   };
 
-  const unreadCount = notifications.filter((n) => n.isNew).length;
-
   return {
     notifications,
     totalResults: data?.pages[0]?.totalResults || 0,
-    unreadCount,
     isLoading,
     isRefetching,
     isFetchingNextPage,

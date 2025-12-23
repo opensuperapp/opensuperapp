@@ -1,6 +1,6 @@
 import { Colors } from "@/constants/Colors";
 import { Styles } from "@/constants/Styles";
-import { useNotifications } from "@/hooks/useNotifications";
+import { Notification, useNotifications } from "@/hooks/useNotifications";
 import { logout } from "@/services/authService";
 import { Ionicons } from "@expo/vector-icons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
@@ -72,7 +72,7 @@ const Notifications = () => {
     hasMore,
     isRefetching,
     isFetchingNextPage,
-  } = useNotifications(logout, true);
+  } = useNotifications(logout);
 
   const handleLoadMore = () => {
     if (hasMore) {
@@ -81,7 +81,7 @@ const Notifications = () => {
     }
   };
 
-  const renderItem = ({ item }: { item: any }) => (
+  const renderItem = ({ item }: { item: Notification }) => (
     <View
       style={[
         {
@@ -91,9 +91,7 @@ const Notifications = () => {
           alignItems: "flex-start",
           borderBottomWidth: 1,
           borderBottomColor: Colors[colorScheme].borderColor,
-          backgroundColor: item.isNew
-            ? Colors.companyOrange15
-            : Colors[colorScheme].primaryBackgroundColor,
+          backgroundColor: Colors[colorScheme].primaryBackgroundColor,
         },
       ]}
     >
@@ -116,8 +114,6 @@ const Notifications = () => {
           {formatNotificationDate(item.createdAt)}
         </Text>
       </View>
-
-      {item.data}
     </View>
   );
 

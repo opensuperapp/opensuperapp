@@ -14,21 +14,12 @@
 // specific language governing permissions and limitations
 // under the License.
 import { Colors } from "@/constants/Colors";
-import { DOWNLOADED } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
-import { MicroApp } from "@/context/slices/appSlice";
-import { RootState } from "@/context/store";
 import { Ionicons } from "@expo/vector-icons";
 import { router, Stack } from "expo-router";
 import { TouchableOpacity, View } from "react-native";
-import { useSelector } from "react-redux";
 
 export default function AppsStack() {
-  const apps: MicroApp[] = useSelector((state: RootState) => state.apps.apps);
-  const localAppIds: MicroApp[] = apps.filter(
-    (app) => app.status === DOWNLOADED
-  );
-
   return (
     <Stack screenOptions={{ headerShown: true }}>
       <Stack.Screen

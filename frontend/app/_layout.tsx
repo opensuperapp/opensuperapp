@@ -64,7 +64,7 @@ function AppInitializer({ onReady }: { onReady: () => void }) {
   /**
    * Prefetch notifications on app mount
    */
-  useNotifications(handleLogout, false);
+  useNotifications(handleLogout);
 
   useEffect(() => {
     const initialize = async () => {
