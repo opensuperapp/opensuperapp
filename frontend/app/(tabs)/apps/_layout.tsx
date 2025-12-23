@@ -15,11 +15,71 @@
 // under the License.
 import { Colors } from "@/constants/Colors";
 import { ScreenPaths } from "@/constants/ScreenPaths";
+import { useNotifications } from "@/hooks/useNotifications";
+import { logout } from "@/services/authService";
 import { Ionicons } from "@expo/vector-icons";
 import { router, Stack } from "expo-router";
-import { TouchableOpacity, View } from "react-native";
+import { useEffect, useRef } from "react";
+import {
+  Animated,
+  Easing,
+  TouchableOpacity,
+  useColorScheme,
+  View,
+} from "react-native";
 
 export default function AppsStack() {
+  const { hasUnread } = useNotifications(logout);
+  const colorScheme = useColorScheme() ?? "light";
+
+  const shakeAnimation = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!hasUnread) {
+      shakeAnimation.setValue(0);
+      return;
+    }
+
+    const timing = (toValue: number, duration: number) =>
+      Animated.timing(shakeAnimation, {
+        toValue,
+        duration,
+        easing: Easing.inOut(Easing.sin),
+        useNativeDriver: true,
+      });
+
+    // One natural shake (with overshoot)
+    const singleShake = Animated.sequence([
+      timing(-25, 80),
+      timing(25, 120),
+      timing(-18, 100),
+      timing(0, 140),
+    ]);
+
+    const loopAnimation = Animated.loop(
+      Animated.sequence([
+        singleShake,
+        Animated.delay(120),
+        singleShake,
+        Animated.delay(120),
+        singleShake,
+        Animated.delay(2200),
+      ])
+    );
+
+    loopAnimation.start();
+
+    return () => {
+      loopAnimation.stop();
+      shakeAnimation.setValue(0);
+    };
+  }, [hasUnread]);
+
+  const rotate = shakeAnimation.interpolate({
+    inputRange: [-25, 25],
+    outputRange: ["-25deg", "25deg"],
+  });
+
   return (
     <Stack screenOptions={{ headerShown: true }}>
       <Stack.Screen
@@ -44,11 +104,30 @@ export default function AppsStack() {
                 onPress={() => router.push(ScreenPaths.NOTIFICATIONS)}
                 hitSlop={20}
               >
-                <Ionicons
-                  name="notifications-outline"
-                  size={24}
-                  color={Colors.companyOrange}
-                />
+                <View>
+                  <Animated.View style={{ transform: [{ rotate }] }}>
+                    <Ionicons
+                      name="notifications-outline"
+                      size={24}
+                      color={Colors.companyOrange}
+                    />
+                  </Animated.View>
+                  {hasUnread && (
+                    <View
+                      style={{
+                        position: "absolute",
+                        right: 0,
+                        top: 0,
+                        width: 10,
+                        height: 10,
+                        borderRadius: 5,
+                        borderWidth: 2,
+                        borderColor: Colors[colorScheme].primaryBackgroundColor,
+                        backgroundColor: "red",
+                      }}
+                    />
+                  )}
+                </View>
               </TouchableOpacity>
             </View>
           ),

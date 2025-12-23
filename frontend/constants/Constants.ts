@@ -101,6 +101,9 @@ export const ID_TOKEN = "secure_id_token";
 export const EXPIRES_AT_KEY = "secure_expires_at";
 export const AUTH_EMAIL_KEY = "secure_auth_email";
 
+// Keys for Async Storage
+export const LAST_NOTIFICATION_OPENED_AT = "last_notification_opened_at";
+
 // Android Notification Configuration
 export const NOTIFICATION_CHANNEL_ID =
   process.env.EXPO_PUBLIC_NOTIFICATION_CHANNEL_ID ??

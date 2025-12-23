@@ -4,6 +4,9 @@ import { Notification, useNotifications } from "@/hooks/useNotifications";
 import { logout } from "@/services/authService";
 import { Ionicons } from "@expo/vector-icons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useIsFocused } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   ActivityIndicator,
@@ -72,7 +75,32 @@ const Notifications = () => {
     hasMore,
     isRefetching,
     isFetchingNextPage,
+    lastOpenedAt,
+    markAsRead,
   } = useNotifications(logout);
+
+  const [highlightTime, setHighlightTime] = useState<number | null>(null);
+  const processedRef = useRef(false);
+  const isFocused = useIsFocused();
+
+  // Logic Effect: Runs when focused and data is ready
+  useEffect(() => {
+    if (isFocused && lastOpenedAt !== null && !processedRef.current) {
+      setHighlightTime(lastOpenedAt);
+      markAsRead();
+      processedRef.current = true;
+    }
+  }, [isFocused, lastOpenedAt, markAsRead]);
+
+  // Cleanup Effect: Resets ref on blur
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        processedRef.current = false;
+        setHighlightTime(null);
+      };
+    }, [])
+  );
 
   const handleLoadMore = () => {
     if (hasMore) {
@@ -81,41 +109,52 @@ const Notifications = () => {
     }
   };
 
-  const renderItem = ({ item }: { item: Notification }) => (
-    <View
-      style={[
-        {
-          flexDirection: "row",
-          padding: Styles.Padding.default,
-          gap: 12,
-          alignItems: "flex-start",
-          borderBottomWidth: 1,
-          borderBottomColor: Colors[colorScheme].borderColor,
-          backgroundColor: Colors[colorScheme].primaryBackgroundColor,
-        },
-      ]}
-    >
+  const renderItem = ({ item }: { item: Notification }) => {
+    const itemTime = new Date(item.createdAt.replace(" ", "T") + "Z").getTime();
+    const isNew = highlightTime !== null && itemTime > highlightTime;
+
+    return (
       <View
-        style={{
-          backgroundColor: Colors.companyOrange20,
-          width: 36,
-          height: 36,
-          borderRadius: Styles.BorderRadius.medium,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
+        style={[
+          {
+            flexDirection: "row",
+            padding: Styles.Padding.default,
+            gap: 12,
+            alignItems: "flex-start",
+            borderBottomWidth: 1,
+            borderBottomColor: Colors[colorScheme].borderColor,
+            backgroundColor: isNew
+              ? Colors.companyOrange15
+              : Colors[colorScheme].primaryBackgroundColor,
+          },
+        ]}
       >
-        <Ionicons name="notifications" size={20} color={Colors.companyOrange} />
+        <View
+          style={{
+            backgroundColor: Colors.companyOrange20,
+            width: 36,
+            height: 36,
+            borderRadius: Styles.BorderRadius.medium,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Ionicons
+            name="notifications"
+            size={20}
+            color={Colors.companyOrange}
+          />
+        </View>
+        <View style={{ flex: 1, flexDirection: "column", gap: 4 }}>
+          <Text style={styles.title}>{item.title}</Text>
+          <Text style={styles.message}>{item.message}</Text>
+          <Text style={[styles.date, isNew && styles.newDate]}>
+            {formatNotificationDate(item.createdAt)}
+          </Text>
+        </View>
       </View>
-      <View style={{ flex: 1, flexDirection: "column", gap: 4 }}>
-        <Text style={styles.title}>{item.title}</Text>
-        <Text style={styles.message}>{item.message}</Text>
-        <Text style={styles.date}>
-          {formatNotificationDate(item.createdAt)}
-        </Text>
-      </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -204,6 +243,10 @@ const createStyles = (colorScheme: "light" | "dark") =>
     date: {
       fontSize: 10,
       color: Colors[colorScheme].text,
+    },
+    newDate: {
+      fontSize: 12,
+      fontWeight: "600",
     },
     emptyContainer: {
       alignItems: "center",
