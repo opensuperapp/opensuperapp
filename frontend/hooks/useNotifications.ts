@@ -16,7 +16,7 @@
 import { BASE_URL } from "@/constants/Constants";
 import { apiRequest } from "@/utils/requestHandler";
 import { useQuery } from "@tanstack/react-query";
-import dayjs from "dayjs";
+import { useEffect, useState } from "react";
 import { useNotificationStorage } from "./useNotificationStorage";
 
 export interface Notification {
@@ -34,17 +34,31 @@ interface NotificationResponse {
   itemsPerPage: number;
 }
 
+export const NOTIFICATIONS_PER_PAGE = 10;
+
 export const useNotifications = (onLogout: () => Promise<void>) => {
   const { lastOpenedAt } = useNotificationStorage();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [startIndex, setStartIndex] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
 
   const fetchNotifications = async (): Promise<NotificationResponse> => {
+    if (startIndex > 0 && !hasMore) {
+      return {
+        notifications: [],
+        totalResults: 0,
+        startIndex,
+        itemsPerPage: NOTIFICATIONS_PER_PAGE,
+      };
+    }
+
     const response = await apiRequest(
       {
         url: `${BASE_URL}/user/notifications`,
         method: "GET",
         params: {
-          startIndex: 0,
-          itemsPerPage: 10,
+          startIndex,
+          itemsPerPage: NOTIFICATIONS_PER_PAGE,
         },
       },
       onLogout
@@ -53,23 +67,55 @@ export const useNotifications = (onLogout: () => Promise<void>) => {
   };
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["notifications"],
+    queryKey: ["notifications", startIndex],
     queryFn: fetchNotifications,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 
-  // Process notifications to add the `isNew` flag
-  const notifications: Notification[] =
-    data?.notifications.map((note) => {
-      const isNew = lastOpenedAt
-        ? dayjs(note.createdAt).isAfter(dayjs(lastOpenedAt))
-        : true;
+  useEffect(() => {
+    if (data?.notifications) {
+      const newNotifications: Notification[] = data.notifications.map(
+        (note) => {
+          const createdAtUtc = new Date(note.createdAt.replace(" ", "T") + "Z");
+          const isNew = lastOpenedAt
+            ? createdAtUtc > new Date(lastOpenedAt)
+            : true;
 
-      return {
-        ...note,
-        isNew,
-      };
-    }) || [];
+          return {
+            ...note,
+            isNew,
+          };
+        }
+      );
+
+      if (startIndex === 0) {
+        setNotifications(newNotifications);
+      } else {
+        setNotifications((prev) => [...prev, ...newNotifications]);
+      }
+
+      console.log("tot notifications", notifications.length);
+
+      if (data?.totalResults !== undefined) {
+        const currentCount = startIndex + newNotifications.length;
+        setHasMore(currentCount < data.totalResults);
+      }
+    }
+  }, [data, lastOpenedAt, startIndex]);
+
+  const loadMore = () => {
+    if (!isLoading && hasMore) {
+      setStartIndex((prev) => prev + NOTIFICATIONS_PER_PAGE);
+    }
+  };
+
+  const refresh = async () => {
+    if (startIndex !== 0) {
+      setStartIndex(0);
+    } else {
+      await refetch();
+    }
+  };
 
   const unreadCount = notifications.filter((n) => n.isNew).length;
 
@@ -79,6 +125,8 @@ export const useNotifications = (onLogout: () => Promise<void>) => {
     unreadCount,
     isLoading,
     error,
-    refetch,
+    refresh,
+    loadMore,
+    hasMore,
   };
 };

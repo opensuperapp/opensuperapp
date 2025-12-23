@@ -5,8 +5,8 @@ import { logout } from "@/services/authService";
 import { Ionicons } from "@expo/vector-icons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 
-import dayjs from "dayjs";
 import {
+  ActivityIndicator,
   FlatList,
   RefreshControl,
   SafeAreaView,
@@ -22,20 +22,13 @@ const Notifications = () => {
 
   const styles = createStyles(colorScheme);
 
-  const {
-    notifications,
-    isLoading,
-    error,
-    refresh,
-    hasNextPage,
-    fetchNextPage,
-    isFetchingNextPage,
-  } = useNotifications(logout);
+  const { notifications, isLoading, error, refresh, loadMore, hasMore } =
+    useNotifications(logout);
 
-  const loadMore = () => {
-    if (hasNextPage && !isFetchingNextPage) {
+  const handleLoadMore = () => {
+    if (hasMore) {
       console.log("Loading more notifications");
-      fetchNextPage();
+      loadMore();
     }
   };
 
@@ -69,7 +62,7 @@ const Notifications = () => {
         <Text style={styles.title}>{item.title}</Text>
         <Text style={styles.message}>{item.message}</Text>
         <Text style={styles.date}>
-          {dayjs(item.createdAt).format("MMM D, YYYY h:mm A")}
+          {new Date(item.createdAt.replace(" ", "T") + "Z").toLocaleString()}
         </Text>
       </View>
 
@@ -89,7 +82,7 @@ const Notifications = () => {
           refreshControl={
             <RefreshControl refreshing={isLoading} onRefresh={refresh} />
           }
-          onEndReached={loadMore}
+          onEndReached={handleLoadMore}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text>No notifications yet.</Text>
@@ -103,8 +96,8 @@ const Notifications = () => {
                 justifyContent: "center",
               }}
             >
-              {isFetchingNextPage ? (
-                <Text>Loading more...</Text>
+              {isLoading && hasMore ? (
+                <ActivityIndicator size="small" />
               ) : (
                 <Text>You're all caught up! 🎉</Text>
               )}
