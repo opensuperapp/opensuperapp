@@ -119,7 +119,7 @@ export const Colors: AppColors = {
     mutedTextColor: "#CCCCCC", // Author name on library cards
     articleTextColor: "#BDC1C6", // Text content inside articles
 
-    borderColor: "#666666", // Border color
+    borderColor: "#1d2333", // Border color
     discoveryContentBackgroundColor: "#000", // Discovery section background
     ternaryBackgroundColor: "#2E2E2E", // Ternary background color
 

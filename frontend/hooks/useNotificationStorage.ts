@@ -19,7 +19,7 @@ import { useEffect, useState } from "react";
 
 const STORAGE_KEY_LAST_OPENED = "notifications_last_opened";
 
-export const useNotificationStorage = () => {
+export const useNotificationStorage = (shouldUpdate: boolean = false) => {
   const [lastOpenedAt, setLastOpenedAt] = useState<string | null>(null);
 
   useEffect(() => {
@@ -27,17 +27,19 @@ export const useNotificationStorage = () => {
       try {
         const storedDate = await AsyncStorage.getItem(STORAGE_KEY_LAST_OPENED);
         setLastOpenedAt(storedDate);
-        await AsyncStorage.setItem(
-          STORAGE_KEY_LAST_OPENED,
-          dayjs().toISOString()
-        );
+        if (shouldUpdate) {
+          await AsyncStorage.setItem(
+            STORAGE_KEY_LAST_OPENED,
+            dayjs().toISOString()
+          );
+        }
       } catch (error) {
         console.error("Failed to access notification storage", error);
       }
     };
 
     initStorage();
-  }, []);
+  }, [shouldUpdate]);
 
   return { lastOpenedAt };
 };

@@ -16,6 +16,47 @@ import {
   View,
 } from "react-native";
 
+/**
+ * Format the notification date to a human readable string.
+ * @param dateString - The date string to format.
+ * @returns The formatted date string.
+ */
+const formatNotificationDate = (dateString: string) => {
+  const date = new Date(dateString.replace(" ", "T") + "Z");
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const isToday =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+
+  const isYesterday =
+    date.getDate() === yesterday.getDate() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getFullYear() === yesterday.getFullYear();
+
+  const time = date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+  if (isToday) {
+    return `Today at ${time}`;
+  } else if (isYesterday) {
+    return `Yesterday at ${time}`;
+  } else {
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = date
+      .toLocaleString("en-US", { month: "short" })
+      .toUpperCase();
+    const year = date.getFullYear();
+    return `${day} ${month} ${year} at ${time}`;
+  }
+};
+
 const Notifications = () => {
   const colorScheme = useColorScheme() ?? "light";
   const tabbarHeight = useBottomTabBarHeight();
@@ -31,7 +72,7 @@ const Notifications = () => {
     hasMore,
     isRefetching,
     isFetchingNextPage,
-  } = useNotifications(logout);
+  } = useNotifications(logout, true);
 
   const handleLoadMore = () => {
     if (hasMore) {
@@ -48,6 +89,8 @@ const Notifications = () => {
           padding: Styles.Padding.default,
           gap: 12,
           alignItems: "flex-start",
+          borderBottomWidth: 1,
+          borderBottomColor: Colors[colorScheme].borderColor,
           backgroundColor: item.isNew
             ? Colors.companyOrange15
             : Colors[colorScheme].primaryBackgroundColor,
@@ -70,7 +113,7 @@ const Notifications = () => {
         <Text style={styles.title}>{item.title}</Text>
         <Text style={styles.message}>{item.message}</Text>
         <Text style={styles.date}>
-          {new Date(item.createdAt.replace(" ", "T") + "Z").toLocaleString()}
+          {formatNotificationDate(item.createdAt)}
         </Text>
       </View>
 
@@ -100,17 +143,11 @@ const Notifications = () => {
             </View>
           }
           ListFooterComponent={
-            <View
-              style={{
-                height: 100,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
+            <View style={styles.footerContainer}>
               {isFetchingNextPage ? (
                 <ActivityIndicator size="small" />
               ) : hasMore ? null : (
-                <Text>You're all caught up! 🎉</Text>
+                <Text style={styles.footerText}>You're all caught up! 🎉</Text>
               )}
             </View>
           }
@@ -132,11 +169,14 @@ const createStyles = (colorScheme: "light" | "dark") =>
       flex: 1,
       backgroundColor: Colors[colorScheme].primaryBackgroundColor,
     },
-    card: {
-      backgroundColor: Colors[colorScheme].primaryBackgroundColor,
-      padding: 16,
-      borderBottomColor: Colors[colorScheme].borderColor,
-      borderBottomWidth: 1,
+    footerContainer: {
+      height: 50,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    footerText: {
+      fontSize: 12,
+      color: Colors[colorScheme].text,
     },
     headerRow: {
       flexDirection: "row",

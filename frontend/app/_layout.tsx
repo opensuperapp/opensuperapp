@@ -29,14 +29,14 @@ import { buildAppsWithTokens } from "@/utils/exchangedTokenRehydrator";
 import { handleFreshInstall } from "@/utils/freshInstall";
 import { performLogout } from "@/utils/performLogout";
 import {
-  initializeNotifications,
-  setupMessagingListener,
+    initializeNotifications,
+    setupMessagingListener,
 } from "@/utils/push-notification";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
-  DarkTheme,
-  DefaultTheme,
-  ThemeProvider,
+    DarkTheme,
+    DefaultTheme,
+    ThemeProvider,
 } from "@react-navigation/native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
@@ -52,9 +52,9 @@ import { PersistGate } from "redux-persist/integration/react";
 // Component to handle app initialization
 function AppInitializer({ onReady }: { onReady: () => void }) {
   const dispatch = useDispatch<AppDispatch>(); // Ensure correct typing for async actions
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     await dispatch(performLogout()).unwrap(); // Ensure the logout action is dispatched properly
-  };
+  }, [dispatch]);
 
   /**
    * Handles push notification token lifecycle.
@@ -64,7 +64,7 @@ function AppInitializer({ onReady }: { onReady: () => void }) {
   /**
    * Prefetch notifications on app mount
    */
-  useNotifications(handleLogout);
+  useNotifications(handleLogout, false);
 
   useEffect(() => {
     const initialize = async () => {

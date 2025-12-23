@@ -36,8 +36,11 @@ interface NotificationResponse {
 
 export const NOTIFICATIONS_PER_PAGE = 10;
 
-export const useNotifications = (onLogout: () => Promise<void>) => {
-  const { lastOpenedAt } = useNotificationStorage();
+export const useNotifications = (
+  onLogout: () => Promise<void>,
+  shouldUpdateLastOpened: boolean = false
+) => {
+  const { lastOpenedAt } = useNotificationStorage(shouldUpdateLastOpened);
 
   const fetchNotifications = useCallback(
     async ({
@@ -117,7 +120,7 @@ export const useNotifications = (onLogout: () => Promise<void>) => {
     notifications,
     totalResults: data?.pages[0]?.totalResults || 0,
     unreadCount,
-    isLoading, // Initial load
+    isLoading,
     isRefetching,
     isFetchingNextPage,
     error,
