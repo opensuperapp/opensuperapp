@@ -20,7 +20,7 @@ import { router } from "expo-router";
 import React, { useEffect, useMemo, useRef } from "react";
 import { Animated, StyleSheet, View } from "react-native";
 
-const SPARKLE_COUNT = 1;
+const SPARKLE_COUNT = 3;
 
 const generateSparkle = () => ({
   id: Math.random().toString(),
