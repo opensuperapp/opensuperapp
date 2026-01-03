@@ -41,13 +41,14 @@ const SparkleIcon = () => {
   return (
     <View style={styles.container}>
       <View style={styles.iconWrapper}>
-        <Ionicons
-          name="storefront-outline"
-          size={24}
-          color={Colors.companyOrange}
-          style={{ marginRight: 16 }}
-          onPress={() => router.push(ScreenPaths.STORE)}
-        />
+        <View style={styles.iconContainer}>
+          <Ionicons
+            name="storefront-outline"
+            size={24}
+            color={Colors.companyOrange}
+            onPress={() => router.push(ScreenPaths.STORE)}
+          />
+        </View>
         {sparkles.map((sparkle) => (
           <FloatingSparkle key={sparkle.id} sparkle={sparkle} />
         ))}
