@@ -149,6 +149,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  iconContainer: {
+    marginHorizontal: 8,
+  },
   sparkle: {
     position: "absolute",
     color: Colors.companyOrange,
