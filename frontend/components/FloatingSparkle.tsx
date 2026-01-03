@@ -59,7 +59,7 @@ const SparkleIcon = () => {
 
 const FloatingSparkle = ({ sparkle }: { sparkle: any }) => {
   const opacity = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(0.5)).current;
+  const scale = useRef(new Animated.Value(0.6)).current;
   const translateX = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
 
@@ -68,8 +68,8 @@ const FloatingSparkle = ({ sparkle }: { sparkle: any }) => {
   const animate = () => {
     if (!isMounted.current) return;
 
-    opacity.setValue(0.2);
-    scale.setValue(0.3);
+    opacity.setValue(0);
+    scale.setValue(0.6);
     translateX.setValue(0);
     translateY.setValue(0);
 
