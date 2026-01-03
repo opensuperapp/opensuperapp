@@ -148,10 +148,10 @@ const styles = StyleSheet.create({
     position: "relative",
     justifyContent: "center",
     alignItems: "center",
-    position: "relative",
   },
   sparkle: {
     position: "absolute",
+    color: Colors.companyOrange,
   },
 });
 
