@@ -24,12 +24,12 @@ const SPARKLE_COUNT = 3;
 
 const generateSparkle = () => ({
   id: Math.random().toString(),
-  top: Math.random() * 10 + 5,
-  left: Math.random() * 10 + 8,
-  fontSize: 10 + Math.random() * 10,
-  duration: 3000 + Math.random() * 1000,
-  delay: Math.random() * 50,
-  rotation: Math.random() * 30 - 15,
+  top: Math.random() * 2 + 6,
+  left: Math.random() * 2 + 16,
+  fontSize: 10 + Math.random() * 6,
+  duration: 1800 + Math.random() * 700,
+  delay: Math.random() * 600,
+  rotation: Math.random() * 20 - 10,
 });
 
 const SparkleIcon = () => {
