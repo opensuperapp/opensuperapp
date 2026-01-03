@@ -46,7 +46,7 @@ export default function AppsStack() {
                     <TouchableOpacity
                       onPress={() => router.push(ScreenPaths.STORE)}
                       hitSlop={20}
-                      style={{ marginRight: 16 }}
+                      style={{ marginHorizontal: 8 }}
                     >
                       <Ionicons
                         name="storefront-outline"
