@@ -98,27 +98,8 @@ const FloatingSparkle = ({ sparkle }: { sparkle: any }) => {
         }),
       ]),
       Animated.timing(opacity, {
-        toValue: 1,
-        duration: sparkle.duration / 2,
-        delay: sparkle.delay,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scale, {
-        toValue: 1.5,
-        duration: sparkle.duration,
-        delay: sparkle.delay,
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateX, {
-        toValue: Math.random() * 10 - 15,
-        duration: sparkle.duration,
-        delay: sparkle.delay,
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateY, {
-        toValue: Math.random() * 10 - 15,
-        duration: sparkle.duration,
-        delay: sparkle.delay,
+        toValue: 0,
+        duration: 400,
         useNativeDriver: true,
       }),
     ]).start(() => {
