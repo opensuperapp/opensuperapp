@@ -121,9 +121,9 @@ const FloatingSparkle = ({ sparkle }: { sparkle: any }) => {
       style={[
         styles.sparkle,
         {
-          fontSize: sparkle.fontSize,
           top: sparkle.top,
           left: sparkle.left,
+          fontSize: sparkle.fontSize,
           transform: [
             { translateX },
             { translateY },
@@ -145,6 +145,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   iconWrapper: {
+    position: "relative",
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
