@@ -95,8 +95,8 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        log:printDebug("Fetching app configurations...", email = userInfo.email, configs = appConfigs, 
-            defaultMicroAppIds = defaultMicroAppIds, microAppScopes = microAppScopes);
+        log:printDebug("Fetching app configurations...", email = userInfo.email, configs = appConfigs,
+                defaultMicroAppIds = defaultMicroAppIds, microAppScopes = microAppScopes);
 
         return <AppConfig>{
             appConfigs,
@@ -303,7 +303,7 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
     # + configuration - User's user configurations including downloaded microapps
     # + return - Created response or error
     resource function post users/user\-configs(http:RequestContext ctx,
-        database:UserConfig configuration) returns http:Created|http:InternalServerError|http:BadRequest {
+            database:UserConfig configuration) returns http:Created|http:InternalServerError|http:BadRequest {
 
         authorization:CustomJwtPayload|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
         if userInfo is error {
@@ -439,5 +439,60 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
         return <http:Ok>{body: {message: result}};
+    }
+
+    # Retrieves a list of notifications filtered by the user's groups.
+    #
+    # + ctx - Request context
+    # + startIndex - Start index for pagination
+    # + itemsPerPage - Items per page
+    # + return - List of notifications or http:InternalServerError
+    resource function get user/notifications(http:RequestContext ctx, int startIndex,
+            int itemsPerPage = NOTIFICATION_ITEMS_PER_PAGE)
+        returns database:NotificationResponse|http:InternalServerError|http:BadRequest {
+
+        authorization:CustomJwtPayload|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
+        if userInfo is error {
+            return <http:InternalServerError>{
+                body: {
+                    message: ERR_MSG_USER_HEADER_NOT_FOUND
+                }
+            };
+        }
+
+        string[]? groups = userInfo.groups;
+        if groups is () {
+            return {
+                notifications: [],
+                totalResults: 0,
+                startIndex: 0,
+                itemsPerPage: 0
+            };
+        }
+
+        database:NotificationResponse|error? notifications =
+            database:getNotifications(groups, startIndex, itemsPerPage);
+
+        if notifications is () {
+            string startIndexError = string `Invalid start index: ${startIndex}`;
+            log:printError(startIndexError);
+            return <http:BadRequest>{
+                body: {
+                    message: startIndexError
+                }
+            };
+        }
+
+        if notifications is error {
+            string customError = "Error occurred while retrieving notifications";
+            log:printError(customError, notifications);
+            return <http:InternalServerError>{
+                body: {
+                    message: customError
+                }
+            };
+        }
+
+        return notifications;
     }
 }
