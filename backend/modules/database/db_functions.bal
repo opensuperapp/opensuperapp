@@ -13,7 +13,6 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import ballerina/http;
 import ballerina/log;
 import ballerina/sql;
 
@@ -238,16 +237,13 @@ public isolated function addDefaultUserConfig(string email, string[] configValue
 # + itemsPerPage - Items per page
 # + return - Array of Notification or error
 public isolated function getNotifications(string[] groups, int startIndex, int itemsPerPage)
-    returns NotificationResponse|http:BadRequest|error {
+    returns NotificationResponse|error|null {
 
     NotificationsCount countRecord = check databaseClient->queryRow(getNotificationsCountQuery(groups));
 
     if startIndex < 0 || startIndex >= countRecord.count {
-        return <http:BadRequest>{
-            body: {
-                message: string `Invalid start index: ${startIndex}. Total results: ${countRecord.count}`
-            }
-        };
+        log:printDebug("Invalid start index", startIndex = startIndex, totalResults = countRecord.count);
+        return ();
     }
 
     stream<DbNotification, sql:Error?> result =

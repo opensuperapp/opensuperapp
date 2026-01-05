@@ -470,13 +470,17 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        database:NotificationResponse|http:BadRequest|error notifications =
+        database:NotificationResponse|error|null notifications =
             database:getNotifications(groups, startIndex, itemsPerPage);
 
-        if notifications is http:BadRequest {
+        if notifications is () {
             string startIndexError = string `Invalid start index: ${startIndex}`;
             log:printError(startIndexError);
-            return notifications;
+            return <http:BadRequest>{
+                body: {
+                    message: startIndexError
+                }
+            };
         }
 
         if notifications is error {
