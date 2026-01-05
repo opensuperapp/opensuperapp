@@ -470,7 +470,7 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        database:NotificationResponse|error|null notifications =
+        database:NotificationResponse|error? notifications =
             database:getNotifications(groups, startIndex, itemsPerPage);
 
         if notifications is () {
