@@ -237,7 +237,7 @@ public isolated function addDefaultUserConfig(string email, string[] configValue
 # + itemsPerPage - Items per page
 # + return - Array of Notification or error
 public isolated function getNotifications(string[] groups, int startIndex, int itemsPerPage)
-    returns NotificationResponse|error|null {
+    returns NotificationResponse|error? {
 
     NotificationsCount countRecord = check databaseClient->queryRow(getNotificationsCountQuery(groups));
 
