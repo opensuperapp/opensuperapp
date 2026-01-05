@@ -16,4 +16,3 @@
 public const ERR_MSG_USER_HEADER_NOT_FOUND = "User information header not found!";
 
 public const int NOTIFICATION_ITEMS_PER_PAGE = 100;
-

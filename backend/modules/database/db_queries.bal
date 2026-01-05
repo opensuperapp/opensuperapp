@@ -278,4 +278,3 @@ public isolated function getNotificationsQuery(string[] groups, int startIndex, 
         LIMIT ${itemsPerPage} OFFSET ${startIndex}
     `);
 }
-
