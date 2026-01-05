@@ -243,7 +243,7 @@ public isolated function getNotifications(string[] groups, int startIndex, int i
 
     if startIndex < 0 || startIndex >= countRecord.count {
         log:printDebug("Invalid start index", startIndex = startIndex, totalResults = countRecord.count);
-        return ();
+        return;
     }
 
     stream<DbNotification, sql:Error?> result =
