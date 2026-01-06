@@ -15,6 +15,7 @@
 // under the License.
 import { Colors } from "@/constants/Colors";
 import { ScreenPaths } from "@/constants/ScreenPaths";
+import { RootState } from "@/context/store";
 import { useNotifications } from "@/hooks/useNotifications";
 import { logout } from "@/services/authService";
 import { Ionicons } from "@expo/vector-icons";
@@ -27,9 +28,11 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import { useSelector } from "react-redux";
 
 export default function AppsStack() {
   const { hasUnread } = useNotifications(logout);
+  const { accessToken } = useSelector((state: RootState) => state.auth);
   const colorScheme = useColorScheme() ?? "light";
 
   const shakeAnimation = useRef(new Animated.Value(0)).current;
@@ -48,7 +51,6 @@ export default function AppsStack() {
         useNativeDriver: true,
       });
 
-    // One natural shake (with overshoot)
     const singleShake = Animated.sequence([
       timing(-25, 80),
       timing(25, 120),
@@ -100,35 +102,39 @@ export default function AppsStack() {
                   color={Colors.companyOrange}
                 />
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => router.push(ScreenPaths.NOTIFICATIONS)}
-                hitSlop={20}
-              >
-                <View>
-                  <Animated.View style={{ transform: [{ rotate }] }}>
-                    <Ionicons
-                      name="notifications-outline"
-                      size={24}
-                      color={Colors.companyOrange}
-                    />
-                  </Animated.View>
-                  {hasUnread && (
-                    <View
-                      style={{
-                        position: "absolute",
-                        right: 0,
-                        top: 0,
-                        width: 10,
-                        height: 10,
-                        borderRadius: 5,
-                        borderWidth: 2,
-                        borderColor: Colors[colorScheme].primaryBackgroundColor,
-                        backgroundColor: "red",
-                      }}
-                    />
-                  )}
-                </View>
-              </TouchableOpacity>
+
+              {accessToken ? (
+                <TouchableOpacity
+                  onPress={() => router.push(ScreenPaths.NOTIFICATIONS)}
+                  hitSlop={20}
+                >
+                  <View>
+                    <Animated.View style={{ transform: [{ rotate }] }}>
+                      <Ionicons
+                        name="notifications-outline"
+                        size={24}
+                        color={Colors.companyOrange}
+                      />
+                    </Animated.View>
+                    {hasUnread && (
+                      <View
+                        style={{
+                          position: "absolute",
+                          right: 0,
+                          top: 0,
+                          width: 10,
+                          height: 10,
+                          borderRadius: 5,
+                          borderWidth: 2,
+                          borderColor:
+                            Colors[colorScheme].primaryBackgroundColor,
+                          backgroundColor: "red",
+                        }}
+                      />
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ) : null}
             </View>
           ),
         }}

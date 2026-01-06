@@ -37,7 +37,8 @@ interface NotificationResponse {
   itemsPerPage: number;
 }
 
-export const NOTIFICATIONS_PER_PAGE = 10;
+// Number of notifications to fetch per page
+export const NOTIFICATIONS_PER_PAGE = 20;
 
 export const useNotifications = (onLogout: () => Promise<void>) => {
   const [lastOpenedAt, setLastOpenedAt] = useState<number | null>(null);
@@ -50,9 +51,9 @@ export const useNotifications = (onLogout: () => Promise<void>) => {
     try {
       const value = await AsyncStorage.getItem(LAST_NOTIFICATION_OPENED_AT);
       if (value !== null) {
-        setLastOpenedAt(parseInt(value, 10));
+        setLastOpenedAt(parseInt(value));
       } else {
-        setLastOpenedAt(0); // Default to 0 if last opened value doesn't exist
+        setLastOpenedAt(0);
       }
     } catch (e) {
       console.error("Failed to load last notification opened time", e);
@@ -75,7 +76,7 @@ export const useNotifications = (onLogout: () => Promise<void>) => {
       pageParam,
     }: {
       pageParam: number;
-    }): Promise<NotificationResponse> => {
+    }): Promise<NotificationResponse | undefined> => {
       const response = await apiRequest(
         {
           url: `${BASE_URL}/user/notifications`,
@@ -115,10 +116,10 @@ export const useNotifications = (onLogout: () => Promise<void>) => {
   });
 
   const notifications = useMemo(() => {
-    if (!data?.pages) return [];
+    if (!data?.pages || data.pages.length === 0) return [];
 
     return data.pages
-      .flatMap((page) => page.notifications)
+      .flatMap((page) => page?.notifications || [])
       .map((note) => {
         return {
           ...note,
