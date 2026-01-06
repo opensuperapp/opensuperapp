@@ -21,6 +21,14 @@
  */
 export const formatNotificationDate = (dateString: string): string => {
   const date = convertToUtc(dateString);
+
+  if (!date) {
+    console.error(
+      `Invalid or unsupported date string provided to formatNotificationDate: ${dateString}`
+    );
+    return "";
+  }
+
   const now = new Date();
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);

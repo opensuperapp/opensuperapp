@@ -133,8 +133,8 @@ export const Colors: AppColors = {
   },
 
   companyOrange: "#FF7300", // Company brand accent color
-  companyOrange20: "#FF730033", // Company brand accent color 40% opacity
-  companyOrange15: "#FF730026", // Company brand accent color 40% opacity
+  companyOrange20: "#FF730033", // Company brand accent color 20% opacity
+  companyOrange15: "#FF730026", // Company brand accent color 15% opacity
   actionButtonTextColor: "#4989F7", // Action button text color
   removeButtonTextColor: "#EB4E3D", // Remove button text color
 };

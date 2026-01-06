@@ -18,10 +18,12 @@ import {
   LAST_NOTIFICATION_OPENED_AT,
   NOTIFICATIONS_QUERY_KEY,
 } from "@/constants/Constants";
+import { RootState } from "@/context/store";
 import { apiRequest } from "@/utils/requestHandler";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSelector } from "react-redux";
 
 export interface Notification {
   id: number;
@@ -41,6 +43,7 @@ interface NotificationResponse {
 export const NOTIFICATIONS_PER_PAGE = 20;
 
 export const useNotifications = (onLogout: () => Promise<void>) => {
+  const accessToken = useSelector((state: RootState) => state.auth.accessToken);
   const [lastOpenedAt, setLastOpenedAt] = useState<number | null>(null);
 
   useEffect(() => {
@@ -113,6 +116,7 @@ export const useNotifications = (onLogout: () => Promise<void>) => {
     },
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
     gcTime: 1000 * 60 * 30, // Keep in cache for 30 minutes
+    enabled: !!accessToken,
   });
 
   const notifications = useMemo(() => {

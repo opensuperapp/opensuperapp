@@ -27,6 +27,7 @@ import { useIsFocused } from "@react-navigation/native";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   FlatList,
   RefreshControl,
   SafeAreaView,
@@ -124,17 +125,21 @@ export default function Notifications() {
             alignItems: "center",
           }}
         >
-          <ContentEmptyView
-            header={
-              <Ionicons
-                name="notifications"
-                size={30}
-                color={Colors.companyOrange}
-              />
-            }
-            title="No notifications yet."
-            description="You'll see your notifications here."
-          />
+          {isLoading ? (
+            <ActivityIndicator size="large" />
+          ) : (
+            <ContentEmptyView
+              header={
+                <Ionicons
+                  name="notifications"
+                  size={30}
+                  color={Colors.companyOrange}
+                />
+              }
+              title="No notifications yet."
+              description="You'll see your notifications here."
+            />
+          )}
         </View>
       )}
     </SafeAreaView>
