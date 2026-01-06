@@ -25,6 +25,7 @@ export type MicroAppParams = {
   exchangedToken: string;
   appId: string;
   displayMode?: DisplayMode;
+  version?: string;
 };
 
 export type DisplayMode =

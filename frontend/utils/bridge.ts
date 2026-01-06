@@ -40,6 +40,7 @@ export const TOPIC = {
   DEVICE_SAFE_AREA_INSETS: "device_safe_area_insets",
   DEVICE_SCREEN_SIZE: "device_screen_size",
   OPEN_URL: "open_url",
+  MICRO_APP_VERSION: "micro_app_version",
 };
 
 // JavaScript code injected into the WebView to enable communication between
@@ -114,5 +115,8 @@ export const injectedJavaScript = `window.nativebridge = {
     rejectGoogleUserInfo: (err) => console.error("Google User Info retrieval failed:", err),
     requestOpenUrl: (config) => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "open_url", data: { config } })),
     resolveOpenUrl: () => console.log("URL opened successfully"),
-    rejectOpenUrl: (err) => console.error("Failed to open URL:", err)
+    rejectOpenUrl: (err) => console.error("Failed to open URL:", err),
+    requestMicroAppVersion: () => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "micro_app_version" })),
+    resolveMicroAppVersion: (version) => console.log("Micro App Version:", version),
+    rejectMicroAppVersion: (err) => console.error("Failed to get Micro App version:", err)
   };`;

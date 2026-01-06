@@ -41,6 +41,7 @@ type WidgetProps = {
   exchangedToken: string;
   appId: string;
   displayMode?: DisplayMode;
+  version?: string;
   isUpdating?: boolean;
   downloadProgress?: number;
 };
@@ -55,6 +56,7 @@ const Widget = React.memo(
     exchangedToken,
     appId,
     displayMode,
+    version,
     isUpdating = false,
     downloadProgress,
   }: WidgetProps) => {
@@ -71,6 +73,7 @@ const Widget = React.memo(
           exchangedToken,
           appId,
           displayMode,
+          version,
         },
       });
     };

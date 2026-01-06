@@ -78,8 +78,15 @@ type NativeLogLevel = "info" | "warn" | "error";
 const MicroApp = () => {
   const [isScannerVisible, setScannerVisible] = useState(false);
 
-  const { webViewUri, appName, clientId, exchangedToken, appId, displayMode } =
-    useLocalSearchParams<MicroAppParams>();
+  const {
+    webViewUri,
+    appName,
+    clientId,
+    exchangedToken,
+    appId,
+    displayMode,
+    version,
+  } = useLocalSearchParams<MicroAppParams>();
   const { bottom: bottomSafeArea } = useSafeAreaInsets();
 
   const [hasError, setHasError] = useState(false);
@@ -470,6 +477,11 @@ const MicroApp = () => {
     sendResponseToWeb("resolveDeviceScreenSize", screenSize);
   };
 
+  // Function to get micro app version
+  const handleMicroAppVersion = async () => {
+    sendResponseToWeb("resolveMicroAppVersion", version || "unknown");
+  };
+
   // Handle messages from WebView
   const onMessage = async (event: WebViewMessageEvent) => {
     try {
@@ -554,6 +566,9 @@ const MicroApp = () => {
           break;
         case TOPIC.DEVICE_SCREEN_SIZE:
           handleDeviceScreenSize();
+          break;
+        case TOPIC.MICRO_APP_VERSION:
+          handleMicroAppVersion();
           break;
         default:
           console.error("Unknown topic:", topic);

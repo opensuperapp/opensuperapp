@@ -311,6 +311,7 @@ export default function HomeScreen() {
               exchangedToken={item.exchangedToken ?? ""}
               appId={item.appId}
               displayMode={item.displayMode}
+              version={item.versions?.[0]?.version}
               isUpdating={updatingApps.includes(item.appId)}
               downloadProgress={downloadProgress[item.appId]}
             />

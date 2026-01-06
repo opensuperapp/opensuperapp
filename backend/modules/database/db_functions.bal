@@ -236,11 +236,14 @@ public isolated function addDefaultUserConfig(string email, string[] configValue
 # + startIndex - Start index for pagination
 # + itemsPerPage - Items per page
 # + return - Array of Notification or error
-public isolated function getNotifications(string[] groups, int startIndex, int itemsPerPage) returns NotificationResponse|error {
+public isolated function getNotifications(string[] groups, int startIndex, int itemsPerPage)
+    returns NotificationResponse|error? {
+
     NotificationsCount countRecord = check databaseClient->queryRow(getNotificationsCountQuery(groups));
 
     if startIndex < 0 || startIndex >= countRecord.count {
-        return error(string `Invalid start index: ${startIndex}. Total results: ${countRecord.count}`);
+        log:printDebug("Invalid start index", startIndex = startIndex, totalResults = countRecord.count);
+        return;
     }
 
     stream<DbNotification, sql:Error?> result =
