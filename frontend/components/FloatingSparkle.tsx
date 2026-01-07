@@ -47,6 +47,7 @@ const SparkleIcon = () => {
             size={24}
             color={Colors.companyOrange}
             onPress={() => router.push(ScreenPaths.STORE)}
+            hitSlop={20}
           />
         </View>
         {sparkles.map((sparkle) => (
