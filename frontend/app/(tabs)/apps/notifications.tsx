@@ -18,7 +18,7 @@ import { NotificationItem } from "@/components/notifications/NotificationItem";
 import { NotificationsFooter } from "@/components/notifications/NotificationsFooter";
 import { Colors } from "@/constants/Colors";
 import { Styles } from "@/constants/Styles";
-import { useNotifications } from "@/hooks/useNotifications";
+import { Notification, useNotifications } from "@/hooks/useNotifications";
 import { logout } from "@/services/authService";
 import { convertToUtc } from "@/utils/date";
 import { Ionicons } from "@expo/vector-icons";
@@ -72,7 +72,7 @@ export default function Notifications() {
     }, [])
   );
 
-  const renderItem = ({ item }: any) => {
+  const renderItem = ({ item }: { item: Notification }) => {
     const itemTime = convertToUtc(item.createdAt)?.getTime() ?? 0;
     return (
       <NotificationItem
