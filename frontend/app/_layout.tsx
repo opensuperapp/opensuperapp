@@ -15,6 +15,7 @@
 // under the License.
 import SplashModal from "@/components/SplashModal";
 import { APPS, USER_INFO } from "@/constants/Constants";
+import { NotificationsProvider } from "@/context/NotificationsContext";
 import { setApps } from "@/context/slices/appSlice";
 import { restoreAuth } from "@/context/slices/authSlice";
 import { getUserConfigurations } from "@/context/slices/userConfigSlice";
@@ -167,16 +168,18 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <Provider store={store}>
           <PersistGate loading={null} persistor={persistor}>
-            <AppInitializer onReady={onAppLoadComplete} />
-            <Stack>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="update" options={{ headerShown: false }} />
-              <Stack.Screen
-                name="micro-app"
-                options={{ headerBackTitle: "Back" }}
-              />
-              <Stack.Screen name="+not-found" />
-            </Stack>
+            <NotificationsProvider>
+              <AppInitializer onReady={onAppLoadComplete} />
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="update" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="micro-app"
+                  options={{ headerBackTitle: "Back" }}
+                />
+                <Stack.Screen name="+not-found" />
+              </Stack>
+            </NotificationsProvider>
           </PersistGate>
         </Provider>
       </QueryClientProvider>

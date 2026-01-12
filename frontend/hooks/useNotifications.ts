@@ -13,16 +13,12 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import {
-  BASE_URL,
-  LAST_NOTIFICATION_OPENED_AT,
-  NOTIFICATIONS_QUERY_KEY,
-} from "@/constants/Constants";
+import { BASE_URL, NOTIFICATIONS_QUERY_KEY } from "@/constants/Constants";
+import { useNotificationsContext } from "@/context/NotificationsContext";
 import { RootState } from "@/context/store";
 import { apiRequest } from "@/utils/requestHandler";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useSelector } from "react-redux";
 
 export interface Notification {
@@ -44,35 +40,7 @@ export const NOTIFICATIONS_PER_PAGE = 20;
 
 export const useNotifications = (onLogout: () => Promise<void>) => {
   const accessToken = useSelector((state: RootState) => state.auth.accessToken);
-  const [lastOpenedAt, setLastOpenedAt] = useState<number | null>(null);
-
-  useEffect(() => {
-    loadLastOpenedAt();
-  }, []);
-
-  const loadLastOpenedAt = async () => {
-    try {
-      const value = await AsyncStorage.getItem(LAST_NOTIFICATION_OPENED_AT);
-      if (value !== null) {
-        setLastOpenedAt(parseInt(value));
-      } else {
-        setLastOpenedAt(0);
-      }
-    } catch (e) {
-      console.error("Failed to load last notification opened time", e);
-      setLastOpenedAt(0);
-    }
-  };
-
-  const markAsRead = useCallback(async () => {
-    const now = Date.now();
-    setLastOpenedAt(now);
-    try {
-      await AsyncStorage.setItem(LAST_NOTIFICATION_OPENED_AT, now.toString());
-    } catch (e) {
-      console.error("Failed to save last notification opened time", e);
-    }
-  }, []);
+  const { lastOpenedAt, markAsRead } = useNotificationsContext();
 
   const fetchNotifications = useCallback(
     async ({
