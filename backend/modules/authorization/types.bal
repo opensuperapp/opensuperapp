@@ -16,8 +16,10 @@
 
 # User info custom type for Asgardeo token.
 public type CustomJwtPayload record {|
-    # User email 
+    # User email
     string email;
+    # User Id
+    string userid;
     # User groups
     string[] groups?;
     json...;

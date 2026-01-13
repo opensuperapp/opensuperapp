@@ -95,7 +95,7 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        log:printDebug("Fetching app configurations...", email = userInfo.email, configs = appConfigs,
+        log:printDebug("Fetching app configurations...", userid = userInfo.userid, configs = appConfigs,
                 defaultMicroAppIds = defaultMicroAppIds, microAppScopes = microAppScopes);
 
         return <AppConfig>{
@@ -283,7 +283,7 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        database:UserConfig[]|error userConfigs = database:getUserConfigsByEmail(userInfo.email);
+        database:UserConfig[]|error userConfigs = database:getUserConfigs(userInfo.userid);
         if userConfigs is error {
             string customError = "Error occurred while retrieving app configurations for the user!";
             log:printError(customError, userConfigs);
@@ -293,7 +293,7 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
                 }
             };
         }
-        log:printDebug("Fetched user configurations...", email = userInfo.email, configs = userConfigs);
+        log:printDebug("Fetched user configurations...", userid = userInfo.userid, configs = userConfigs);
         return userConfigs;
     }
 
@@ -314,7 +314,7 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        if configuration.email != userInfo.email {
+        if configuration.uuid != userInfo.userid {
             string customError = "Token email and the email in the request doesn't match!";
             log:printError(customError);
             return <http:BadRequest>{
@@ -324,9 +324,9 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        log:printDebug("Updating user configurations...", email = userInfo.email, configs = configuration);
+        log:printDebug("Updating user configurations...", userid = userInfo.userid, configs = configuration);
         database:ExecutionSuccessResult|error result =
-            database:updateUserConfigsByEmail(userInfo.email, configuration);
+            database:updateUserConfigs(userInfo.userid, configuration);
         if result is error {
             string customError = "Error occurred while updating the user configuration!";
             log:printError(customError, result);
@@ -343,7 +343,7 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
     # Retrieves FCM tokens for all members of a specified group.
     #
     # + ctx - Request context
-    # + group - The group name to search for members 
+    # + group - The group name to search for members
     # + startIndex - Starting index for pagination
     # + return - Paginated FCM tokens response or an error
     resource function get users/fcm\-tokens(http:RequestContext ctx, string group, int startIndex)
@@ -356,22 +356,22 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        string[]|error memberEmails = scim:getGroupMemberEmails(group);
-        if memberEmails is error {
+        string[]|error memberIds = scim:getGroupMemberIds(group);
+        if memberIds is error {
             string customError = "Error occurred while calling SCIM operations service";
-            log:printError(customError, memberEmails);
+            log:printError(customError, memberIds);
             return <http:InternalServerError>{
                 body: {message: customError}
             };
         }
-        if memberEmails.length() == 0 {
+        if memberIds.length() == 0 {
             string customError = string `No members found in the requested group or the group does not exist.`;
             return <http:NotFound>{
                 body: {message: customError}
             };
         }
 
-        database:FcmTokenResponse|error fcmTokensResponse = database:getFcmTokens(memberEmails, startIndex);
+        database:FcmTokenResponse|error fcmTokensResponse = database:getFcmTokens(memberIds, startIndex);
         if fcmTokensResponse is error {
             string customError = "Error occurred while retrieving FCM tokens";
             log:printError(customError, fcmTokensResponse);
@@ -400,8 +400,8 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        log:printDebug("Adding FCM token...", email = userInfo.email, fcmToken = fcmToken);
-        database:ExecutionSuccessResult|error result = database:addFcmToken(userInfo.email, fcmToken);
+        log:printDebug("Adding FCM token...", userid = userInfo.userid, fcmToken = fcmToken);
+        database:ExecutionSuccessResult|error result = database:addFcmToken(userInfo.userid, fcmToken);
         if result is error {
             string customError = "Error occurred while adding FCM token";
             log:printError(customError, result);

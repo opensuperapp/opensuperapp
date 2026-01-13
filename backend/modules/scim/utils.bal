@@ -15,12 +15,11 @@
 // under the License. 
 
 # Gets the email addresses of users belonging to a specific group from the SCIM operations service.
-# 
+#
 # + group - Filter used to search users of a group from the SCIM operations service
 # + return - An array of email strings, or an error if the operation fails
-public isolated function getGroupMemberEmails(string group) returns string[]|error {
+public isolated function getGroupMemberIds(string group) returns string[]|error {
     User[] users = check searchUsers(group);
     return from User user in users
-        let string displayName = user.userName
-        select displayName.startsWith(STORE_NAME) ? displayName.substring(STORE_NAME.length()) : displayName;
+        select user.id;
 }
