@@ -43,6 +43,7 @@ export const apiRequest = async (
   config.headers = {
     ...config.headers,
     Authorization: `Bearer ${accessToken}`,
+    "x-jwt-assertion": accessToken,
   };
 
   try {
