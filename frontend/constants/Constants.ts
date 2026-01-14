@@ -100,6 +100,7 @@ export const REFRESH_TOKEN = "secure_refresh_token";
 export const ID_TOKEN = "secure_id_token";
 export const EXPIRES_AT_KEY = "secure_expires_at";
 export const AUTH_EMAIL_KEY = "secure_auth_email";
+export const USER_ID_KEY = "secure_userid";
 
 // Keys for Async Storage
 export const LAST_NOTIFICATION_OPENED_AT = "last_notification_opened_at";

@@ -29,6 +29,7 @@ interface AuthState {
   refreshToken: string | null;
   idToken: string | null;
   email: AuthData["email"] | null;
+  userid: AuthData["userid"] | null;
   isLoading: boolean;
 }
 
@@ -37,6 +38,7 @@ const initialState: AuthState = {
   refreshToken: null,
   idToken: null,
   email: null,
+  userid: null,
   isLoading: false,
 };
 
@@ -47,6 +49,7 @@ export const restoreAuth = createAsyncThunk(
     let authData = await loadAuthData();
 
     if (authData) {
+      console.log("restoreAuth authData", authData);
       dispatch(setAuth(authData));
       const isExpired = authData.expiresAt && Date.now() >= authData.expiresAt;
       if (isExpired) {
@@ -94,6 +97,7 @@ const authSlice = createSlice({
       state.refreshToken = action.payload.refreshToken;
       state.idToken = action.payload.idToken;
       state.email = action.payload.email;
+      state.userid = action.payload.userid;
       state.isLoading = false;
     },
     resetAll: () => initialState,
@@ -106,6 +110,7 @@ const authSlice = createSlice({
           state.refreshToken = action.payload.refreshToken;
           state.idToken = action.payload.idToken;
           state.email = action.payload.email;
+          state.userid = action.payload.userid;
         }
         state.isLoading = false;
       })

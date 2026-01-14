@@ -42,10 +42,10 @@ export const UpdateUserConfiguration = async (
 
     if (storedUserConfigs.length === 0) {
       const state = store.getState();
-      const email = state.auth.email;
+      const userid = state.auth.userid;
 
-      if (!email) {
-        console.error("User email not found in auth state.");
+      if (!userid) {
+        console.error("User userid not found in auth state.");
         return false;
       }
 
@@ -90,10 +90,10 @@ export const UpdateUserConfiguration = async (
       JSON.stringify(updatedUserConfigs)
     );
     const state = store.getState();
-    const email = state.auth.email;
-    if (!email) {
+    const userid = state.auth.userid;
+    if (!userid) {
       console.error(
-        "Missing auth.email in Redux (expected after SecureStore restore)."
+        "Missing auth.userid in Redux (expected after SecureStore restore)."
       );
       return false;
     }
@@ -105,7 +105,7 @@ export const UpdateUserConfiguration = async (
         data: {
           configKey: APP_LIST_CONFIG_KEY,
           configValue: updatedConfigValue,
-          email,
+          uuid: userid,
           isActive: appUserConfigs.isActive,
         },
       },

@@ -313,9 +313,8 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
                 }
             };
         }
-
         if configuration.uuid != userInfo.userid {
-            string customError = "Token email and the email in the request doesn't match!";
+            string customError = "Token UUID and the UUID in the request doesn't match!";
             log:printError(customError);
             return <http:BadRequest>{
                 body: {
