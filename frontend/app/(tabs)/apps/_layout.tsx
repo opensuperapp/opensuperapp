@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 import { Colors } from "@/constants/Colors";
+import { MY_APPS_TAB_NAME } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { RootState } from "@/context/store";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -87,7 +88,7 @@ export default function AppsStack() {
       <Stack.Screen
         name="index"
         options={{
-          headerTitle: "My Apps",
+          headerTitle: MY_APPS_TAB_NAME,
           headerRight: () => (
             <View
               style={{ flexDirection: "row", alignItems: "center", gap: 24 }}
@@ -143,14 +144,14 @@ export default function AppsStack() {
         name="store"
         options={{
           headerTitle: "Store",
-          headerBackTitle: "My Apps",
+          headerBackTitle: MY_APPS_TAB_NAME,
         }}
       />
       <Stack.Screen
         name="notifications"
         options={{
           headerTitle: "Notifications",
-          headerBackTitle: "My Apps",
+          headerBackTitle: MY_APPS_TAB_NAME,
         }}
       />
     </Stack>
