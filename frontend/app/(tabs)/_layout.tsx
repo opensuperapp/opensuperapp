@@ -16,6 +16,12 @@
 import { HapticTab } from "@/components/HapticTab";
 import TabBarBackground from "@/components/ui/TabBarBackground";
 import { Colors } from "@/constants/Colors";
+import {
+  FEED_TAB_NAME,
+  LIBRARY_TAB_NAME,
+  MY_APPS_TAB_NAME,
+  PROFILE_TAB_NAME,
+} from "@/constants/Constants";
 import { useRestoreLastTab } from "@/hooks/useRestoreLastTab";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
@@ -36,7 +42,7 @@ const tabs: TabType[] = [
     name: "index",
     options: {
       headerShown: true,
-      title: "Feed",
+      title: FEED_TAB_NAME,
       icon: "layers-outline",
       iconFocused: "layers-sharp",
     },
@@ -45,7 +51,7 @@ const tabs: TabType[] = [
     name: "library",
     options: {
       headerShown: true,
-      title: "Library",
+      title: LIBRARY_TAB_NAME,
       icon: "book-outline",
       iconFocused: "book",
     },
@@ -54,7 +60,7 @@ const tabs: TabType[] = [
     name: "apps",
     options: {
       headerShown: false,
-      title: "My Apps",
+      title: MY_APPS_TAB_NAME,
       icon: "apps-outline",
       iconFocused: "apps",
     },
@@ -63,7 +69,7 @@ const tabs: TabType[] = [
     name: "profile",
     options: {
       headerShown: true,
-      title: "Profile",
+      title: PROFILE_TAB_NAME,
       icon: "person-circle-outline",
       iconFocused: "person-circle",
     },
