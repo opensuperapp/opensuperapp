@@ -111,7 +111,6 @@ public type Version record {|
 # Record type to model configurations for the users of the SuperApp.
 public type UserConfig record {|
     # User ID
-    @sql:Column {name: "uuid"}
     string uuid;
     # Configuration key, unique key for the configuration
     @sql:Column {name: "config_key"}
