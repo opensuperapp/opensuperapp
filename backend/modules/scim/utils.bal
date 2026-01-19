@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License. 
 
-# Gets the email addresses of users belonging to a specific group from the SCIM operations service.
+# Gets the user ids of users belonging to a specific group from the SCIM operations service.
 #
 # + group - Filter used to search users of a group from the SCIM operations service
 # + return - An array of email strings, or an error if the operation fails

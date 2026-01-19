@@ -49,7 +49,6 @@ export const restoreAuth = createAsyncThunk(
     let authData = await loadAuthData();
 
     if (authData) {
-      console.log("restoreAuth authData", authData);
       dispatch(setAuth(authData));
       const isExpired = authData.expiresAt && Date.now() >= authData.expiresAt;
       if (isExpired) {
