@@ -14,13 +14,25 @@
 // specific language governing permissions and limitations
 // under the License.
 
-# User info custom type for Asgardeo token.
-public type CustomJwtPayload record {|
+# Base JWT payload record.
+public type BaseJwtPayload record {|
     # User email
     string email;
-    # User ID
-    string userid;
     # User groups
     string[] groups?;
+|};
+
+# Custom JWT payload record.
+public type CustomJwtPayload record {|
+    *BaseJwtPayload;
+    # User ID
+    string userId;
+|};
+
+# JWT payload record.
+public type JwtPayload record {|
+    *BaseJwtPayload;
+    # User ID
+    string userid;
     json...;
 |};

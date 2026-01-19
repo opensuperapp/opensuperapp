@@ -95,7 +95,7 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        log:printDebug("Fetching app configurations...", userid = userInfo.userid, configs = appConfigs,
+        log:printDebug("Fetching app configurations...", userId = userInfo.userId, configs = appConfigs,
                 defaultMicroAppIds = defaultMicroAppIds, microAppScopes = microAppScopes);
 
         return <AppConfig>{
@@ -283,7 +283,7 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        database:UserConfig[]|error userConfigs = database:getUserConfigs(userInfo.userid);
+        database:UserConfig[]|error userConfigs = database:getUserConfigs(userInfo.userId);
         if userConfigs is error {
             string customError = "Error occurred while retrieving app configurations for the user!";
             log:printError(customError, userConfigs);
@@ -293,7 +293,7 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
                 }
             };
         }
-        log:printDebug("Fetched user configurations...", userid = userInfo.userid, configs = userConfigs);
+        log:printDebug("Fetched user configurations...", userId = userInfo.userId, configs = userConfigs);
         return userConfigs;
     }
 
@@ -313,7 +313,7 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
                 }
             };
         }
-        if configuration.uuid != userInfo.userid {
+        if configuration.uuid != userInfo.userId {
             string customError = "Token UUID and the UUID in the request doesn't match!";
             log:printError(customError);
             return <http:BadRequest>{
@@ -323,9 +323,9 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        log:printDebug("Updating user configurations...", userid = userInfo.userid, configs = configuration);
+        log:printDebug("Updating user configurations...", userId = userInfo.userId, configs = configuration);
         database:ExecutionSuccessResult|error result =
-            database:updateUserConfigs(userInfo.userid, configuration);
+            database:updateUserConfigs(userInfo.userId, configuration);
         if result is error {
             string customError = "Error occurred while updating the user configuration!";
             log:printError(customError, result);
@@ -399,8 +399,8 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        log:printDebug("Adding FCM token...", userid = userInfo.userid, fcmToken = fcmToken);
-        database:ExecutionSuccessResult|error result = database:addFcmToken(userInfo.userid, fcmToken);
+        log:printDebug("Adding FCM token...", userId = userInfo.userId, fcmToken = fcmToken);
+        database:ExecutionSuccessResult|error result = database:addFcmToken(userInfo.userId, fcmToken);
         if result is error {
             string customError = "Error occurred while adding FCM token";
             log:printError(customError, result);
