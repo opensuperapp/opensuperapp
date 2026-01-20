@@ -26,7 +26,7 @@ interface AppArrangement {
 }
 
 export interface UserConfig {
-  email: string;
+  uuid?: string;
   configKey: string;
   configValue: string[] | AppArrangement[];
   isActive: number;
@@ -57,10 +57,9 @@ export const getUserConfigurations = createAsyncThunk(
         const cleanedResponseData = removeDuplicatesFromUserConfigs(
           response.data
         );
-        // Persist without email
         const sanitizedUserConfigs = cleanedResponseData.map(
           (config: UserConfig) => {
-            const { email, ...rest } = config;
+            const { uuid, ...rest } = config;
             return rest;
           }
         );
