@@ -42,10 +42,10 @@ export const UpdateUserConfiguration = async (
 
     if (storedUserConfigs.length === 0) {
       const state = store.getState();
-      const userid = state.auth.userid;
+      const userId = state.auth.userId;
 
-      if (!userid) {
-        console.error("User userid not found in auth state.");
+      if (!userId) {
+        console.error("User userId not found in auth state.");
         return false;
       }
 
@@ -90,10 +90,10 @@ export const UpdateUserConfiguration = async (
       JSON.stringify(updatedUserConfigs)
     );
     const state = store.getState();
-    const userid = state.auth.userid;
-    if (!userid) {
+    const userId = state.auth.userId;
+    if (!userId) {
       console.error(
-        "Missing auth.userid in Redux (expected after SecureStore restore)."
+        "Missing auth.userId in Redux (expected after SecureStore restore)."
       );
       return false;
     }
@@ -105,7 +105,7 @@ export const UpdateUserConfiguration = async (
         data: {
           configKey: APP_LIST_CONFIG_KEY,
           configValue: updatedConfigValue,
-          uuid: userid,
+          uuid: userId,
           isActive: appUserConfigs.isActive,
         },
       },

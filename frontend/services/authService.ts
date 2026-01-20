@@ -61,7 +61,7 @@ export interface AuthData {
   refreshToken: string;
   idToken: string;
   email?: string;
-  userid?: string;
+  userId?: string;
   expiresAt: number;
 }
 
@@ -96,7 +96,7 @@ export const getAccessToken = async (
 
       if (data.access_token && data.id_token) {
         const decodedIdToken = jwtDecode<DecodedIdToken>(data.id_token);
-        const { email, userid } = decodedIdToken;
+        const { email, userid: userId } = decodedIdToken;
         const exp = jwtDecode(data.access_token).exp || 0;
 
         const authData: AuthData = {
@@ -104,7 +104,7 @@ export const getAccessToken = async (
           refreshToken: data.refresh_token,
           idToken: data.id_token,
           email,
-          userid,
+          userId,
           expiresAt: exp * MILLISECONDS_IN_A_SECOND,
         };
 
@@ -175,14 +175,14 @@ export const refreshAccessToken = async (
       if (data.access_token && data.id_token) {
         const decodedIdToken = jwtDecode<DecodedIdToken>(data.id_token);
         const exp = jwtDecode<{ exp: number }>(data.access_token).exp || 0;
-        const { email, userid } = decodedIdToken;
+        const { email, userid: userId } = decodedIdToken;
 
         const updatedAuthData: AuthData = {
           accessToken: data.access_token,
           refreshToken: data.refresh_token || authData.refreshToken,
           idToken: data.id_token,
           email,
-          userid,
+          userId,
           expiresAt: exp * MILLISECONDS_IN_A_SECOND,
         };
 
@@ -414,14 +414,14 @@ export const processNativeAuthResult = async (
     if (authResult.accessToken && authResult.idToken) {
       const decodedIdToken = jwtDecode<DecodedIdToken>(authResult.idToken);
       const exp = jwtDecode<{ exp: number }>(authResult.accessToken).exp || 0;
-      const { email, userid } = decodedIdToken;
+      const { email, userid: userId } = decodedIdToken;
 
       const authData: AuthData = {
         accessToken: authResult.accessToken,
         refreshToken: authResult.refreshToken,
         idToken: authResult.idToken,
         email: email,
-        userid,
+        userId,
         expiresAt: exp * MILLISECONDS_IN_A_SECOND,
       };
 

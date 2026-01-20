@@ -28,7 +28,7 @@ export type SecureAuthData = {
   refreshToken: string;
   idToken: string;
   email?: string;
-  userid?: string;
+  userId?: string;
   expiresAt: number;
 };
 
@@ -38,14 +38,14 @@ export async function saveAuthDataToSecureStore(authData: SecureAuthData) {
     setItemAsync(REFRESH_TOKEN, authData.refreshToken),
     setItemAsync(ID_TOKEN, authData.idToken),
     setItemAsync(EXPIRES_AT_KEY, String(authData.expiresAt)),
-    authData.userid
-      ? setItemAsync(USER_ID_KEY, authData.userid)
+    authData.userId
+      ? setItemAsync(USER_ID_KEY, authData.userId)
       : deleteItemAsync(USER_ID_KEY),
   ]);
 }
 
 export async function loadAuthDataFromSecureStore(): Promise<SecureAuthData | null> {
-  const [accessToken, refreshToken, idToken, expiresAtStr, email, userid] =
+  const [accessToken, refreshToken, idToken, expiresAtStr, email, userId] =
     await Promise.all([
       getItemAsync(ACCESS_TOKEN),
       getItemAsync(REFRESH_TOKEN),
@@ -55,7 +55,7 @@ export async function loadAuthDataFromSecureStore(): Promise<SecureAuthData | nu
       getItemAsync(USER_ID_KEY),
     ]);
 
-  if (!accessToken || !refreshToken || !idToken || !expiresAtStr || !userid)
+  if (!accessToken || !refreshToken || !idToken || !expiresAtStr || !userId)
     return null;
 
   return {
@@ -63,7 +63,7 @@ export async function loadAuthDataFromSecureStore(): Promise<SecureAuthData | nu
     refreshToken,
     idToken,
     email: email || undefined,
-    userid,
+    userId,
     expiresAt: Number(expiresAtStr),
   };
 }
@@ -75,5 +75,6 @@ export async function clearAuthDataFromSecureStore() {
     deleteItemAsync(ID_TOKEN),
     deleteItemAsync(EXPIRES_AT_KEY),
     deleteItemAsync(AUTH_EMAIL_KEY),
+    deleteItemAsync(USER_ID_KEY),
   ]);
 }
