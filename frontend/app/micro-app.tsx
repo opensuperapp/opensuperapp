@@ -27,6 +27,7 @@ import {
   isIos,
 } from "@/constants/Constants";
 import { Event } from "@/constants/Event";
+import { ScreenPaths } from "@/constants/ScreenPaths";
 import { RootState } from "@/context/store";
 import { logout, tokenExchange } from "@/services/authService";
 import googleAuthenticationService, {
@@ -188,7 +189,7 @@ const MicroApp = () => {
 
   const openQrScanner = () => {
     router.navigate({
-      pathname: "/qr-scanner",
+      pathname: ScreenPaths.QR_SCANNER,
       params: {
         message: isTotp
           ? "We need access to your camera to scan QR codes for generating one-time passwords (TOTP) for secure authentication. This will allow you to easily log in to your accounts."
