@@ -13,9 +13,10 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import AppProviders from "@/components/contexts/AppProviders";
+import CloseButton from "@/components/headers/CloseButton";
 import SplashModal from "@/components/SplashModal";
 import { APPS, USER_INFO } from "@/constants/Constants";
-import { NotificationsProvider } from "@/context/NotificationsContext";
 import { setApps } from "@/context/slices/appSlice";
 import { restoreAuth } from "@/context/slices/authSlice";
 import { getUserConfigurations } from "@/context/slices/userConfigSlice";
@@ -30,14 +31,14 @@ import { buildAppsWithTokens } from "@/utils/exchangedTokenRehydrator";
 import { handleFreshInstall } from "@/utils/freshInstall";
 import { performLogout } from "@/utils/performLogout";
 import {
-    initializeNotifications,
-    setupMessagingListener,
+  initializeNotifications,
+  setupMessagingListener,
 } from "@/utils/push-notification";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
-    DarkTheme,
-    DefaultTheme,
-    ThemeProvider,
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider,
 } from "@react-navigation/native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
@@ -168,18 +169,26 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <Provider store={store}>
           <PersistGate loading={null} persistor={persistor}>
-            <NotificationsProvider>
+            <AppProviders>
               <AppInitializer onReady={onAppLoadComplete} />
               <Stack>
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="update" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="qr-scanner"
+                  options={{
+                    presentation: "modal",
+                    title: "QR Scanner",
+                    headerRight: () => <CloseButton />,
+                  }}
+                />
                 <Stack.Screen
                   name="micro-app"
                   options={{ headerBackTitle: "Back" }}
                 />
                 <Stack.Screen name="+not-found" />
               </Stack>
-            </NotificationsProvider>
+            </AppProviders>
           </PersistGate>
         </Provider>
       </QueryClientProvider>

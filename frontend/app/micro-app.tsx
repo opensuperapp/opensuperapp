@@ -14,7 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 import NotFound from "@/components/NotFound";
-import Scanner from "@/components/Scanner";
 import { Colors } from "@/constants/Colors";
 import {
   DEVELOPER_APP_ANDROID_DEFAULT_URL,
@@ -27,6 +26,7 @@ import {
   isAndroid,
   isIos,
 } from "@/constants/Constants";
+import { Event } from "@/constants/Event";
 import { RootState } from "@/context/store";
 import { logout, tokenExchange } from "@/services/authService";
 import googleAuthenticationService, {
@@ -49,6 +49,7 @@ import {
 } from "@/types/microApp.types";
 import { MicroAppParams } from "@/types/navigation";
 import { injectedJavaScript, TOPIC } from "@/utils/bridge";
+import { qrScannerEmitter } from "@/utils/eventEmitter";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Google from "expo-auth-session/providers/google";
 import { documentDirectory } from "expo-file-system";
@@ -76,8 +77,6 @@ WebBrowser.maybeCompleteAuthSession();
 type NativeLogLevel = "info" | "warn" | "error";
 
 const MicroApp = () => {
-  const [isScannerVisible, setScannerVisible] = useState(false);
-
   const {
     webViewUri,
     appName,
@@ -107,6 +106,20 @@ const MicroApp = () => {
   const insets = useSafeAreaInsets();
   const shouldShowHeader: boolean = displayMode !== FULL_SCREEN_VIEWING_MODE;
   const { width, height } = useWindowDimensions();
+
+  // Event listener for QR Code scanned
+  useEffect(() => {
+    const unsubscribe = qrScannerEmitter.on(
+      Event.QrScanned,
+      (qrCode: string) => {
+        sendQrToWebView(qrCode);
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   /**
    * Create styles for the micro app.
@@ -172,6 +185,17 @@ const MicroApp = () => {
 
     fetchToken();
   }, [clientId]);
+
+  const openQrScanner = () => {
+    router.navigate({
+      pathname: "/qr-scanner",
+      params: {
+        message: true
+          ? "We need access to your camera to scan QR codes for generating one-time passwords (TOTP) for secure authentication. This will allow you to easily log in to your accounts."
+          : undefined,
+      },
+    });
+  };
 
   // Function to send token to WebView
   const sendTokenToWebView = (token: string) => {
@@ -494,7 +518,7 @@ const MicroApp = () => {
             : pendingTokenRequests.current.push(sendTokenToWebView);
           break;
         case TOPIC.QR_REQUEST:
-          setScannerVisible(true);
+          openQrScanner();
           break;
         case TOPIC.SAVE_LOCAL_DATA:
           await handleSaveLocalData(data.key, data.value);
@@ -749,28 +773,7 @@ const MicroApp = () => {
         }}
       />
       <View style={styles.container}>
-        {isScannerVisible && (
-          <View style={styles.scannerOverlay}>
-            <Scanner
-              onScan={(qrCode) => {
-                sendQrToWebView(qrCode);
-                setScannerVisible(false);
-              }}
-              message={
-                isTotp
-                  ? "We need access to your camera to scan QR codes for generating one-time passwords (TOTP) for secure authentication. This will allow you to easily log in to your accounts."
-                  : undefined
-              }
-            />
-          </View>
-        )}
-
-        <View
-          style={[
-            styles.webViewContainer,
-            isScannerVisible && styles.webViewHidden,
-          ]}
-        >
+        <View style={styles.webViewContainer}>
           {renderWebView(isDeveloper ? webUri : webViewUri)}
         </View>
       </View>
@@ -785,22 +788,11 @@ const createStyles = (colorScheme: "light" | "dark", bottomSafeArea: number) =>
     container: {
       flex: 1,
     },
-    scannerOverlay: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-    },
     webViewContainer: {
       flex: 1,
       opacity: 1,
       pointerEvents: "auto",
       paddingBottom: isAndroid ? bottomSafeArea : 0,
-    },
-    webViewHidden: {
-      opacity: 0,
-      pointerEvents: "none",
     },
     headerText: {
       fontWeight: "600",
