@@ -13,7 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import QrScanner from "@/components/qr-scanner/qr-scanner";
+import QrScanner from "@/components/qr-scanner/QRScanner";
 import { useLocalSearchParams } from "expo-router";
 import React from "react";
 

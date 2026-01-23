@@ -21,7 +21,7 @@ import { useGlobalSearchParams, useRouter } from "expo-router";
 import { useColorScheme, View } from "react-native";
 import Scanner from "../Scanner";
 import CloseButton from "../headers/CloseButton";
-import { QrScannerScreenProps } from "./qr-scanner.ios";
+import { QrScannerScreenProps } from "./QRScanner.ios";
 
 const QrScanner = ({ message }: QrScannerScreenProps) => {
   const { emitQrCode } = useQrScanner();
