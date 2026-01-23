@@ -13,8 +13,9 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import { isAndroid, isIos } from "@/constants/Constants";
 import { Event } from "@/constants/Event";
-import { NativeEventEmitter, NativeModules, Platform } from "react-native";
+import { NativeEventEmitter, NativeModules } from "react-native";
 
 type EventHandler<T> = (data: T) => void;
 
@@ -23,7 +24,7 @@ class EventEmitter<T> {
   private nativeEmitter?: NativeEventEmitter;
 
   constructor() {
-    if (Platform.OS === "ios" || Platform.OS === "android") {
+    if (isIos || isAndroid) {
       if (NativeModules.DeviceEventEmitter) {
         this.nativeEmitter = new NativeEventEmitter(
           NativeModules.DeviceEventEmitter
