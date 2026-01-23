@@ -16,13 +16,14 @@
 import { Colors } from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { Pressable, useColorScheme } from "react-native";
+import { Pressable, StyleProp, useColorScheme, ViewStyle } from "react-native";
 
 type CloseButtonProps = {
   onPress?: () => void;
+  style?: StyleProp<ViewStyle>;
 };
 
-const CloseButton = ({ onPress }: CloseButtonProps) => {
+const CloseButton = ({ onPress, style }: CloseButtonProps) => {
   const colorScheme = useColorScheme() ?? "light";
 
   return (
@@ -30,6 +31,7 @@ const CloseButton = ({ onPress }: CloseButtonProps) => {
       onPress={() => {
         onPress ? onPress() : router.back();
       }}
+      style={style}
     >
       <Ionicons name="close" size={24} color={Colors[colorScheme].text} />
     </Pressable>

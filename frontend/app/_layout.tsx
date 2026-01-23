@@ -16,7 +16,7 @@
 import AppProviders from "@/components/contexts/AppProviders";
 import CloseButton from "@/components/headers/CloseButton";
 import SplashModal from "@/components/SplashModal";
-import { APPS, USER_INFO } from "@/constants/Constants";
+import { APPS, isAndroid, USER_INFO } from "@/constants/Constants";
 import { setApps } from "@/context/slices/appSlice";
 import { restoreAuth } from "@/context/slices/authSlice";
 import { getUserConfigurations } from "@/context/slices/userConfigSlice";
@@ -179,6 +179,7 @@ export default function RootLayout() {
                   options={{
                     presentation: "modal",
                     title: "QR Scanner",
+                    headerShown: isAndroid ? false : true,
                     headerRight: () => <CloseButton />,
                   }}
                 />

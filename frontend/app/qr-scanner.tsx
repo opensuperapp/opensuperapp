@@ -13,40 +13,14 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import Scanner from "@/components/Scanner";
-import { useQrScanner } from "@/context/QrScannerContext";
-import {
-  useGlobalSearchParams,
-  useLocalSearchParams,
-  useRouter,
-} from "expo-router";
+import QrScanner from "@/components/qr-scanner/qr-scanner";
+import { useLocalSearchParams } from "expo-router";
 import React from "react";
-
-interface QrScannerScreenProps {
-  message?: string;
-}
-
-const QrScannerContent = ({ message }: QrScannerScreenProps) => {
-  const { emitQrCode } = useQrScanner();
-  const router = useRouter();
-  const { message: routeMessage } = useGlobalSearchParams<{
-    message?: string;
-  }>();
-
-  const handleMessageScan = (qrCode: string) => {
-    emitQrCode(qrCode);
-    router.back();
-  };
-
-  const displayMessage = message || routeMessage;
-
-  return <Scanner onScan={handleMessageScan} message={displayMessage} />;
-};
 
 const QrScannerScreen = () => {
   const { message } = useLocalSearchParams<{ message?: string }>();
 
-  return <QrScannerContent message={message} />;
+  return <QrScanner message={message} />;
 };
 
 export default QrScannerScreen;
