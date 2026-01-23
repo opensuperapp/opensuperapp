@@ -190,7 +190,7 @@ const MicroApp = () => {
     router.navigate({
       pathname: "/qr-scanner",
       params: {
-        message: true
+        message: isTotp
           ? "We need access to your camera to scan QR codes for generating one-time passwords (TOTP) for secure authentication. This will allow you to easily log in to your accounts."
           : undefined,
       },
