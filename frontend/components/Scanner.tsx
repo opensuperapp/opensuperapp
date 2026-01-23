@@ -14,11 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 import { Colors } from "@/constants/Colors";
+import { isAndroid } from "@/constants/Constants";
 import { CameraType, CameraView, useCameraPermissions } from "expo-camera";
 import { useEffect, useRef, useState } from "react";
 import {
   AppState,
-  Platform,
   StatusBar,
   StyleProp,
   StyleSheet,
@@ -82,7 +82,7 @@ const Scanner = ({ onScan, message, style }: ScannerProps) => {
         alignItems: "center",
       }}
     >
-      {Platform.OS === "android" ? <StatusBar hidden /> : null}
+      {isAndroid ? <StatusBar hidden /> : null}
       <CameraView
         style={[StyleSheet.absoluteFillObject, style]}
         facing={facing}
