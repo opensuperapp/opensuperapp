@@ -70,6 +70,7 @@ import prompt from "react-native-prompt-android";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 import { useDispatch, useSelector } from "react-redux";
+import * as DocumentPicker from "expo-document-picker";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -482,6 +483,30 @@ const MicroApp = () => {
     sendResponseToWeb("resolveMicroAppVersion", version || "unknown");
   };
 
+  // Function to pick a document from device storage
+  const handlePickDocument = async (
+    configs?: DocumentPicker.DocumentPickerOptions,
+  ) => {
+    try {
+      if (!configs) {
+        console.error("Missing Required DocumentPicker configuration.");
+        sendResponseToWeb(
+          "rejectPickDocument",
+          "Document picker configuration is missing.",
+        );
+        return;
+      }
+
+      const result = await DocumentPicker.getDocumentAsync(configs);
+      sendResponseToWeb("resolvePickDocument", result);
+    } catch (error) {
+      const errMessage =
+        error instanceof Error ? error.message : "Failed to pick document";
+      console.error("Error picking document:", errMessage);
+      sendResponseToWeb("rejectPickDocument", errMessage);
+    }
+  };
+
   // Handle messages from WebView
   const onMessage = async (event: WebViewMessageEvent) => {
     try {
@@ -569,6 +594,9 @@ const MicroApp = () => {
           break;
         case TOPIC.MICRO_APP_VERSION:
           handleMicroAppVersion();
+          break;
+        case TOPIC.PICK_DOCUMENT:
+          await handlePickDocument(data.configs);
           break;
         default:
           console.error("Unknown topic:", topic);
