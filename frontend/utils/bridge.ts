@@ -119,7 +119,6 @@ export const injectedJavaScript = `window.nativebridge = {
     rejectOpenUrl: (err) => console.error("Failed to open URL:", err),
     requestMicroAppVersion: () => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "micro_app_version" })),
     resolveMicroAppVersion: (version) => console.log("Micro App Version:", version),
-    rejectMicroAppVersion: (err) => console.error("Failed to get Micro App version:", err)
     rejectMicroAppVersion: (err) => console.error("Failed to get Micro App version:", err),
     requestPickDocument: (config) => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "pick_document", data: { config } })),
     resolvePickDocument: (result) => console.log("Document picked successfully:", result),
