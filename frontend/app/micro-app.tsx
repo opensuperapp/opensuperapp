@@ -485,7 +485,7 @@ const MicroApp = () => {
 
   // Function to pick a document
   const handlePickDocument = async (
-    config: DocumentPicker.DocumentPickerOptions,
+    config?: DocumentPicker.DocumentPickerOptions,
   ) => {
     try {
       if (!config) {
@@ -596,7 +596,7 @@ const MicroApp = () => {
           handleMicroAppVersion();
           break;
         case TOPIC.PICK_DOCUMENT:
-          await handlePickDocument(data.config);
+          await handlePickDocument(data?.config);
           break;
         default:
           console.error("Unknown topic:", topic);
