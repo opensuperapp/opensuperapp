@@ -71,6 +71,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 import { useDispatch, useSelector } from "react-redux";
 import * as MailComposer from "expo-mail-composer";
+import * as FileSystem from "expo-file-system";
 
 WebBrowser.maybeCompleteAuthSession();
 
