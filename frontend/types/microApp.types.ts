@@ -84,27 +84,3 @@ export interface ScheduledNotificationData
   body: string;
   time: Date;
 }
-
-// Enum for MailComposer status
-export enum MailComposerStatus {
-  CANCELLED = "cancelled",
-  SAVED = "saved",
-  SENT = "sent",
-  UNDETERMINED = "undetermined",
-}
-
-// Interface for MailComposer options
-export interface MailComposerOptions {
-  recipients?: string[];
-  ccRecipients?: string[];
-  bccRecipients?: string[];
-  subject?: string;
-  body?: string;
-  isHtml?: boolean;
-  attachments?: string[];
-}
-
-// Interface for MailComposer result
-export interface MailComposerResult {
-  status: MailComposerStatus;
-}
