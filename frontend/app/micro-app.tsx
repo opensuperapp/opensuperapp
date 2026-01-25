@@ -486,10 +486,10 @@ const MicroApp = () => {
 
   // Function to compose an email
   const handleComposeEmail = async (
-    options: MailComposer.MailComposerOptions,
+    config: MailComposer.MailComposerOptions,
   ) => {
     try {
-      if (!options) {
+      if (!config) {
         console.error("Missing Required MailComposer configuration.");
         sendResponseToWeb(
           "rejectComposeEmail",
@@ -504,8 +504,8 @@ const MicroApp = () => {
       }
 
       // Validate attachments if provided
-      if (options.attachments && options.attachments.length > 0) {
-        for (const attachment of options.attachments) {
+      if (config.attachments && config.attachments.length > 0) {
+        for (const attachment of config.attachments) {
           try {
             const info = await FileSystem.getInfoAsync(attachment);
             if (!info.exists) {
@@ -519,7 +519,7 @@ const MicroApp = () => {
         }
       }
 
-      const result = await MailComposer.composeAsync(options);
+      const result = await MailComposer.composeAsync(config);
       sendResponseToWeb("resolveComposeEmail", result);
     } catch (error) {
       const errMessage =
