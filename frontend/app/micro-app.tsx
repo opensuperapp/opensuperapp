@@ -497,7 +497,14 @@ const MicroApp = () => {
         return;
       }
 
-      const result = await DocumentPicker.getDocumentAsync(configs);
+      const result = await DocumentPicker.getDocumentAsync(config);
+      if (result.canceled) {
+        sendResponseToWeb(
+          "rejectPickDocument",
+          "Document pick canceled by user.",
+        );
+        return;
+      }
       sendResponseToWeb("resolvePickDocument", result);
     } catch (error) {
       const errMessage =
@@ -596,7 +603,7 @@ const MicroApp = () => {
           handleMicroAppVersion();
           break;
         case TOPIC.PICK_DOCUMENT:
-          await handlePickDocument(data.configs);
+          await handlePickDocument(data?.config);
           break;
         default:
           console.error("Unknown topic:", topic);
