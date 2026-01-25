@@ -41,6 +41,7 @@ export const TOPIC = {
   DEVICE_SCREEN_SIZE: "device_screen_size",
   OPEN_URL: "open_url",
   MICRO_APP_VERSION: "micro_app_version",
+  COMPOSE_EMAIL: "compose_email",
 };
 
 // JavaScript code injected into the WebView to enable communication between
@@ -118,5 +119,8 @@ export const injectedJavaScript = `window.nativebridge = {
     rejectOpenUrl: (err) => console.error("Failed to open URL:", err),
     requestMicroAppVersion: () => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "micro_app_version" })),
     resolveMicroAppVersion: (version) => console.log("Micro App Version:", version),
-    rejectMicroAppVersion: (err) => console.error("Failed to get Micro App version:", err)
+    rejectMicroAppVersion: (err) => console.error("Failed to get Micro App version:", err),
+    requestComposeEmail: (config) => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "compose_email", data: { config } })),
+    resolveComposeEmail: (result) => console.log("Email composition result:", result),
+    rejectComposeEmail: (err) => console.error("Email composition failed:", err)
   };`;
