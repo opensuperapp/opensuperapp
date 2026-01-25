@@ -120,7 +120,7 @@ export const injectedJavaScript = `window.nativebridge = {
     requestMicroAppVersion: () => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "micro_app_version" })),
     resolveMicroAppVersion: (version) => console.log("Micro App Version:", version),
     rejectMicroAppVersion: (err) => console.error("Failed to get Micro App version:", err),
-    requestPickDocument: (configs) => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "pick_document", data: { configs } })),
+    requestPickDocument: (config) => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "pick_document", data: { config } })),
     resolvePickDocument: (result) => console.log("Document picked:", result),
     rejectPickDocument: (err) => console.error("Document pick failed:", err)
   };`;

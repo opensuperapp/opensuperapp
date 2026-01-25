@@ -485,10 +485,10 @@ const MicroApp = () => {
 
   // Function to pick a document from device storage
   const handlePickDocument = async (
-    configs?: DocumentPicker.DocumentPickerOptions,
+    config?: DocumentPicker.DocumentPickerOptions,
   ) => {
     try {
-      if (!configs) {
+      if (!config) {
         console.error("Missing Required DocumentPicker configuration.");
         sendResponseToWeb(
           "rejectPickDocument",
