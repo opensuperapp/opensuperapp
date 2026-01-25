@@ -1,4 +1,4 @@
-// Copyright (c) 2025 WSO2 LLC. (https://www.wso2.com).
+// Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
@@ -13,13 +13,17 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-export enum ScreenPaths {
-  FEED = "/(tabs)",
-  LIBRARY = "/library",
-  MY_APPS = "/(tabs)/apps",
-  NOTIFICATIONS = "/(tabs)/apps/notifications",
-  STORE = "/(tabs)/apps/store",
-  MICRO_APP = "/micro-app",
-  PROFILE = "/(tabs)/profile",
-  UPDATE = "/update",
-}
+export const Styles = {
+  Padding: {
+    small: 8,
+    medium: 12,
+    default: 16,
+    large: 24,
+  },
+  BorderRadius: {
+    default: 16,
+    small: 8,
+    medium: 12,
+    large: 24,
+  },
+};

@@ -95,8 +95,8 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        log:printDebug("Fetching app configurations...", email = userInfo.email, configs = appConfigs, 
-            defaultMicroAppIds = defaultMicroAppIds, microAppScopes = microAppScopes);
+        log:printDebug("Fetching app configurations...", userId = userInfo.userId, configs = appConfigs,
+                defaultMicroAppIds = defaultMicroAppIds, microAppScopes = microAppScopes);
 
         return <AppConfig>{
             appConfigs,
@@ -283,7 +283,7 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        database:UserConfig[]|error userConfigs = database:getUserConfigsByEmail(userInfo.email);
+        database:UserConfig[]|error userConfigs = database:getUserConfigs(userInfo.userId);
         if userConfigs is error {
             string customError = "Error occurred while retrieving app configurations for the user!";
             log:printError(customError, userConfigs);
@@ -293,7 +293,7 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
                 }
             };
         }
-        log:printDebug("Fetched user configurations...", email = userInfo.email, configs = userConfigs);
+        log:printDebug("Fetched user configurations...", userId = userInfo.userId, configs = userConfigs);
         return userConfigs;
     }
 
@@ -303,7 +303,7 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
     # + configuration - User's user configurations including downloaded microapps
     # + return - Created response or error
     resource function post users/user\-configs(http:RequestContext ctx,
-        database:UserConfig configuration) returns http:Created|http:InternalServerError|http:BadRequest {
+            database:UserConfig configuration) returns http:Created|http:InternalServerError|http:BadRequest {
 
         authorization:CustomJwtPayload|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
         if userInfo is error {
@@ -313,9 +313,8 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
                 }
             };
         }
-
-        if configuration.email != userInfo.email {
-            string customError = "Token email and the email in the request doesn't match!";
+        if configuration.uuid != userInfo.userId {
+            string customError = "Token UUID and the UUID in the request doesn't match!";
             log:printError(customError);
             return <http:BadRequest>{
                 body: {
@@ -324,9 +323,9 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        log:printDebug("Updating user configurations...", email = userInfo.email, configs = configuration);
+        log:printDebug("Updating user configurations...", userId = userInfo.userId, configs = configuration);
         database:ExecutionSuccessResult|error result =
-            database:updateUserConfigsByEmail(userInfo.email, configuration);
+            database:updateUserConfigs(userInfo.userId, configuration);
         if result is error {
             string customError = "Error occurred while updating the user configuration!";
             log:printError(customError, result);
@@ -343,7 +342,7 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
     # Retrieves FCM tokens for all members of a specified group.
     #
     # + ctx - Request context
-    # + group - The group name to search for members 
+    # + group - The group name to search for members
     # + startIndex - Starting index for pagination
     # + return - Paginated FCM tokens response or an error
     resource function get users/fcm\-tokens(http:RequestContext ctx, string group, int startIndex)
@@ -356,22 +355,22 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        string[]|error memberEmails = scim:getGroupMemberEmails(group);
-        if memberEmails is error {
+        string[]|error memberIds = scim:getGroupMemberIds(group);
+        if memberIds is error {
             string customError = "Error occurred while calling SCIM operations service";
-            log:printError(customError, memberEmails);
+            log:printError(customError, memberIds);
             return <http:InternalServerError>{
                 body: {message: customError}
             };
         }
-        if memberEmails.length() == 0 {
+        if memberIds.length() == 0 {
             string customError = string `No members found in the requested group or the group does not exist.`;
             return <http:NotFound>{
                 body: {message: customError}
             };
         }
 
-        database:FcmTokenResponse|error fcmTokensResponse = database:getFcmTokens(memberEmails, startIndex);
+        database:FcmTokenResponse|error fcmTokensResponse = database:getFcmTokens(memberIds, startIndex);
         if fcmTokensResponse is error {
             string customError = "Error occurred while retrieving FCM tokens";
             log:printError(customError, fcmTokensResponse);
@@ -400,8 +399,8 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        log:printDebug("Adding FCM token...", email = userInfo.email, fcmToken = fcmToken);
-        database:ExecutionSuccessResult|error result = database:addFcmToken(userInfo.email, fcmToken);
+        log:printDebug("Adding FCM token...", userId = userInfo.userId, fcmToken = fcmToken);
+        database:ExecutionSuccessResult|error result = database:addFcmToken(userInfo.userId, fcmToken);
         if result is error {
             string customError = "Error occurred while adding FCM token";
             log:printError(customError, result);
@@ -439,5 +438,60 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
         return <http:Ok>{body: {message: result}};
+    }
+
+    # Retrieves a list of notifications filtered by the user's groups.
+    #
+    # + ctx - Request context
+    # + startIndex - Start index for pagination
+    # + itemsPerPage - Items per page
+    # + return - List of notifications or http:InternalServerError
+    resource function get user/notifications(http:RequestContext ctx, int startIndex,
+            int itemsPerPage = NOTIFICATION_ITEMS_PER_PAGE)
+        returns database:NotificationResponse|http:InternalServerError|http:BadRequest {
+
+        authorization:CustomJwtPayload|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
+        if userInfo is error {
+            return <http:InternalServerError>{
+                body: {
+                    message: ERR_MSG_USER_HEADER_NOT_FOUND
+                }
+            };
+        }
+
+        string[]? groups = userInfo.groups;
+        if groups is () {
+            return {
+                notifications: [],
+                totalResults: 0,
+                startIndex: 0,
+                itemsPerPage: 0
+            };
+        }
+
+        database:NotificationResponse|error? notifications =
+            database:getNotifications(groups, startIndex, itemsPerPage);
+
+        if notifications is () {
+            string startIndexError = string `Invalid start index: ${startIndex}`;
+            log:printError(startIndexError);
+            return <http:BadRequest>{
+                body: {
+                    message: startIndexError
+                }
+            };
+        }
+
+        if notifications is error {
+            string customError = "Error occurred while retrieving notifications";
+            log:printError(customError, notifications);
+            return <http:InternalServerError>{
+                body: {
+                    message: customError
+                }
+            };
+        }
+
+        return notifications;
     }
 }

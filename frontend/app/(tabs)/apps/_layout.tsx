@@ -67,7 +67,7 @@ export default function AppsStack() {
         Animated.delay(120),
         singleShake,
         Animated.delay(2200),
-      ]),
+      ])
     );
 
     loopAnimation.start();

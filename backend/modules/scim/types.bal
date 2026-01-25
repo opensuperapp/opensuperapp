@@ -41,7 +41,7 @@ public type UserSearchResult record {|
 
 # User.
 public type User record {|
-    # User name
-    string userName;
+    # User ID
+    string id;
     json...;
 |};

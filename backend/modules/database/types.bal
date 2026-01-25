@@ -110,8 +110,8 @@ public type Version record {|
 
 # Record type to model configurations for the users of the SuperApp.
 public type UserConfig record {|
-    # User email
-    string email;
+    # User ID
+    string uuid;
     # Configuration key, unique key for the configuration
     @sql:Column {name: "config_key"}
     string configKey;
@@ -167,4 +167,53 @@ public type AppConfig record {|
     boolean|string|int value;
     # Type of configuration value
     string 'type?;
+|};
+
+# Record type for the notification count.
+public type NotificationsCount record {|
+    # Total number of notifications
+    int count;
+|};
+
+# Record type for the DB notification record.
+public type DbNotification record {|
+    # Unique ID of the notification
+    int id;
+    # Title of the notification
+    string title;
+    # Message body
+    string message;
+    # Target roles (groups)
+    @sql:Column {name: "target_roles"}
+    string targetRoles;
+    # Creator of the notification
+    @sql:Column {name: "created_by"}
+    string createdBy;
+    # Creation timestamp
+    @sql:Column {name: "created_at"}
+    string createdAt;
+|};
+
+# Record type for the notification response item.
+public type Notification record {|
+    # Unique ID of the notification
+    int id;
+    # Title of the notification
+    string title;
+    # Message body
+    string message;
+    # Creation timestamp
+    string createdAt;
+|};
+
+# Record type for the notification response.
+public type NotificationResponse record {|
+    # Array of notifications
+    Notification[] notifications;
+    # Total number of notifications
+    int totalResults;
+    # Start index of the response
+    int startIndex;
+    # Items per page
+    int itemsPerPage;
 |};

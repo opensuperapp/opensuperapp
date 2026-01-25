@@ -19,6 +19,7 @@ import {
   EXPIRES_AT_KEY,
   ID_TOKEN,
   REFRESH_TOKEN,
+  USER_ID_KEY,
 } from "@/constants/Constants";
 import { deleteItemAsync, getItemAsync, setItemAsync } from "expo-secure-store";
 
@@ -27,6 +28,7 @@ export type SecureAuthData = {
   refreshToken: string;
   idToken: string;
   email?: string;
+  userId?: string;
   expiresAt: number;
 };
 
@@ -36,29 +38,32 @@ export async function saveAuthDataToSecureStore(authData: SecureAuthData) {
     setItemAsync(REFRESH_TOKEN, authData.refreshToken),
     setItemAsync(ID_TOKEN, authData.idToken),
     setItemAsync(EXPIRES_AT_KEY, String(authData.expiresAt)),
-    authData.email
-      ? setItemAsync(AUTH_EMAIL_KEY, authData.email)
-      : deleteItemAsync(AUTH_EMAIL_KEY),
+    authData.userId
+      ? setItemAsync(USER_ID_KEY, authData.userId)
+      : deleteItemAsync(USER_ID_KEY),
   ]);
 }
 
 export async function loadAuthDataFromSecureStore(): Promise<SecureAuthData | null> {
-  const [accessToken, refreshToken, idToken, expiresAtStr, email] =
+  const [accessToken, refreshToken, idToken, expiresAtStr, email, userId] =
     await Promise.all([
       getItemAsync(ACCESS_TOKEN),
       getItemAsync(REFRESH_TOKEN),
       getItemAsync(ID_TOKEN),
       getItemAsync(EXPIRES_AT_KEY),
       getItemAsync(AUTH_EMAIL_KEY),
+      getItemAsync(USER_ID_KEY),
     ]);
 
-  if (!accessToken || !refreshToken || !idToken || !expiresAtStr) return null;
+  if (!accessToken || !refreshToken || !idToken || !expiresAtStr || !userId)
+    return null;
 
   return {
     accessToken,
     refreshToken,
     idToken,
     email: email || undefined,
+    userId,
     expiresAt: Number(expiresAtStr),
   };
 }
@@ -70,5 +75,6 @@ export async function clearAuthDataFromSecureStore() {
     deleteItemAsync(ID_TOKEN),
     deleteItemAsync(EXPIRES_AT_KEY),
     deleteItemAsync(AUTH_EMAIL_KEY),
+    deleteItemAsync(USER_ID_KEY),
   ]);
 }

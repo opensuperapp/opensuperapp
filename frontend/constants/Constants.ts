@@ -100,6 +100,10 @@ export const REFRESH_TOKEN = "secure_refresh_token";
 export const ID_TOKEN = "secure_id_token";
 export const EXPIRES_AT_KEY = "secure_expires_at";
 export const AUTH_EMAIL_KEY = "secure_auth_email";
+export const USER_ID_KEY = "secure_userid";
+
+// Keys for Async Storage
+export const LAST_NOTIFICATION_OPENED_AT = "last_notification_opened_at";
 
 // Android Notification Configuration
 export const NOTIFICATION_CHANNEL_ID =
@@ -114,3 +118,12 @@ export const ANDROID_NOTIFICATION_SMALL_ICON_ACCENT_COLOR =
 // Platform
 export const isAndroid = Platform.OS === "android";
 export const isIos = Platform.OS === "ios";
+
+// Query Keys
+export const NOTIFICATIONS_QUERY_KEY = "notifications";
+
+// Tab Names
+export const FEED_TAB_NAME = "Feed";
+export const LIBRARY_TAB_NAME = "Library";
+export const MY_APPS_TAB_NAME = "My Apps";
+export const PROFILE_TAB_NAME = "Profile";

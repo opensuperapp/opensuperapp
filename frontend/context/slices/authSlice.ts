@@ -29,6 +29,7 @@ interface AuthState {
   refreshToken: string | null;
   idToken: string | null;
   email: AuthData["email"] | null;
+  userId: AuthData["userId"] | null;
   isLoading: boolean;
 }
 
@@ -37,6 +38,7 @@ const initialState: AuthState = {
   refreshToken: null,
   idToken: null,
   email: null,
+  userId: null,
   isLoading: false,
 };
 
@@ -94,6 +96,7 @@ const authSlice = createSlice({
       state.refreshToken = action.payload.refreshToken;
       state.idToken = action.payload.idToken;
       state.email = action.payload.email;
+      state.userId = action.payload.userId;
       state.isLoading = false;
     },
     resetAll: () => initialState,
@@ -106,6 +109,7 @@ const authSlice = createSlice({
           state.refreshToken = action.payload.refreshToken;
           state.idToken = action.payload.idToken;
           state.email = action.payload.email;
+          state.userId = action.payload.userId;
         }
         state.isLoading = false;
       })
