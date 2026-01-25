@@ -486,7 +486,7 @@ const MicroApp = () => {
 
   // Function to compose an email
   const handleComposeEmail = async (
-    config: MailComposer.MailComposerOptions,
+    config?: MailComposer.MailComposerOptions,
   ) => {
     try {
       if (!config) {
@@ -506,15 +506,20 @@ const MicroApp = () => {
       // Validate attachments if provided
       if (config.attachments && config.attachments.length > 0) {
         for (const attachment of config.attachments) {
+          let info;
+
           try {
-            const info = await FileSystem.getInfoAsync(attachment);
-            if (!info.exists) {
-              throw new Error(`Attachment file not found: ${attachment}`);
-            }
+            info = await FileSystem.getInfoAsync(attachment);
           } catch (error) {
             throw new Error(
-              `Failed to verify attachment: ${attachment}. ${error instanceof Error ? error.message : ""}`,
+              `Failed to access attachment metadata: ${attachment}. ${
+                error instanceof Error ? error.message : ""
+              }`,
             );
+          }
+
+          if (!info.exists) {
+            throw new Error(`Attachment file not found: ${attachment}`);
           }
         }
       }
@@ -618,7 +623,7 @@ const MicroApp = () => {
           handleMicroAppVersion();
           break;
         case TOPIC.COMPOSE_EMAIL:
-          await handleComposeEmail(data.config);
+          await handleComposeEmail(data?.config);
           break;
         default:
           console.error("Unknown topic:", topic);
