@@ -20,16 +20,16 @@ import { router } from "expo-router";
 import React, { useEffect, useMemo, useRef } from "react";
 import { Animated, StyleSheet, View } from "react-native";
 
-const SPARKLE_COUNT = 3;
+const SPARKLE_COUNT = 1;
 
 const generateSparkle = () => ({
   id: Math.random().toString(),
-  top: Math.random() * 2 + 6,
-  left: Math.random() * 2 + 16,
-  fontSize: 10 + Math.random() * 6,
-  duration: 1800 + Math.random() * 700,
-  delay: Math.random() * 600,
-  rotation: Math.random() * 20 - 10,
+  top: Math.random() * 10 + 5,
+  left: Math.random() * 10 + 8,
+  fontSize: 10 + Math.random() * 10,
+  duration: 3000 + Math.random() * 1000,
+  delay: Math.random() * 50,
+  rotation: Math.random() * 30 - 15,
 });
 
 const SparkleIcon = () => {
@@ -41,15 +41,13 @@ const SparkleIcon = () => {
   return (
     <View style={styles.container}>
       <View style={styles.iconWrapper}>
-        <View style={styles.iconContainer}>
-          <Ionicons
-            name="storefront-outline"
-            size={24}
-            color={Colors.companyOrange}
-            onPress={() => router.push(ScreenPaths.STORE)}
-            hitSlop={20}
-          />
-        </View>
+        <Ionicons
+          name="storefront-outline"
+          size={24}
+          color={Colors.companyOrange}
+          style={{ marginRight: 16 }}
+          onPress={() => router.push(ScreenPaths.STORE)}
+        />
         {sparkles.map((sparkle) => (
           <FloatingSparkle key={sparkle.id} sparkle={sparkle} />
         ))}
@@ -60,7 +58,7 @@ const SparkleIcon = () => {
 
 const FloatingSparkle = ({ sparkle }: { sparkle: any }) => {
   const opacity = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(0.6)).current;
+  const scale = useRef(new Animated.Value(0.5)).current;
   const translateX = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
 
@@ -69,38 +67,34 @@ const FloatingSparkle = ({ sparkle }: { sparkle: any }) => {
   const animate = () => {
     if (!isMounted.current) return;
 
-    opacity.setValue(0);
-    scale.setValue(0.6);
+    opacity.setValue(0.2);
+    scale.setValue(0.3);
     translateX.setValue(0);
     translateY.setValue(0);
 
-    Animated.sequence([
-      Animated.parallel([
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: sparkle.duration * 0.4,
-          delay: sparkle.delay,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scale, {
-          toValue: 1.1,
-          duration: sparkle.duration,
-          useNativeDriver: true,
-        }),
-        Animated.timing(translateX, {
-          toValue: Math.random() * 16 - 8,
-          duration: sparkle.duration,
-          useNativeDriver: true,
-        }),
-        Animated.timing(translateY, {
-          toValue: Math.random() * -16,
-          duration: sparkle.duration,
-          useNativeDriver: true,
-        }),
-      ]),
+    Animated.parallel([
       Animated.timing(opacity, {
-        toValue: 0,
-        duration: 400,
+        toValue: 1,
+        duration: sparkle.duration / 2,
+        delay: sparkle.delay,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scale, {
+        toValue: 1.5,
+        duration: sparkle.duration,
+        delay: sparkle.delay,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateX, {
+        toValue: Math.random() * 10 - 15,
+        duration: sparkle.duration,
+        delay: sparkle.delay,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: Math.random() * 10 - 15,
+        duration: sparkle.duration,
+        delay: sparkle.delay,
         useNativeDriver: true,
       }),
     ]).start(() => {
@@ -122,9 +116,9 @@ const FloatingSparkle = ({ sparkle }: { sparkle: any }) => {
       style={[
         styles.sparkle,
         {
+          fontSize: sparkle.fontSize,
           top: sparkle.top,
           left: sparkle.left,
-          fontSize: sparkle.fontSize,
           transform: [
             { translateX },
             { translateY },
@@ -146,16 +140,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   iconWrapper: {
-    position: "relative",
     justifyContent: "center",
     alignItems: "center",
-  },
-  iconContainer: {
-    marginHorizontal: 8,
+    position: "relative",
   },
   sparkle: {
     position: "absolute",
-    color: Colors.companyOrange,
   },
 });
 
