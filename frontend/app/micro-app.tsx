@@ -488,10 +488,36 @@ const MicroApp = () => {
     options: MailComposer.MailComposerOptions,
   ) => {
     try {
+      if (!options) {
+        console.error("Missing Required MailComposer configuration.");
+        sendResponseToWeb(
+          "rejectComposeEmail",
+          "Mail configuration is missing.",
+        );
+        return;
+      }
+
       const isAvailable = await MailComposer.isAvailableAsync();
       if (!isAvailable) {
         throw new Error("Mail services are not available on this device");
       }
+
+      // Validate attachments if provided
+      if (options.attachments && options.attachments.length > 0) {
+        for (const attachment of options.attachments) {
+          try {
+            const info = await FileSystem.getInfoAsync(attachment);
+            if (!info.exists) {
+              throw new Error(`Attachment file not found: ${attachment}`);
+            }
+          } catch (error) {
+            throw new Error(
+              `Failed to verify attachment: ${attachment}. ${error instanceof Error ? error.message : ""}`,
+            );
+          }
+        }
+      }
+
       const result = await MailComposer.composeAsync(options);
       sendResponseToWeb("resolveComposeEmail", result);
     } catch (error) {
