@@ -41,6 +41,7 @@ export const TOPIC = {
   DEVICE_SCREEN_SIZE: "device_screen_size",
   OPEN_URL: "open_url",
   MICRO_APP_VERSION: "micro_app_version",
+  PICK_DOCUMENT: "pick_document",
 };
 
 // JavaScript code injected into the WebView to enable communication between
@@ -119,4 +120,8 @@ export const injectedJavaScript = `window.nativebridge = {
     requestMicroAppVersion: () => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "micro_app_version" })),
     resolveMicroAppVersion: (version) => console.log("Micro App Version:", version),
     rejectMicroAppVersion: (err) => console.error("Failed to get Micro App version:", err)
+    rejectMicroAppVersion: (err) => console.error("Failed to get Micro App version:", err),
+    requestPickDocument: (config) => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "pick_document", data: { config } })),
+    resolvePickDocument: (result) => console.log("Document picked successfully:", result),
+    rejectPickDocument: (err) => console.error("Failed to pick document:", err)
   };`;
