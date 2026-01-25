@@ -595,6 +595,9 @@ const MicroApp = () => {
         case TOPIC.MICRO_APP_VERSION:
           handleMicroAppVersion();
           break;
+        case TOPIC.PICK_DOCUMENT:
+          await handlePickDocument(data.config);
+          break;
         default:
           console.error("Unknown topic:", topic);
       }
