@@ -70,6 +70,7 @@ import prompt from "react-native-prompt-android";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 import { useDispatch, useSelector } from "react-redux";
+import * as MailComposer from "expo-mail-composer";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -482,6 +483,25 @@ const MicroApp = () => {
     sendResponseToWeb("resolveMicroAppVersion", version || "unknown");
   };
 
+  // Function to compose an email
+  const handleComposeEmail = async (
+    options: MailComposer.MailComposerOptions,
+  ) => {
+    try {
+      const isAvailable = await MailComposer.isAvailableAsync();
+      if (!isAvailable) {
+        throw new Error("Mail services are not available on this device");
+      }
+      const result = await MailComposer.composeAsync(options);
+      sendResponseToWeb("resolveComposeEmail", result);
+    } catch (error) {
+      const errMessage =
+        error instanceof Error ? error.message : "Failed to compose email";
+      console.error("Error composing email:", errMessage);
+      sendResponseToWeb("rejectComposeEmail", errMessage);
+    }
+  };
+
   // Handle messages from WebView
   const onMessage = async (event: WebViewMessageEvent) => {
     try {
@@ -569,6 +589,9 @@ const MicroApp = () => {
           break;
         case TOPIC.MICRO_APP_VERSION:
           handleMicroAppVersion();
+          break;
+        case TOPIC.COMPOSE_EMAIL:
+          await handleComposeEmail(data.config);
           break;
         default:
           console.error("Unknown topic:", topic);
