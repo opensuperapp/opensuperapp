@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 import { isAndroid, isIos } from "@/constants/Constants";
-import { Event } from "@/constants/Event";
+import { Event } from "@/constants/enums/Event";
 import { NativeEventEmitter, NativeModules } from "react-native";
 
 type EventHandler<T> = (data: T) => void;

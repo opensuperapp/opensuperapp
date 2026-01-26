@@ -26,7 +26,7 @@ import {
   isAndroid,
   isIos,
 } from "@/constants/Constants";
-import { Event } from "@/constants/Event";
+import { Event } from "@/constants/enums/Event";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { RootState } from "@/context/store";
 import { logout, tokenExchange } from "@/services/authService";

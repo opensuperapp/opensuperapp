@@ -13,7 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Event } from "@/constants/Event";
+import { Event } from "@/constants/enums/Event";
 import { qrScannerEmitter } from "@/utils/eventEmitter";
 import { router } from "expo-router";
 import React, { createContext, useCallback, useContext } from "react";
