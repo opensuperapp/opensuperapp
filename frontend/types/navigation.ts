@@ -26,6 +26,7 @@ export type MicroAppParams = {
   appId: string;
   displayMode?: DisplayMode;
   version?: string;
+  launchData?: string;
 };
 
 export type DisplayMode =

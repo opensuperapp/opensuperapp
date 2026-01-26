@@ -18,6 +18,7 @@ import { Colors } from "@/constants/Colors";
 import {
   DEVELOPER_APP_ANDROID_DEFAULT_URL,
   DEVELOPER_APP_IOS_DEFAULT_URL,
+  DOWNLOADED,
   FULL_SCREEN_VIEWING_MODE,
   GOOGLE_ANDROID_CLIENT_ID,
   GOOGLE_IOS_CLIENT_ID,
@@ -86,6 +87,7 @@ const MicroApp = () => {
     appId,
     displayMode,
     version,
+    launchData,
   } = useLocalSearchParams<MicroAppParams>();
   const { bottom: bottomSafeArea } = useSafeAreaInsets();
 
@@ -99,6 +101,7 @@ const MicroApp = () => {
     isIos ? DEVELOPER_APP_IOS_DEFAULT_URL : DEVELOPER_APP_ANDROID_DEFAULT_URL
   );
   const colorScheme = useColorScheme();
+  const apps = useSelector((state: RootState) => state.apps.apps);
   const appScopes = useSelector(
     (state: RootState) => state.appConfig.appScopes
   );
@@ -507,6 +510,60 @@ const MicroApp = () => {
     sendResponseToWeb("resolveMicroAppVersion", version || "unknown");
   };
 
+  // Function to open another micro app
+  const handleOpenMicroApp = async (targetAppId: string, data: any) => {
+    const targetApp = apps.find((app) => app.appId === targetAppId);
+    if (targetApp?.status === DOWNLOADED) {
+      router.push({
+        pathname: ScreenPaths.MICRO_APP,
+        params: {
+          webViewUri: targetApp.webViewUri,
+          appName: targetApp.name,
+          clientId: targetApp.clientId,
+          exchangedToken: targetApp.exchangedToken,
+          appId: targetApp.appId,
+          displayMode: targetApp.displayMode,
+          launchData: JSON.stringify(data),
+        },
+      });
+    } else {
+      Alert.alert(
+        "App not installed",
+        "Would you like to install it?",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+            onPress: () => {},
+          },
+          {
+            text: "Install",
+            onPress: () => {
+              router.back();
+              router.navigate(ScreenPaths.STORE);
+            },
+          },
+        ],
+        { cancelable: false }
+      );
+    }
+  };
+
+  // Function to get launch data passed to the micro app
+  const handleGetLaunchData = async () => {
+    if (launchData) {
+      try {
+        const parsedData = JSON.parse(launchData);
+        sendResponseToWeb("resolveGetLaunchData", parsedData);
+      } catch (error) {
+        console.error("Failed to parse launch data:", error);
+        sendResponseToWeb("resolveGetLaunchData", launchData);
+      }
+    } else {
+      sendResponseToWeb("resolveGetLaunchData", null);
+    }
+  };
+
   // Handle messages from WebView
   const onMessage = async (event: WebViewMessageEvent) => {
     try {
@@ -594,6 +651,12 @@ const MicroApp = () => {
           break;
         case TOPIC.MICRO_APP_VERSION:
           handleMicroAppVersion();
+          break;
+        case TOPIC.OPEN_MICRO_APP:
+          await handleOpenMicroApp(data.appId, data.data);
+          break;
+        case TOPIC.GET_LAUNCH_DATA:
+          await handleGetLaunchData();
           break;
         default:
           console.error("Unknown topic:", topic);
