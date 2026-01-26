@@ -14,10 +14,10 @@
 // specific language governing permissions and limitations
 // under the License.
 import { Colors } from "@/constants/Colors";
+import { isAndroid } from "@/constants/Constants";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
-  Platform,
   StyleSheet,
   TextInput,
   TouchableOpacity,
@@ -55,7 +55,7 @@ const SearchBar = React.memo(
           clearButtonMode="while-editing"
         />
 
-        {Platform.OS === "android" && searchQuery && (
+        {isAndroid && searchQuery && (
           <TouchableOpacity
             onPress={() => setSearchQuery("")}
             accessibilityLabel="Clear search"
