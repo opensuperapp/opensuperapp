@@ -14,25 +14,28 @@
 // specific language governing permissions and limitations
 // under the License.
 import { Colors } from "@/constants/Colors";
+import { isAndroid } from "@/constants/Constants";
 import { CameraType, CameraView, useCameraPermissions } from "expo-camera";
 import { useEffect, useRef, useState } from "react";
 import {
   AppState,
-  Platform,
   StatusBar,
+  StyleProp,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  ViewStyle,
 } from "react-native";
 import CameraPermission from "./CameraPermission";
 
 type ScannerProps = {
   onScan: (qrCode: string) => void;
   message?: string;
+  style?: StyleProp<ViewStyle>;
 };
 
-const Scanner = ({ onScan, message }: ScannerProps) => {
+const Scanner = ({ onScan, message, style }: ScannerProps) => {
   const qrLock = useRef(false);
   const appState = useRef(AppState.currentState);
   const [facing, setFacing] = useState<CameraType>("back");
@@ -79,9 +82,9 @@ const Scanner = ({ onScan, message }: ScannerProps) => {
         alignItems: "center",
       }}
     >
-      {Platform.OS === "android" ? <StatusBar hidden /> : null}
+      {isAndroid ? <StatusBar hidden /> : null}
       <CameraView
-        style={StyleSheet.absoluteFillObject}
+        style={[StyleSheet.absoluteFillObject, style]}
         facing={facing}
         onBarcodeScanned={({ data }) => {
           if (data && !qrLock.current) {

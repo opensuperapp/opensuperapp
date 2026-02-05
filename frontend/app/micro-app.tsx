@@ -14,11 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 import NotFound from "@/components/NotFound";
-import Scanner from "@/components/Scanner";
 import { Colors } from "@/constants/Colors";
 import {
   DEVELOPER_APP_ANDROID_DEFAULT_URL,
   DEVELOPER_APP_IOS_DEFAULT_URL,
+  DOWNLOADED,
   FULL_SCREEN_VIEWING_MODE,
   GOOGLE_ANDROID_CLIENT_ID,
   GOOGLE_IOS_CLIENT_ID,
@@ -27,6 +27,8 @@ import {
   isAndroid,
   isIos,
 } from "@/constants/Constants";
+import { Event } from "@/constants/enums/Event";
+import { ScreenPaths } from "@/constants/ScreenPaths";
 import { RootState } from "@/context/store";
 import { logout, tokenExchange } from "@/services/authService";
 import googleAuthenticationService, {
@@ -49,6 +51,7 @@ import {
 } from "@/types/microApp.types";
 import { MicroAppParams } from "@/types/navigation";
 import { injectedJavaScript, TOPIC } from "@/utils/bridge";
+import { qrScannerEmitter } from "@/utils/eventEmitter";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Google from "expo-auth-session/providers/google";
 import { documentDirectory } from "expo-file-system";
@@ -78,8 +81,6 @@ WebBrowser.maybeCompleteAuthSession();
 type NativeLogLevel = "info" | "warn" | "error";
 
 const MicroApp = () => {
-  const [isScannerVisible, setScannerVisible] = useState(false);
-
   const {
     webViewUri,
     appName,
@@ -88,6 +89,7 @@ const MicroApp = () => {
     appId,
     displayMode,
     version,
+    launchData,
   } = useLocalSearchParams<MicroAppParams>();
   const { bottom: bottomSafeArea } = useSafeAreaInsets();
 
@@ -98,17 +100,32 @@ const MicroApp = () => {
   const router = useRouter();
   const pendingTokenRequests = useRef<((token: string) => void)[]>([]);
   const [webUri, setWebUri] = useState<string>(
-    isIos ? DEVELOPER_APP_IOS_DEFAULT_URL : DEVELOPER_APP_ANDROID_DEFAULT_URL
+    isIos ? DEVELOPER_APP_IOS_DEFAULT_URL : DEVELOPER_APP_ANDROID_DEFAULT_URL,
   );
   const colorScheme = useColorScheme();
+  const apps = useSelector((state: RootState) => state.apps.apps);
   const appScopes = useSelector(
-    (state: RootState) => state.appConfig.appScopes
+    (state: RootState) => state.appConfig.appScopes,
   );
   const isDeveloper: boolean = appId.includes("developer");
   const isTotp: boolean = appId.includes("totp");
   const insets = useSafeAreaInsets();
   const shouldShowHeader: boolean = displayMode !== FULL_SCREEN_VIEWING_MODE;
   const { width, height } = useWindowDimensions();
+
+  // Event listener for QR Code scanned
+  useEffect(() => {
+    const unsubscribe = qrScannerEmitter.on(
+      Event.QrScanned,
+      (qrCode: string) => {
+        sendQrToWebView(qrCode);
+      },
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   /**
    * Create styles for the micro app.
@@ -118,7 +135,7 @@ const MicroApp = () => {
    */
   const styles = createStyles(
     colorScheme ?? "light",
-    shouldShowHeader ? bottomSafeArea : 0
+    shouldShowHeader ? bottomSafeArea : 0,
   );
 
   const [request, response, promptAsync] = Google.useAuthRequest({
@@ -131,7 +148,7 @@ const MicroApp = () => {
   // Function to send response to micro app
   const sendResponseToWeb = (method: string, data?: any) => {
     webviewRef.current?.injectJavaScript(
-      `window.nativebridge.${method}(${JSON.stringify(data)});`
+      `window.nativebridge.${method}(${JSON.stringify(data)});`,
     );
   };
 
@@ -162,7 +179,7 @@ const MicroApp = () => {
           exchangedToken,
           appId,
           logout,
-          appScopes
+          appScopes,
         );
         if (!token) throw new Error("Token exchange failed");
         setToken(token);
@@ -174,6 +191,17 @@ const MicroApp = () => {
 
     fetchToken();
   }, [clientId]);
+
+  const openQrScanner = () => {
+    router.navigate({
+      pathname: ScreenPaths.QR_SCANNER,
+      params: {
+        message: isTotp
+          ? "We need access to your camera to scan QR codes for generating one-time passwords (TOTP) for secure authentication. This will allow you to easily log in to your accounts."
+          : undefined,
+      },
+    });
+  };
 
   // Function to send token to WebView
   const sendTokenToWebView = (token: string) => {
@@ -201,7 +229,7 @@ const MicroApp = () => {
   const handleAlert = async (
     title: string,
     message: string,
-    buttonText: string
+    buttonText: string,
   ) => {
     Alert.alert(title, message, [{ text: buttonText }], { cancelable: false });
   };
@@ -211,7 +239,7 @@ const MicroApp = () => {
     title: string,
     message: string,
     cancelButtonText: string,
-    confirmButtonText: string
+    confirmButtonText: string,
   ) => {
     Alert.alert(
       title,
@@ -227,7 +255,7 @@ const MicroApp = () => {
           onPress: () => sendResponseToWeb("resolveConfirmAlert", "confirm"),
         },
       ],
-      { cancelable: false }
+      { cancelable: false },
     );
   };
 
@@ -402,7 +430,7 @@ const MicroApp = () => {
       }
 
       const webPresentationStyle = mapToWebBrowserPresentationStyle(
-        config.presentationStyle
+        config.presentationStyle,
       );
 
       const result = await WebBrowser.openBrowserAsync(config.url, {
@@ -429,7 +457,7 @@ const MicroApp = () => {
 
   // Function to schedule a local notification
   const handleScheduleLocalNotification = async (
-    data: ScheduledNotificationData
+    data: ScheduledNotificationData,
   ) => {
     try {
       await scheduleSessionNotifications(data);
@@ -438,14 +466,14 @@ const MicroApp = () => {
       console.error("Error scheduling local notification:", error);
       sendResponseToWeb(
         "rejectSchedulingLocalNotification",
-        error instanceof Error ? error.message : "Unknown error"
+        error instanceof Error ? error.message : "Unknown error",
       );
     }
   };
 
   // Function to cancel a local notification
   const handleCancelLocalNotification = async (
-    data: ScheduledNotificationIdentifiable
+    data: ScheduledNotificationIdentifiable,
   ) => {
     try {
       cancelLocalNotification(data);
@@ -454,7 +482,7 @@ const MicroApp = () => {
       console.error("Error canceling local notification:", error);
       sendResponseToWeb(
         "rejectCancellingLocalNotification",
-        error instanceof Error ? error.message : "Unknown error"
+        error instanceof Error ? error.message : "Unknown error",
       );
     }
   };
@@ -468,7 +496,7 @@ const MicroApp = () => {
       console.error("Error clearing all local notifications:", error);
       sendResponseToWeb(
         "rejectClearingAllLocalNotifications",
-        error instanceof Error ? error.message : "Unknown error"
+        error instanceof Error ? error.message : "Unknown error",
       );
     }
   };
@@ -483,14 +511,12 @@ const MicroApp = () => {
   const handleMicroAppVersion = async () => {
     sendResponseToWeb("resolveMicroAppVersion", version || "unknown");
   };
-
   // Function to compose an email
   const handleComposeEmail = async (
     config?: MailComposer.MailComposerOptions,
   ) => {
     try {
       if (!config) {
-        console.error("Missing Required MailComposer configuration.");
         sendResponseToWeb(
           "rejectComposeEmail",
           "Mail configuration is missing.",
@@ -503,23 +529,11 @@ const MicroApp = () => {
         throw new Error("Mail services are not available on this device");
       }
 
-      // Validate attachments if provided
-      if (config.attachments && config.attachments.length > 0) {
+      if (config.attachments?.length) {
         for (const attachment of config.attachments) {
-          let info;
-
-          try {
-            info = await FileSystem.getInfoAsync(attachment);
-          } catch (error) {
-            throw new Error(
-              `Failed to access attachment metadata: ${attachment}. ${
-                error instanceof Error ? error.message : ""
-              }`,
-            );
-          }
-
+          const info = await FileSystem.getInfoAsync(attachment);
           if (!info.exists) {
-            throw new Error(`Attachment file not found: ${attachment}`);
+            throw new Error(`Attachment not found: ${attachment}`);
           }
         }
       }
@@ -527,13 +541,61 @@ const MicroApp = () => {
       const result = await MailComposer.composeAsync(config);
       sendResponseToWeb("resolveComposeEmail", result);
     } catch (error) {
-      const errMessage =
+      const message =
         error instanceof Error ? error.message : "Failed to compose email";
-      console.error("Error composing email:", errMessage);
-      sendResponseToWeb("rejectComposeEmail", errMessage);
+      sendResponseToWeb("rejectComposeEmail", message);
     }
   };
 
+  // Function to open another micro app
+  const handleOpenMicroApp = async (targetAppId: string, data: any) => {
+    const targetApp = apps.find((app) => app.appId === targetAppId);
+
+    if (targetApp?.status === DOWNLOADED) {
+      router.push({
+        pathname: ScreenPaths.MICRO_APP,
+        params: {
+          webViewUri: targetApp.webViewUri,
+          appName: targetApp.name,
+          clientId: targetApp.clientId,
+          exchangedToken: targetApp.exchangedToken,
+          appId: targetApp.appId,
+          displayMode: targetApp.displayMode,
+          launchData: JSON.stringify(data),
+        },
+      });
+    } else {
+      Alert.alert(
+        "App not installed",
+        "Would you like to install it?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Install",
+            onPress: () => {
+              router.back();
+              router.navigate(ScreenPaths.STORE);
+            },
+          },
+        ],
+        { cancelable: false },
+      );
+    }
+  };
+
+  // Function to get launch data passed to the micro app
+  const handleGetLaunchData = async () => {
+    if (!launchData) {
+      sendResponseToWeb("resolveGetLaunchData", null);
+      return;
+    }
+
+    try {
+      sendResponseToWeb("resolveGetLaunchData", JSON.parse(launchData));
+    } catch {
+      sendResponseToWeb("resolveGetLaunchData", launchData);
+    }
+  };
   // Handle messages from WebView
   const onMessage = async (event: WebViewMessageEvent) => {
     try {
@@ -546,7 +608,7 @@ const MicroApp = () => {
             : pendingTokenRequests.current.push(sendTokenToWebView);
           break;
         case TOPIC.QR_REQUEST:
-          setScannerVisible(true);
+          openQrScanner();
           break;
         case TOPIC.SAVE_LOCAL_DATA:
           await handleSaveLocalData(data.key, data.value);
@@ -568,7 +630,7 @@ const MicroApp = () => {
             data.title,
             data.message,
             data.cancelButtonText,
-            data.confirmButtonText
+            data.confirmButtonText,
           );
           break;
         case TOPIC.GOOGLE_LOGIN:
@@ -624,6 +686,11 @@ const MicroApp = () => {
           break;
         case TOPIC.COMPOSE_EMAIL:
           await handleComposeEmail(data?.config);
+        case TOPIC.OPEN_MICRO_APP:
+          await handleOpenMicroApp(data.appId, data.data);
+          break;
+        case TOPIC.GET_LAUNCH_DATA:
+          await handleGetLaunchData();
           break;
         default:
           console.error("Unknown topic:", topic);
@@ -647,19 +714,19 @@ const MicroApp = () => {
       case "info":
         console.info(
           `[Micro App] ${message}.`,
-          injectedData !== undefined ? injectedData : ""
+          injectedData !== undefined ? injectedData : "",
         );
         break;
       case "warn":
         console.warn(
           `[Micro App] ${message}.`,
-          injectedData !== undefined ? injectedData : ""
+          injectedData !== undefined ? injectedData : "",
         );
         break;
       case "error":
         console.error(
           `[Micro App] ${message}.`,
-          injectedData !== undefined ? injectedData : ""
+          injectedData !== undefined ? injectedData : "",
         );
         break;
     }
@@ -768,7 +835,7 @@ const MicroApp = () => {
                           },
                         ],
                         "plain-text",
-                        webUri
+                        webUri,
                       )
                     : prompt(
                         "App URL",
@@ -793,7 +860,7 @@ const MicroApp = () => {
                           type: "plain-text",
                           cancelable: false,
                           defaultValue: webUri,
-                        }
+                        },
                       );
                 }}
                 hitSlop={20}
@@ -804,28 +871,7 @@ const MicroApp = () => {
         }}
       />
       <View style={styles.container}>
-        {isScannerVisible && (
-          <View style={styles.scannerOverlay}>
-            <Scanner
-              onScan={(qrCode) => {
-                sendQrToWebView(qrCode);
-                setScannerVisible(false);
-              }}
-              message={
-                isTotp
-                  ? "We need access to your camera to scan QR codes for generating one-time passwords (TOTP) for secure authentication. This will allow you to easily log in to your accounts."
-                  : undefined
-              }
-            />
-          </View>
-        )}
-
-        <View
-          style={[
-            styles.webViewContainer,
-            isScannerVisible && styles.webViewHidden,
-          ]}
-        >
+        <View style={styles.webViewContainer}>
           {renderWebView(isDeveloper ? webUri : webViewUri)}
         </View>
       </View>
@@ -840,22 +886,11 @@ const createStyles = (colorScheme: "light" | "dark", bottomSafeArea: number) =>
     container: {
       flex: 1,
     },
-    scannerOverlay: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-    },
     webViewContainer: {
       flex: 1,
       opacity: 1,
       pointerEvents: "auto",
       paddingBottom: isAndroid ? bottomSafeArea : 0,
-    },
-    webViewHidden: {
-      opacity: 0,
-      pointerEvents: "none",
     },
     headerText: {
       fontWeight: "600",

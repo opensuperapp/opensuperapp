@@ -22,4 +22,5 @@ export enum ScreenPaths {
   MICRO_APP = "/micro-app",
   PROFILE = "/(tabs)/profile",
   UPDATE = "/update",
+  QR_SCANNER = "/qr-scanner",
 }

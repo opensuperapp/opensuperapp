@@ -42,6 +42,8 @@ export const TOPIC = {
   OPEN_URL: "open_url",
   MICRO_APP_VERSION: "micro_app_version",
   COMPOSE_EMAIL: "compose_email",
+  OPEN_MICRO_APP: "open_micro_app",
+  GET_LAUNCH_DATA: "get_launch_data",
 };
 
 // JavaScript code injected into the WebView to enable communication between
@@ -123,4 +125,7 @@ export const injectedJavaScript = `window.nativebridge = {
     requestComposeEmail: (config) => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "compose_email", data: { config } })),
     resolveComposeEmail: (result) => console.log("Email composition result:", result),
     rejectComposeEmail: (err) => console.error("Email composition failed:", err)
+    requestOpenMicroApp: (appId, data) => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "open_micro_app", data: { appId, data } })),
+    requestGetLaunchData: () => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "get_launch_data" })),
+    resolveGetLaunchData: (data) => console.log("Launch Data:", data)
   };`;
