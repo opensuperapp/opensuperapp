@@ -41,6 +41,7 @@ export const TOPIC = {
   DEVICE_SCREEN_SIZE: "device_screen_size",
   OPEN_URL: "open_url",
   MICRO_APP_VERSION: "micro_app_version",
+  COMPOSE_EMAIL: "compose_email",
   OPEN_MICRO_APP: "open_micro_app",
   GET_LAUNCH_DATA: "get_launch_data",
 };
@@ -121,6 +122,9 @@ export const injectedJavaScript = `window.nativebridge = {
     requestMicroAppVersion: () => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "micro_app_version" })),
     resolveMicroAppVersion: (version) => console.log("Micro App Version:", version),
     rejectMicroAppVersion: (err) => console.error("Failed to get Micro App version:", err),
+    requestComposeEmail: (config) => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "compose_email", data: { config } })),
+    resolveComposeEmail: (result) => console.log("Email composition result:", result),
+    rejectComposeEmail: (err) => console.error("Email composition failed:", err)
     requestOpenMicroApp: (appId, data) => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "open_micro_app", data: { appId, data } })),
     requestGetLaunchData: () => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "get_launch_data" })),
     resolveGetLaunchData: (data) => console.log("Launch Data:", data)

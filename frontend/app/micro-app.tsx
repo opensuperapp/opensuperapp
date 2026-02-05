@@ -73,6 +73,8 @@ import prompt from "react-native-prompt-android";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 import { useDispatch, useSelector } from "react-redux";
+import * as MailComposer from "expo-mail-composer";
+import * as FileSystem from "expo-file-system";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -98,12 +100,12 @@ const MicroApp = () => {
   const router = useRouter();
   const pendingTokenRequests = useRef<((token: string) => void)[]>([]);
   const [webUri, setWebUri] = useState<string>(
-    isIos ? DEVELOPER_APP_IOS_DEFAULT_URL : DEVELOPER_APP_ANDROID_DEFAULT_URL
+    isIos ? DEVELOPER_APP_IOS_DEFAULT_URL : DEVELOPER_APP_ANDROID_DEFAULT_URL,
   );
   const colorScheme = useColorScheme();
   const apps = useSelector((state: RootState) => state.apps.apps);
   const appScopes = useSelector(
-    (state: RootState) => state.appConfig.appScopes
+    (state: RootState) => state.appConfig.appScopes,
   );
   const isDeveloper: boolean = appId.includes("developer");
   const isTotp: boolean = appId.includes("totp");
@@ -117,7 +119,7 @@ const MicroApp = () => {
       Event.QrScanned,
       (qrCode: string) => {
         sendQrToWebView(qrCode);
-      }
+      },
     );
 
     return () => {
@@ -133,7 +135,7 @@ const MicroApp = () => {
    */
   const styles = createStyles(
     colorScheme ?? "light",
-    shouldShowHeader ? bottomSafeArea : 0
+    shouldShowHeader ? bottomSafeArea : 0,
   );
 
   const [request, response, promptAsync] = Google.useAuthRequest({
@@ -146,7 +148,7 @@ const MicroApp = () => {
   // Function to send response to micro app
   const sendResponseToWeb = (method: string, data?: any) => {
     webviewRef.current?.injectJavaScript(
-      `window.nativebridge.${method}(${JSON.stringify(data)});`
+      `window.nativebridge.${method}(${JSON.stringify(data)});`,
     );
   };
 
@@ -177,7 +179,7 @@ const MicroApp = () => {
           exchangedToken,
           appId,
           logout,
-          appScopes
+          appScopes,
         );
         if (!token) throw new Error("Token exchange failed");
         setToken(token);
@@ -227,7 +229,7 @@ const MicroApp = () => {
   const handleAlert = async (
     title: string,
     message: string,
-    buttonText: string
+    buttonText: string,
   ) => {
     Alert.alert(title, message, [{ text: buttonText }], { cancelable: false });
   };
@@ -237,7 +239,7 @@ const MicroApp = () => {
     title: string,
     message: string,
     cancelButtonText: string,
-    confirmButtonText: string
+    confirmButtonText: string,
   ) => {
     Alert.alert(
       title,
@@ -253,7 +255,7 @@ const MicroApp = () => {
           onPress: () => sendResponseToWeb("resolveConfirmAlert", "confirm"),
         },
       ],
-      { cancelable: false }
+      { cancelable: false },
     );
   };
 
@@ -428,7 +430,7 @@ const MicroApp = () => {
       }
 
       const webPresentationStyle = mapToWebBrowserPresentationStyle(
-        config.presentationStyle
+        config.presentationStyle,
       );
 
       const result = await WebBrowser.openBrowserAsync(config.url, {
@@ -455,7 +457,7 @@ const MicroApp = () => {
 
   // Function to schedule a local notification
   const handleScheduleLocalNotification = async (
-    data: ScheduledNotificationData
+    data: ScheduledNotificationData,
   ) => {
     try {
       await scheduleSessionNotifications(data);
@@ -464,14 +466,14 @@ const MicroApp = () => {
       console.error("Error scheduling local notification:", error);
       sendResponseToWeb(
         "rejectSchedulingLocalNotification",
-        error instanceof Error ? error.message : "Unknown error"
+        error instanceof Error ? error.message : "Unknown error",
       );
     }
   };
 
   // Function to cancel a local notification
   const handleCancelLocalNotification = async (
-    data: ScheduledNotificationIdentifiable
+    data: ScheduledNotificationIdentifiable,
   ) => {
     try {
       cancelLocalNotification(data);
@@ -480,7 +482,7 @@ const MicroApp = () => {
       console.error("Error canceling local notification:", error);
       sendResponseToWeb(
         "rejectCancellingLocalNotification",
-        error instanceof Error ? error.message : "Unknown error"
+        error instanceof Error ? error.message : "Unknown error",
       );
     }
   };
@@ -494,7 +496,7 @@ const MicroApp = () => {
       console.error("Error clearing all local notifications:", error);
       sendResponseToWeb(
         "rejectClearingAllLocalNotifications",
-        error instanceof Error ? error.message : "Unknown error"
+        error instanceof Error ? error.message : "Unknown error",
       );
     }
   };
@@ -509,10 +511,46 @@ const MicroApp = () => {
   const handleMicroAppVersion = async () => {
     sendResponseToWeb("resolveMicroAppVersion", version || "unknown");
   };
+  // Function to compose an email
+  const handleComposeEmail = async (
+    config?: MailComposer.MailComposerOptions,
+  ) => {
+    try {
+      if (!config) {
+        sendResponseToWeb(
+          "rejectComposeEmail",
+          "Mail configuration is missing.",
+        );
+        return;
+      }
+
+      const isAvailable = await MailComposer.isAvailableAsync();
+      if (!isAvailable) {
+        throw new Error("Mail services are not available on this device");
+      }
+
+      if (config.attachments?.length) {
+        for (const attachment of config.attachments) {
+          const info = await FileSystem.getInfoAsync(attachment);
+          if (!info.exists) {
+            throw new Error(`Attachment not found: ${attachment}`);
+          }
+        }
+      }
+
+      const result = await MailComposer.composeAsync(config);
+      sendResponseToWeb("resolveComposeEmail", result);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to compose email";
+      sendResponseToWeb("rejectComposeEmail", message);
+    }
+  };
 
   // Function to open another micro app
   const handleOpenMicroApp = async (targetAppId: string, data: any) => {
     const targetApp = apps.find((app) => app.appId === targetAppId);
+
     if (targetApp?.status === DOWNLOADED) {
       router.push({
         pathname: ScreenPaths.MICRO_APP,
@@ -531,11 +569,7 @@ const MicroApp = () => {
         "App not installed",
         "Would you like to install it?",
         [
-          {
-            text: "Cancel",
-            style: "cancel",
-            onPress: () => {},
-          },
+          { text: "Cancel", style: "cancel" },
           {
             text: "Install",
             onPress: () => {
@@ -544,26 +578,24 @@ const MicroApp = () => {
             },
           },
         ],
-        { cancelable: false }
+        { cancelable: false },
       );
     }
   };
 
   // Function to get launch data passed to the micro app
   const handleGetLaunchData = async () => {
-    if (launchData) {
-      try {
-        const parsedData = JSON.parse(launchData);
-        sendResponseToWeb("resolveGetLaunchData", parsedData);
-      } catch (error) {
-        console.error("Failed to parse launch data:", error);
-        sendResponseToWeb("resolveGetLaunchData", launchData);
-      }
-    } else {
+    if (!launchData) {
       sendResponseToWeb("resolveGetLaunchData", null);
+      return;
+    }
+
+    try {
+      sendResponseToWeb("resolveGetLaunchData", JSON.parse(launchData));
+    } catch {
+      sendResponseToWeb("resolveGetLaunchData", launchData);
     }
   };
-
   // Handle messages from WebView
   const onMessage = async (event: WebViewMessageEvent) => {
     try {
@@ -598,7 +630,7 @@ const MicroApp = () => {
             data.title,
             data.message,
             data.cancelButtonText,
-            data.confirmButtonText
+            data.confirmButtonText,
           );
           break;
         case TOPIC.GOOGLE_LOGIN:
@@ -652,6 +684,8 @@ const MicroApp = () => {
         case TOPIC.MICRO_APP_VERSION:
           handleMicroAppVersion();
           break;
+        case TOPIC.COMPOSE_EMAIL:
+          await handleComposeEmail(data?.config);
         case TOPIC.OPEN_MICRO_APP:
           await handleOpenMicroApp(data.appId, data.data);
           break;
@@ -680,19 +714,19 @@ const MicroApp = () => {
       case "info":
         console.info(
           `[Micro App] ${message}.`,
-          injectedData !== undefined ? injectedData : ""
+          injectedData !== undefined ? injectedData : "",
         );
         break;
       case "warn":
         console.warn(
           `[Micro App] ${message}.`,
-          injectedData !== undefined ? injectedData : ""
+          injectedData !== undefined ? injectedData : "",
         );
         break;
       case "error":
         console.error(
           `[Micro App] ${message}.`,
-          injectedData !== undefined ? injectedData : ""
+          injectedData !== undefined ? injectedData : "",
         );
         break;
     }
@@ -801,7 +835,7 @@ const MicroApp = () => {
                           },
                         ],
                         "plain-text",
-                        webUri
+                        webUri,
                       )
                     : prompt(
                         "App URL",
@@ -826,7 +860,7 @@ const MicroApp = () => {
                           type: "plain-text",
                           cancelable: false,
                           defaultValue: webUri,
-                        }
+                        },
                       );
                 }}
                 hitSlop={20}
