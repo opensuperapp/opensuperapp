@@ -46,7 +46,12 @@ export async function deleteExchangedIdToken(appId: string) {
 }
 
 export async function clearAllExchangedTokens(appIds: string[]) {
-  await Promise.all(appIds.map((id) => deleteItemAsync(KEY(id))));
+  await Promise.all(
+    appIds.map((id) => {
+      deleteItemAsync(KEY(id));
+      deleteItemAsync(ID_TOKEN_KEY(id));
+    })
+  );
 }
 
 /** Save apps to AsyncStorage with exchangedToken stripped */
