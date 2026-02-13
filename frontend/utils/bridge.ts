@@ -17,6 +17,7 @@
 // Bridge event topics used for communication between the main app and micro apps.
 export const TOPIC = {
   TOKEN: "token",
+  ID_TOKEN: "id_token",
   QR_REQUEST: "qr_request",
   SAVE_LOCAL_DATA: "save_local_data",
   GET_LOCAL_DATA: "get_local_data",
@@ -52,6 +53,11 @@ export const injectedJavaScript = `window.nativebridge = {
     requestToken: () => {
       window.ReactNativeWebView.postMessage(JSON.stringify({
         topic: 'token'
+      }));
+    },
+    requestIdToken: () => {
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        topic: 'id_token'
       }));
     },
     requestQr: () => {
@@ -124,8 +130,10 @@ export const injectedJavaScript = `window.nativebridge = {
     rejectMicroAppVersion: (err) => console.error("Failed to get Micro App version:", err),
     requestComposeEmail: (config) => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "compose_email", data: { config } })),
     resolveComposeEmail: (result) => console.log("Email composition result:", result),
-    rejectComposeEmail: (err) => console.error("Email composition failed:", err)
+    rejectComposeEmail: (err) => console.error("Email composition failed:", err),
     requestOpenMicroApp: (appId, data) => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "open_micro_app", data: { appId, data } })),
     requestGetLaunchData: () => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "get_launch_data" })),
-    resolveGetLaunchData: (data) => console.log("Launch Data:", data)
+    resolveGetLaunchData: (data) => console.log("Launch Data:", data),
+    resolveIdToken: (token) => console.log("ID Token received:", token),
+    rejectIdToken: (err) => console.error("ID Token request failed:", err)
   };`;

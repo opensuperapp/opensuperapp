@@ -267,6 +267,7 @@ export const removeMicroApp = async (
         webViewUri: "",
         clientId: "",
         exchangedToken: "",
+        exchangedIdToken: "",
         displayMode: DEFAULT_VIEWING_MODE,
       })
     );
@@ -310,6 +311,7 @@ const mergeAppData = (latestApp: MicroApp, storedApp?: MicroApp): MicroApp => {
     webViewUri: storedApp.webViewUri || "",
     clientId: storedApp.clientId || "",
     exchangedToken: storedApp.exchangedToken || "",
+    exchangedIdToken: storedApp.exchangedIdToken || "",
     displayMode:
       storedApp.displayMode || latestApp.displayMode || DEFAULT_VIEWING_MODE,
   };
