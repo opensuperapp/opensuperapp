@@ -45,6 +45,10 @@ export const apiRequest = async (
     Authorization: `Bearer ${accessToken}`,
   };
 
+  if (__DEV__) {
+    config.headers["x-jwt-assertion"] = accessToken;
+  }
+
   try {
     return await axios(config); // Make the API request
   } catch (error: any) {

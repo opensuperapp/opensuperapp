@@ -14,7 +14,10 @@
 // specific language governing permissions and limitations
 // under the License.
 import type { MicroApp } from "@/context/slices/appSlice";
-import { loadExchangedToken } from "./exchangedTokenStore";
+import {
+  loadExchangedIdToken,
+  loadExchangedToken,
+} from "./exchangedTokenStore";
 
 /** Fetch exchanged tokens from SecureStore and merge into app state.*/
 export async function buildAppsWithTokens(
@@ -24,7 +27,11 @@ export async function buildAppsWithTokens(
     apps.map(async (app) => {
       try {
         const token = await loadExchangedToken(app.appId);
-        return token ? { ...app, exchangedToken: token } : app;
+        const idToken = await loadExchangedIdToken(app.appId);
+        let appConfiguration = { ...app };
+        if (idToken) appConfiguration.exchangedIdToken = idToken;
+        if (token) appConfiguration.exchangedToken = token;
+        return appConfiguration;
       } catch (error) {
         console.warn(`SecureStore lookup failed`, {
           appId: app.appId,

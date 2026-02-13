@@ -19,6 +19,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { deleteItemAsync, getItemAsync, setItemAsync } from "expo-secure-store";
 
 const KEY = (appId: string) => `exchangedToken_${appId}`;
+const ID_TOKEN_KEY = (appId: string) => `exchangedIdToken_${appId}`;
 
 export async function saveExchangedToken(appId: string, token: string) {
   await setItemAsync(KEY(appId), token);
@@ -30,6 +31,18 @@ export async function loadExchangedToken(appId: string) {
 
 export async function deleteExchangedToken(appId: string) {
   await deleteItemAsync(KEY(appId));
+}
+
+export async function saveExchangedIdToken(appId: string, token: string) {
+  await setItemAsync(ID_TOKEN_KEY(appId), token);
+}
+
+export async function loadExchangedIdToken(appId: string) {
+  return await getItemAsync(ID_TOKEN_KEY(appId));
+}
+
+export async function deleteExchangedIdToken(appId: string) {
+  await deleteItemAsync(ID_TOKEN_KEY(appId));
 }
 
 export async function clearAllExchangedTokens(appIds: string[]) {

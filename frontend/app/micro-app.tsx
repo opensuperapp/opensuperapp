@@ -30,7 +30,13 @@ import {
 import { Event } from "@/constants/enums/Event";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { RootState } from "@/context/store";
-import { logout, tokenExchange } from "@/services/authService";
+import {
+  isAccessTokenExpired,
+  isIdTokenExpired,
+  logout,
+  tokenExchange,
+  TokenExchangeResult,
+} from "@/services/authService";
 import googleAuthenticationService, {
   getGoogleUserInfo,
   isAuthenticatedWithGoogle,
@@ -54,7 +60,9 @@ import { injectedJavaScript, TOPIC } from "@/utils/bridge";
 import { qrScannerEmitter } from "@/utils/eventEmitter";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Google from "expo-auth-session/providers/google";
+import * as FileSystem from "expo-file-system";
 import { documentDirectory } from "expo-file-system";
+import * as MailComposer from "expo-mail-composer";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { StatusBar } from "expo-status-bar";
@@ -73,8 +81,6 @@ import prompt from "react-native-prompt-android";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 import { useDispatch, useSelector } from "react-redux";
-import * as MailComposer from "expo-mail-composer";
-import * as FileSystem from "expo-file-system";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -86,6 +92,7 @@ const MicroApp = () => {
     appName,
     clientId,
     exchangedToken,
+    exchangedIdToken,
     appId,
     displayMode,
     version,
@@ -95,17 +102,15 @@ const MicroApp = () => {
 
   const [hasError, setHasError] = useState(false);
   const webviewRef = useRef<WebView>(null);
-  const [token, setToken] = useState<string | null>();
   const dispatch = useDispatch();
   const router = useRouter();
-  const pendingTokenRequests = useRef<((token: string) => void)[]>([]);
   const [webUri, setWebUri] = useState<string>(
-    isIos ? DEVELOPER_APP_IOS_DEFAULT_URL : DEVELOPER_APP_ANDROID_DEFAULT_URL,
+    isIos ? DEVELOPER_APP_IOS_DEFAULT_URL : DEVELOPER_APP_ANDROID_DEFAULT_URL
   );
   const colorScheme = useColorScheme();
   const apps = useSelector((state: RootState) => state.apps.apps);
   const appScopes = useSelector(
-    (state: RootState) => state.appConfig.appScopes,
+    (state: RootState) => state.appConfig.appScopes
   );
   const isDeveloper: boolean = appId.includes("developer");
   const isTotp: boolean = appId.includes("totp");
@@ -113,13 +118,53 @@ const MicroApp = () => {
   const shouldShowHeader: boolean = displayMode !== FULL_SCREEN_VIEWING_MODE;
   const { width, height } = useWindowDimensions();
 
+  // Token and ID token states
+  const [token, setToken] = useState<string | null>();
+  const [idToken, setIdToken] = useState<string | null>();
+
+  const pendingTokenRequests = useRef<((token: string) => void)[]>([]);
+  const pendingIdTokenRequests = useRef<((idToken: string) => void)[]>([]);
+  const tokenExchangePromise =
+    useRef<Promise<TokenExchangeResult | null> | null>(null);
+
+  // Function to refresh token(s) if expired
+  const refreshTokenIfExpired =
+    async (): Promise<TokenExchangeResult | null> => {
+      if (tokenExchangePromise.current) {
+        return tokenExchangePromise.current;
+      }
+
+      tokenExchangePromise.current = (async () => {
+        try {
+          const result = await tokenExchange(
+            dispatch,
+            clientId,
+            exchangedToken,
+            exchangedIdToken,
+            appId,
+            logout,
+            appScopes
+          );
+          if (result) {
+            if (result.accessToken) setToken(result.accessToken);
+            if (result.idToken) setIdToken(result.idToken);
+          }
+          return result;
+        } finally {
+          tokenExchangePromise.current = null;
+        }
+      })();
+
+      return tokenExchangePromise.current;
+    };
+
   // Event listener for QR Code scanned
   useEffect(() => {
     const unsubscribe = qrScannerEmitter.on(
       Event.QrScanned,
       (qrCode: string) => {
         sendQrToWebView(qrCode);
-      },
+      }
     );
 
     return () => {
@@ -135,7 +180,7 @@ const MicroApp = () => {
    */
   const styles = createStyles(
     colorScheme ?? "light",
-    shouldShowHeader ? bottomSafeArea : 0,
+    shouldShowHeader ? bottomSafeArea : 0
   );
 
   const [request, response, promptAsync] = Google.useAuthRequest({
@@ -148,7 +193,7 @@ const MicroApp = () => {
   // Function to send response to micro app
   const sendResponseToWeb = (method: string, data?: any) => {
     webviewRef.current?.injectJavaScript(
-      `window.nativebridge.${method}(${JSON.stringify(data)});`,
+      `window.nativebridge.${method}(${JSON.stringify(data)});`
     );
   };
 
@@ -173,17 +218,24 @@ const MicroApp = () => {
   useEffect(() => {
     const fetchToken = async () => {
       try {
-        const token = await tokenExchange(
+        const result = await tokenExchange(
           dispatch,
           clientId,
           exchangedToken,
+          exchangedIdToken,
           appId,
           logout,
-          appScopes,
+          appScopes
         );
-        if (!token) throw new Error("Token exchange failed");
-        setToken(token);
-        sendTokenToWebView(token);
+        if (!result) throw new Error("Token exchange failed");
+        if (result.accessToken) {
+          setToken(result.accessToken);
+          sendTokenToWebView(result.accessToken);
+        }
+        if (result.idToken) {
+          setIdToken(result.idToken);
+          sendIdTokenToWebView(result.idToken);
+        }
       } catch (error) {
         console.error("Token exchange error:", error);
       }
@@ -215,6 +267,17 @@ const MicroApp = () => {
     }
   };
 
+  // Function to send ID token to WebView
+  const sendIdTokenToWebView = (idToken: string) => {
+    if (!idToken) return;
+    sendResponseToWeb("resolveIdToken", idToken);
+
+    while (pendingIdTokenRequests.current.length > 0) {
+      const resolve = pendingIdTokenRequests.current.shift();
+      resolve?.(idToken);
+    }
+  };
+
   // Function to send QR string to WebView
   const sendQrToWebView = (qrString: string) => {
     sendResponseToWeb("resolveQrCode", qrString);
@@ -229,7 +292,7 @@ const MicroApp = () => {
   const handleAlert = async (
     title: string,
     message: string,
-    buttonText: string,
+    buttonText: string
   ) => {
     Alert.alert(title, message, [{ text: buttonText }], { cancelable: false });
   };
@@ -239,7 +302,7 @@ const MicroApp = () => {
     title: string,
     message: string,
     cancelButtonText: string,
-    confirmButtonText: string,
+    confirmButtonText: string
   ) => {
     Alert.alert(
       title,
@@ -255,7 +318,7 @@ const MicroApp = () => {
           onPress: () => sendResponseToWeb("resolveConfirmAlert", "confirm"),
         },
       ],
-      { cancelable: false },
+      { cancelable: false }
     );
   };
 
@@ -430,7 +493,7 @@ const MicroApp = () => {
       }
 
       const webPresentationStyle = mapToWebBrowserPresentationStyle(
-        config.presentationStyle,
+        config.presentationStyle
       );
 
       const result = await WebBrowser.openBrowserAsync(config.url, {
@@ -457,7 +520,7 @@ const MicroApp = () => {
 
   // Function to schedule a local notification
   const handleScheduleLocalNotification = async (
-    data: ScheduledNotificationData,
+    data: ScheduledNotificationData
   ) => {
     try {
       await scheduleSessionNotifications(data);
@@ -466,14 +529,14 @@ const MicroApp = () => {
       console.error("Error scheduling local notification:", error);
       sendResponseToWeb(
         "rejectSchedulingLocalNotification",
-        error instanceof Error ? error.message : "Unknown error",
+        error instanceof Error ? error.message : "Unknown error"
       );
     }
   };
 
   // Function to cancel a local notification
   const handleCancelLocalNotification = async (
-    data: ScheduledNotificationIdentifiable,
+    data: ScheduledNotificationIdentifiable
   ) => {
     try {
       cancelLocalNotification(data);
@@ -482,7 +545,7 @@ const MicroApp = () => {
       console.error("Error canceling local notification:", error);
       sendResponseToWeb(
         "rejectCancellingLocalNotification",
-        error instanceof Error ? error.message : "Unknown error",
+        error instanceof Error ? error.message : "Unknown error"
       );
     }
   };
@@ -496,7 +559,7 @@ const MicroApp = () => {
       console.error("Error clearing all local notifications:", error);
       sendResponseToWeb(
         "rejectClearingAllLocalNotifications",
-        error instanceof Error ? error.message : "Unknown error",
+        error instanceof Error ? error.message : "Unknown error"
       );
     }
   };
@@ -513,13 +576,13 @@ const MicroApp = () => {
   };
   // Function to compose an email
   const handleComposeEmail = async (
-    config?: MailComposer.MailComposerOptions,
+    config?: MailComposer.MailComposerOptions
   ) => {
     try {
       if (!config) {
         sendResponseToWeb(
           "rejectComposeEmail",
-          "Mail configuration is missing.",
+          "Mail configuration is missing."
         );
         return;
       }
@@ -578,7 +641,7 @@ const MicroApp = () => {
             },
           },
         ],
-        { cancelable: false },
+        { cancelable: false }
       );
     }
   };
@@ -596,6 +659,15 @@ const MicroApp = () => {
       sendResponseToWeb("resolveGetLaunchData", launchData);
     }
   };
+
+  const handleGetIdToken = async () => {
+    if (idToken) {
+      sendResponseToWeb("resolveIdToken", idToken);
+    } else {
+      sendResponseToWeb("rejectIdToken", "No exchanged ID token available");
+    }
+  };
+
   // Handle messages from WebView
   const onMessage = async (event: WebViewMessageEvent) => {
     try {
@@ -603,9 +675,28 @@ const MicroApp = () => {
       if (!topic) throw new Error("Invalid message format: Missing topic");
       switch (topic) {
         case TOPIC.TOKEN:
-          token
-            ? sendTokenToWebView(token)
-            : pendingTokenRequests.current.push(sendTokenToWebView);
+          if (token && !isAccessTokenExpired(token)) {
+            sendTokenToWebView(token);
+          } else {
+            pendingTokenRequests.current.push(sendTokenToWebView);
+            refreshTokenIfExpired().then((result) => {
+              if (result?.accessToken) {
+                sendTokenToWebView(result.accessToken);
+              }
+            });
+          }
+          break;
+        case TOPIC.ID_TOKEN:
+          if (idToken && !isIdTokenExpired(idToken)) {
+            sendIdTokenToWebView(idToken);
+          } else {
+            pendingIdTokenRequests.current.push(sendIdTokenToWebView);
+            refreshTokenIfExpired().then((result) => {
+              if (result?.idToken) {
+                sendIdTokenToWebView(result.idToken);
+              }
+            });
+          }
           break;
         case TOPIC.QR_REQUEST:
           openQrScanner();
@@ -630,7 +721,7 @@ const MicroApp = () => {
             data.title,
             data.message,
             data.cancelButtonText,
-            data.confirmButtonText,
+            data.confirmButtonText
           );
           break;
         case TOPIC.GOOGLE_LOGIN:
@@ -714,19 +805,19 @@ const MicroApp = () => {
       case "info":
         console.info(
           `[Micro App] ${message}.`,
-          injectedData !== undefined ? injectedData : "",
+          injectedData !== undefined ? injectedData : ""
         );
         break;
       case "warn":
         console.warn(
           `[Micro App] ${message}.`,
-          injectedData !== undefined ? injectedData : "",
+          injectedData !== undefined ? injectedData : ""
         );
         break;
       case "error":
         console.error(
           `[Micro App] ${message}.`,
-          injectedData !== undefined ? injectedData : "",
+          injectedData !== undefined ? injectedData : ""
         );
         break;
     }
@@ -810,7 +901,7 @@ const MicroApp = () => {
       <Stack.Screen
         options={{
           title: shouldShowHeader ? appName : "",
-          headerShown: shouldShowHeader,
+          headerShown: false,
           headerRight: () =>
             isDeveloper &&
             shouldShowHeader && (
@@ -835,7 +926,7 @@ const MicroApp = () => {
                           },
                         ],
                         "plain-text",
-                        webUri,
+                        webUri
                       )
                     : prompt(
                         "App URL",
@@ -860,7 +951,7 @@ const MicroApp = () => {
                           type: "plain-text",
                           cancelable: false,
                           defaultValue: webUri,
-                        },
+                        }
                       );
                 }}
                 hitSlop={20}
