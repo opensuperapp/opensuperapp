@@ -258,7 +258,6 @@ const MicroApp = () => {
   const sendTokenToWebView = (token: string) => {
     if (!token) return;
     sendResponseToWeb("resolveToken", token);
-    console.log("[TOKEN] Sending token to WebView:", token);
     // Resolve any pending token requests
     while (pendingTokenRequests.current.length > 0) {
       const resolve = pendingTokenRequests.current.shift();
@@ -270,7 +269,6 @@ const MicroApp = () => {
   const sendIdTokenToWebView = (idToken: string) => {
     if (!idToken) return;
     sendResponseToWeb("resolveIdToken", idToken);
-    console.log("[TOKEN] Sending ID token to WebView:", idToken);
 
     while (pendingIdTokenRequests.current.length > 0) {
       const resolve = pendingIdTokenRequests.current.shift();
@@ -679,7 +677,6 @@ const MicroApp = () => {
           if (token && !isTokenExpired(token)) {
             sendTokenToWebView(token);
           } else {
-            pendingTokenRequests.current.push(sendTokenToWebView);
             refreshTokenIfExpired().then((result) => {
               if (result?.accessToken) {
                 sendTokenToWebView(result.accessToken);
@@ -691,7 +688,6 @@ const MicroApp = () => {
           if (idToken && !isTokenExpired(idToken)) {
             sendIdTokenToWebView(idToken);
           } else {
-            pendingIdTokenRequests.current.push(sendIdTokenToWebView);
             refreshTokenIfExpired().then((result) => {
               if (result?.idToken) {
                 sendIdTokenToWebView(result.idToken);
