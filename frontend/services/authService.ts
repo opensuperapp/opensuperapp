@@ -298,9 +298,9 @@ export const tokenExchange = async (
     // Use existing exchanged tokens if they're still valid
     if (
       exchangedToken &&
-      !isAccessTokenExpired(exchangedToken) &&
+      !isTokenExpired(exchangedToken) &&
       exchangedIdToken &&
-      !isIdTokenExpired(exchangedIdToken)
+      !isTokenExpired(exchangedIdToken)
     ) {
       return { accessToken: exchangedToken, idToken: exchangedIdToken };
     }
@@ -325,7 +325,7 @@ export const tokenExchange = async (
     }
 
     // Refresh access token if expired
-    if (isAccessTokenExpired(accessToken)) {
+    if (isTokenExpired(accessToken)) {
       const newAuthData = await refreshAccessToken(onLogout);
       if (!newAuthData?.accessToken) {
         return null; // Logout is triggered inside refreshAccessToken
@@ -416,19 +416,9 @@ export const tokenExchange = async (
 };
 
 // Helper function to check if the token is expired
-export const isAccessTokenExpired = (accessToken: string): boolean => {
+export const isTokenExpired = (token: string): boolean => {
   try {
-    const decoded = jwtDecode<{ exp: number }>(accessToken);
-    return dayjs.unix(decoded.exp).isBefore(dayjs());
-  } catch {
-    return true; // Assume expired if decoding fails
-  }
-};
-
-// Helper function to check if the ID token is expired
-export const isIdTokenExpired = (idToken: string): boolean => {
-  try {
-    const decoded = jwtDecode<{ exp: number }>(idToken);
+    const decoded = jwtDecode<{ exp: number }>(token);
     return dayjs.unix(decoded.exp).isBefore(dayjs());
   } catch {
     return true;
