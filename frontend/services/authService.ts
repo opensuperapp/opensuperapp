@@ -351,7 +351,6 @@ export const tokenExchange = async (
           }
         );
 
-        console.log("Token exchange response:", response.data);
         if (response.status === 200) return response.data;
 
         if (response.status === 401) {
