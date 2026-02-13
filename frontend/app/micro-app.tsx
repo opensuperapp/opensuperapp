@@ -622,6 +622,7 @@ const MicroApp = () => {
           appName: targetApp.name,
           clientId: targetApp.clientId,
           exchangedToken: targetApp.exchangedToken,
+          exchangedIdToken: targetApp.exchangedIdToken,
           appId: targetApp.appId,
           displayMode: targetApp.displayMode,
           launchData: JSON.stringify(data),
