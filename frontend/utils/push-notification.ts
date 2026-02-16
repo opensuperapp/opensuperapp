@@ -76,17 +76,27 @@ const requestNotificationPermissionAndroid = async (): Promise<boolean> => {
     grantedNotificationPermission === PermissionsAndroid.RESULTS.GRANTED;
   if (!isGranted) return false;
 
-  const hasPrompted = await AsyncStorage.getItem(ALARM_PERMISSION_PROMPTED_KEY);
-  if (hasPrompted) return isGranted;
+  // Check if the alarm permission has been prompted
+  try {
+    const hasPrompted = await AsyncStorage.getItem(
+      ALARM_PERMISSION_PROMPTED_KEY
+    );
+    if (hasPrompted) return isGranted;
 
-  const settings = await notifee.getNotificationSettings();
-  if (settings.android.alarm === AndroidNotificationSetting.DISABLED) {
-    await notifee.openAlarmPermissionSettings();
+    const settings = await notifee.getNotificationSettings();
+    if (settings.android.alarm === AndroidNotificationSetting.DISABLED) {
+      await notifee.openAlarmPermissionSettings();
+    }
+
+    await AsyncStorage.setItem(ALARM_PERMISSION_PROMPTED_KEY, "true");
+    return isGranted;
+  } catch (error) {
+    console.error(
+      "Error requesting notification permission for Android:",
+      error
+    );
+    return false;
   }
-
-  await AsyncStorage.setItem(ALARM_PERMISSION_PROMPTED_KEY, "true");
-
-  return isGranted;
 };
 
 // Request notification permission
