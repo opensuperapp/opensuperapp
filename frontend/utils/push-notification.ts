@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 import {
+  ALARM_PERMISSION_PROMPTED_KEY,
   ANDROID_NOTIFICATION_SMALL_ICON_ACCENT_COLOR,
   isAndroid,
   isIos,
@@ -24,6 +25,7 @@ import notifee, {
   AndroidImportance,
   AndroidNotificationSetting,
 } from "@notifee/react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   AuthorizationStatus,
   FirebaseMessagingTypes,
@@ -74,10 +76,15 @@ const requestNotificationPermissionAndroid = async (): Promise<boolean> => {
     grantedNotificationPermission === PermissionsAndroid.RESULTS.GRANTED;
   if (!isGranted) return false;
 
+  const hasPrompted = await AsyncStorage.getItem(ALARM_PERMISSION_PROMPTED_KEY);
+  if (hasPrompted) return isGranted;
+
   const settings = await notifee.getNotificationSettings();
   if (settings.android.alarm === AndroidNotificationSetting.DISABLED) {
     await notifee.openAlarmPermissionSettings();
   }
+
+  await AsyncStorage.setItem(ALARM_PERMISSION_PROMPTED_KEY, "true");
 
   return isGranted;
 };
