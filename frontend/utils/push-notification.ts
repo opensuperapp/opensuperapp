@@ -147,6 +147,7 @@ export const setupTokenRefreshListener = (
  */
 export function setupMessagingListener() {
   const unsubscribe = onMessage(messaging, async (remoteMessage) => {
+    console.log("Remote message received:", remoteMessage);
     showNotification(remoteMessage);
   });
 
@@ -166,11 +167,13 @@ const showNotification = async (
     await notifee.displayNotification({
       title,
       body,
+      data: { screen: "/(tabs)/apps/notifications" },
       android: {
         channelId: NOTIFICATION_CHANNEL_ID,
         smallIcon: "ic_notification",
         color: ANDROID_NOTIFICATION_SMALL_ICON_ACCENT_COLOR,
         sound: "default",
+        pressAction: { id: "default" },
       },
     });
   } else {
@@ -188,6 +191,7 @@ export const setupForegroundNotificationListener = (
 ): (() => void) => {
   const unsubscribe = notifee.onForegroundEvent(({ type, detail }) => {
     if (type === EventType.PRESS) {
+      console.log("Notification pressed:", detail);
       const notificationData = detail.notification?.data;
       onNotificationTap(notificationData);
     }
@@ -206,6 +210,7 @@ export const setupBackgroundNotificationListener = (): void => {
   notifee.onBackgroundEvent(async ({ type, detail }) => {
     if (type === EventType.PRESS) {
       const notificationData = detail.notification?.data;
+      console.log("Notification pressed in background:", notificationData);
       if (notificationData) {
         await AsyncStorage.setItem(
           PENDING_NOTIFICATION_NAVIGATION,
