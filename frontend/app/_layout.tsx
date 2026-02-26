@@ -33,6 +33,7 @@ import { handleFreshInstall } from "@/utils/freshInstall";
 import { performLogout } from "@/utils/performLogout";
 import {
   initializeNotifications,
+  setupBackgroundNotificationListeners,
   setupMessagingListener,
 } from "@/utils/push-notification";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -141,6 +142,8 @@ export default function RootLayout() {
   useEffect(() => {
     initializeNotifications();
     const unsubscribe = setupMessagingListener();
+
+    setupBackgroundNotificationListeners();
     return () => unsubscribe();
   }, []);
 

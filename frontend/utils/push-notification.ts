@@ -37,6 +37,7 @@ import {
   onMessage,
   onTokenRefresh,
   requestPermission,
+  setBackgroundMessageHandler,
 } from "@react-native-firebase/messaging";
 import { PermissionsAndroid } from "react-native";
 
@@ -147,7 +148,6 @@ export const setupTokenRefreshListener = (
  */
 export function setupMessagingListener() {
   const unsubscribe = onMessage(messaging, async (remoteMessage) => {
-    console.log("Remote message received:", remoteMessage);
     showNotification(remoteMessage);
   });
 
@@ -161,13 +161,13 @@ export function setupMessagingListener() {
 const showNotification = async (
   remoteMessage: FirebaseMessagingTypes.RemoteMessage
 ) => {
-  const { notification } = remoteMessage;
+  const { notification, data } = remoteMessage;
   if (notification) {
     const { title, body } = notification;
     await notifee.displayNotification({
       title,
       body,
-      data: { screen: "/(tabs)/apps/notifications" },
+      data: { screen: "/(tabs)/apps/notifications", ...data },
       android: {
         channelId: NOTIFICATION_CHANNEL_ID,
         smallIcon: "ic_notification",
@@ -191,7 +191,6 @@ export const setupForegroundNotificationListener = (
 ): (() => void) => {
   const unsubscribe = notifee.onForegroundEvent(({ type, detail }) => {
     if (type === EventType.PRESS) {
-      console.log("Notification pressed:", detail);
       const notificationData = detail.notification?.data;
       onNotificationTap(notificationData);
     }
@@ -206,11 +205,10 @@ export const setupForegroundNotificationListener = (
  * Only one background event handler can be registered.
  * @returns void (the handler is registered globally)
  */
-export const setupBackgroundNotificationListener = (): void => {
+export const setupBackgroundNotificationListeners = (): void => {
   notifee.onBackgroundEvent(async ({ type, detail }) => {
     if (type === EventType.PRESS) {
       const notificationData = detail.notification?.data;
-      console.log("Notification pressed in background:", notificationData);
       if (notificationData) {
         await AsyncStorage.setItem(
           PENDING_NOTIFICATION_NAVIGATION,
@@ -218,6 +216,10 @@ export const setupBackgroundNotificationListener = (): void => {
         );
       }
     }
+  });
+
+  setBackgroundMessageHandler(messaging, async (remoteMessage) => {
+    showNotification(remoteMessage);
   });
 };
 
