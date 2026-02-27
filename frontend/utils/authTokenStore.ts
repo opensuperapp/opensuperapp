@@ -38,6 +38,9 @@ export async function saveAuthDataToSecureStore(authData: SecureAuthData) {
     setItemAsync(REFRESH_TOKEN, authData.refreshToken),
     setItemAsync(ID_TOKEN, authData.idToken),
     setItemAsync(EXPIRES_AT_KEY, String(authData.expiresAt)),
+    authData.email
+      ? setItemAsync(AUTH_EMAIL_KEY, authData.email)
+      : deleteItemAsync(AUTH_EMAIL_KEY),
     authData.userId
       ? setItemAsync(USER_ID_KEY, authData.userId)
       : deleteItemAsync(USER_ID_KEY),
