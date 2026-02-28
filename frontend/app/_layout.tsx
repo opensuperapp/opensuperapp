@@ -24,6 +24,7 @@ import { setUserInfo } from "@/context/slices/userInfoSlice";
 import { getVersions } from "@/context/slices/versionSlice";
 import { AppDispatch, persistor, store } from "@/context/store";
 import { useColorScheme } from "@/hooks/useColorScheme";
+import { useNotificationNavigation } from "@/hooks/useNotificationNavigation";
 import { useNotifications } from "@/hooks/useNotifications";
 import { usePushNotificationHandler } from "@/hooks/usePushNotificationHandler";
 import { runMigrations } from "@/migrations/migrator";
@@ -32,6 +33,7 @@ import { handleFreshInstall } from "@/utils/freshInstall";
 import { performLogout } from "@/utils/performLogout";
 import {
   initializeNotifications,
+  setupBackgroundNotificationListeners,
   setupMessagingListener,
 } from "@/utils/push-notification";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -67,6 +69,11 @@ function AppInitializer({ onReady }: { onReady: () => void }) {
    * Prefetch notifications on app mount
    */
   useNotifications(handleLogout);
+
+  /**
+   * Handle notification tap navigation
+   */
+  useNotificationNavigation();
 
   useEffect(() => {
     const initialize = async () => {
@@ -135,6 +142,8 @@ export default function RootLayout() {
   useEffect(() => {
     initializeNotifications();
     const unsubscribe = setupMessagingListener();
+
+    setupBackgroundNotificationListeners();
     return () => unsubscribe();
   }, []);
 

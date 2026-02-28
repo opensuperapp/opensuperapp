@@ -105,6 +105,7 @@ export const USER_ID_KEY = "secure_userid";
 // Keys for Async Storage
 export const LAST_NOTIFICATION_OPENED_AT = "last_notification_opened_at";
 export const ALARM_PERMISSION_PROMPTED_KEY = "alarm_permission_prompted";
+export const PENDING_NOTIFICATION_NAVIGATION = "pending_notification_navigation";
 
 // Android Notification Configuration
 export const NOTIFICATION_CHANNEL_ID =

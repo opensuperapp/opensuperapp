@@ -81,6 +81,7 @@ let config: ExpoConfig = {
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       UIBackgroundModes: ["remote-notification"],
+      UIDesignRequiresCompatibility: true,
     },
     entitlements: {
       "aps-environment": profile === PRODUCTION ? PRODUCTION : DEVELOPMENT,

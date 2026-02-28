@@ -20,10 +20,12 @@ import {
   isIos,
   NOTIFICATION_CHANNEL_ID,
   NOTIFICATION_CHANNEL_NAME,
+  PENDING_NOTIFICATION_NAVIGATION,
 } from "@/constants/Constants";
 import notifee, {
   AndroidImportance,
   AndroidNotificationSetting,
+  EventType,
 } from "@notifee/react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
@@ -35,6 +37,7 @@ import {
   onMessage,
   onTokenRefresh,
   requestPermission,
+  setBackgroundMessageHandler,
 } from "@react-native-firebase/messaging";
 import { PermissionsAndroid } from "react-native";
 
@@ -158,20 +161,79 @@ export function setupMessagingListener() {
 const showNotification = async (
   remoteMessage: FirebaseMessagingTypes.RemoteMessage
 ) => {
-  const { notification } = remoteMessage;
+  const { notification, data } = remoteMessage;
   if (notification) {
     const { title, body } = notification;
     await notifee.displayNotification({
       title,
       body,
+      data: { screen: "/(tabs)/apps/notifications", ...data },
       android: {
         channelId: NOTIFICATION_CHANNEL_ID,
         smallIcon: "ic_notification",
         color: ANDROID_NOTIFICATION_SMALL_ICON_ACCENT_COLOR,
         sound: "default",
+        pressAction: { id: "default" },
       },
     });
   } else {
     console.warn("Remote message received without notification payload");
   }
+};
+
+/**
+ * Sets up a listener for notification press events when the app is in the foreground.
+ * @param onNotificationTap - Callback function to execute when a notification is pressed.
+ * @returns An unsubscribe function to be called on cleanup.
+ */
+export const setupForegroundNotificationListener = (
+  onNotificationTap: (data: any) => void
+): (() => void) => {
+  const unsubscribe = notifee.onForegroundEvent(({ type, detail }) => {
+    if (type === EventType.PRESS) {
+      const notificationData = detail.notification?.data;
+      onNotificationTap(notificationData);
+    }
+  });
+
+  return unsubscribe;
+};
+
+/**
+ * Sets up a listener for notification press events when the app is in the background.
+ * Must be registered early (e.g., in entry.tsx or index.js).
+ * Only one background event handler can be registered.
+ * @returns void (the handler is registered globally)
+ */
+export const setupBackgroundNotificationListeners = (): void => {
+  notifee.onBackgroundEvent(async ({ type, detail }) => {
+    if (type === EventType.PRESS) {
+      const notificationData = detail.notification?.data;
+      if (notificationData) {
+        await AsyncStorage.setItem(
+          PENDING_NOTIFICATION_NAVIGATION,
+          JSON.stringify(notificationData)
+        );
+      }
+    }
+  });
+
+  setBackgroundMessageHandler(messaging, async (remoteMessage) => {
+    showNotification(remoteMessage);
+  });
+};
+
+/**
+ * Gets the initial notification that caused the app to open.
+ * Used to handle quit state notifications (app was not running).
+ * @returns The initial notification data or null.
+ */
+export const getInitialNotification = async (): Promise<any | null> => {
+  const initialNotification = await notifee.getInitialNotification();
+
+  if (initialNotification) {
+    return initialNotification.notification?.data || null;
+  }
+
+  return null;
 };
