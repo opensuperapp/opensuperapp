@@ -58,15 +58,14 @@ export async function loadAuthDataFromSecureStore(): Promise<SecureAuthData | nu
       getItemAsync(USER_ID_KEY),
     ]);
 
-  if (!accessToken || !refreshToken || !idToken || !expiresAtStr || !userId)
-    return null;
+  if (!accessToken || !refreshToken || !idToken || !expiresAtStr) return null;
 
   return {
     accessToken,
     refreshToken,
     idToken,
     email: email || undefined,
-    userId,
+    userId: userId || undefined,
     expiresAt: Number(expiresAtStr),
   };
 }

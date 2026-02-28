@@ -313,15 +313,6 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
                 }
             };
         }
-        if configuration.uuid != userInfo.userId {
-            string customError = "Token UUID and the UUID in the request doesn't match!";
-            log:printError(customError);
-            return <http:BadRequest>{
-                body: {
-                    message: customError
-                }
-            };
-        }
 
         log:printDebug("Updating user configurations...", userId = userInfo.userId, configs = configuration);
         database:ExecutionSuccessResult|error result =
@@ -473,12 +464,11 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             database:getNotifications(groups, startIndex, itemsPerPage);
 
         if notifications is () {
-            string startIndexError = string `Invalid start index: ${startIndex}`;
-            log:printError(startIndexError);
-            return <http:BadRequest>{
-                body: {
-                    message: startIndexError
-                }
+            return {
+                notifications: [],
+                totalResults: 0,
+                startIndex: 0,
+                itemsPerPage: 0
             };
         }
 
