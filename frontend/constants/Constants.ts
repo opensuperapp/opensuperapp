@@ -124,8 +124,12 @@ export const isIos = Platform.OS === "ios";
 // Query Keys
 export const NOTIFICATIONS_QUERY_KEY = "notifications";
 
+// Chat Agent
+export const CHAT_AGENT_URL = process.env.EXPO_PUBLIC_CHAT_AGENT_URL ?? "";
+
 // Tab Names
 export const FEED_TAB_NAME = "Feed";
 export const LIBRARY_TAB_NAME = "Library";
 export const MY_APPS_TAB_NAME = "My Apps";
+export const CHAT_TAB_NAME = "Chat";
 export const PROFILE_TAB_NAME = "Profile";
