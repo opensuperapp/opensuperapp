@@ -50,6 +50,10 @@ export interface ChatMessage {
  * Automatically refreshes the access token if expired.
  */
 export const sendChatMessage = async (message: string): Promise<string> => {
+  if (!CHAT_AGENT_URL) {
+    throw new Error("Chat agent URL is not configured");
+  }
+
   const token = await getValidAccessToken();
 
   if (!token) {
@@ -70,5 +74,10 @@ export const sendChatMessage = async (message: string): Promise<string> => {
   }
 
   const data = await response.json();
+
+  if (typeof data?.reply !== "string") {
+    throw new Error("Invalid response from chat agent");
+  }
+
   return data.reply;
 };

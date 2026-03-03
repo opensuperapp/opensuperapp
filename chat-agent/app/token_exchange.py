@@ -49,6 +49,11 @@ async def exchange_token_for_meals(access_token: str) -> str:
     Raises:
         Exception: If the token exchange fails.
     """
+    if not ASGARDEO_TOKEN_URL:
+        raise ValueError("ASGARDEO_TOKEN_URL is not configured")
+    if not MEALS_APP_CLIENT_ID:
+        raise ValueError("MEALS_APP_CLIENT_ID is not configured")
+
     payload = {
         "grant_type": GRANT_TYPE_TOKEN_EXCHANGE,
         "subject_token": access_token,

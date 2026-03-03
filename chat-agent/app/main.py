@@ -22,10 +22,15 @@ and the user's ID token, runs the LangChain agent, and returns
 the agent's response.
 """
 
-from fastapi import FastAPI, Header, HTTPException
+import logging
+from typing import Optional
+
+from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
 
 from app.agent import run_agent
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="OpenSuperApp Chat Agent",
@@ -50,7 +55,7 @@ async def health():
 @app.post("/chat", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,
-    authorization: str = Header(..., description="Bearer <access_token>"),
+    authorization: Optional[str] = Header(None, description="Bearer <access_token>"),
 ):
     """
     Process a chat message from the user.
@@ -61,7 +66,7 @@ async def chat(
     The access token is forwarded to micro-app backends for authentication.
     """
     # Extract the token from "Bearer <token>"
-    if not authorization.startswith("Bearer "):
+    if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(
             status_code=401,
             detail="Authorization header must be in format: Bearer <token>",
@@ -76,7 +81,8 @@ async def chat(
         reply = await run_agent(request.message, access_token)
         return ChatResponse(reply=reply)
     except Exception as e:
+        logger.error("Agent error: %s", e)
         raise HTTPException(
             status_code=500,
-            detail=f"Agent error: {str(e)}",
+            detail="An internal error occurred. Please try again later.",
         )

@@ -78,7 +78,7 @@ The system prompt in `app/agent.py` is structured for progressive disclosure at 
 
 The agent tells the user *what it can do* only when relevant:
 
-```
+```text
 You can help employees with company-related queries. Currently you can:
 
 1. **Meals & Menu**: Fetch today's cafeteria menu ...
@@ -88,7 +88,7 @@ You can help employees with company-related queries. Currently you can:
 
 Formatting instructions are embedded but only activated when a tool returns data:
 
-```
+```text
 When presenting menu information:
 - Format it in a clean, readable way using markdown
 - Group items by meal type (Breakfast, Juice, Lunch, Dessert, Snack)
@@ -99,7 +99,7 @@ When presenting menu information:
 
 For features outside the agent's capabilities, the prompt provides *navigation hints* rather than generic refusals:
 
-```
+```text
 - **Leave requests or balances** → "You can manage your leaves in the **Leave App** ..."
 ```
 
@@ -182,7 +182,7 @@ This is where our architecture goes beyond the standard Skills framework. Each m
 
 ### Token Exchange Flow (RFC 8693)
 
-```
+```text
 ┌────────────────┐         ┌────────────┐         ┌──────────────┐
 │  Mobile App    │         │  Chat Agent │         │   Asgardeo   │
 │  (Super App    │ Bearer  │  (FastAPI)  │  Token  │   (IdP)      │
@@ -224,7 +224,7 @@ Our "Micro-App Guidance" skill is implemented entirely in the system prompt — 
 
 The guidance skill in the system prompt:
 
-```
+```text
 For features you **cannot** handle directly, guide the user to the right micro app:
 - **Leave requests or balances** → "You can manage your leaves in the **Leave App**
   available in the Apps tab."
@@ -241,7 +241,7 @@ This is a deliberate design: rather than returning "I can't help with that", the
 
 Our file structure maps directly to the Skills framework's module boundaries:
 
-```
+```text
 chat-agent/
 ├── app/
 │   ├── agent.py           # Orchestrator — system prompt + tool loop
@@ -358,7 +358,7 @@ LEAVE_APP_CLIENT_ID = os.getenv("LEAVE_APP_CLIENT_ID", "")
 
 In `.env`:
 
-```
+```bash
 LEAVE_BACKEND_URL=https://leave-api.example.com
 LEAVE_APP_CLIENT_ID=<client-id-from-asgardeo>
 ```

@@ -25,7 +25,7 @@ as x-jwt-assertion header for authentication.
 import httpx
 from langchain_core.tools import tool
 
-from app.config import MEALS_BACKEND_URL
+from app.config import DEBUG, MEALS_BACKEND_URL
 
 
 @tool
@@ -37,13 +37,14 @@ async def get_todays_menu(access_token: str) -> dict:
     Args:
         access_token: The exchanged access token for authentication (injected by the agent).
     """
+    headers = {"Authorization": f"Bearer {access_token}"}
+    if DEBUG:
+        headers["x-jwt-assertion"] = access_token
+
     async with httpx.AsyncClient(timeout=15.0) as client:
         response = await client.get(
             f"{MEALS_BACKEND_URL}/menu",
-            headers={
-                "x-jwt-assertion": access_token,
-                "Authorization": f"Bearer {access_token}",
-            },
+            headers=headers,
         )
         if response.status_code != 200:
             return {"error": f"Menu API returned {response.status_code}: {response.text}"}

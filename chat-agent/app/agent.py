@@ -108,7 +108,7 @@ async def run_agent(user_message: str, access_token: str) -> str:
                     )
                 except Exception as e:
                     logger.error("Tool execution failed: %s", e)
-                    result = {"error": str(e)}
+                    result = {"error": "Failed to fetch data. Please try again later."}
             else:
                 result = {"error": f"Unknown tool: {tool_name}"}
 

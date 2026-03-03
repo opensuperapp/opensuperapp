@@ -23,5 +23,6 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
 MEALS_BACKEND_URL = os.getenv("MEALS_BACKEND_URL", "")
-ASGARDEO_TOKEN_URL = os.getenv("ASGARDEO_TOKEN_URL", "https://api.asgardeo.io/t/wso2/oauth2/token/")
+ASGARDEO_TOKEN_URL = os.getenv("ASGARDEO_TOKEN_URL", "")
 MEALS_APP_CLIENT_ID = os.getenv("MEALS_APP_CLIENT_ID", "")
+DEBUG = os.getenv("DEBUG", "false").lower() == "true"
