@@ -28,7 +28,7 @@ from langchain_openai import ChatOpenAI
 
 from app.config import OPENAI_API_KEY, OPENAI_MODEL
 from app.token_exchange import exchange_token_for_meals
-from app.tools import get_todays_menu
+from app.tools import get_todays_menu, submit_lunch_feedback
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,10 @@ You can help employees with company-related queries. Currently you can:
 1. **Meals & Menu**: Fetch today's cafeteria menu (breakfast, juice, lunch, dessert, snack). \
 Use the get_todays_menu tool when users ask about food, meals, lunch, breakfast, or the menu.
 
+2. **Lunch Feedback**: Submit feedback about today's lunch using the submit_lunch_feedback tool. \
+Use this when the user wants to give feedback, review, or share their opinion about today's lunch. \
+Feedback can only be submitted between 12:00 and 16:15. If it's outside this window, let the user know.
+
 When presenting menu information:
 - Format it in a clean, readable way using markdown
 - If the user asks about a **specific meal** (e.g., "lunch", "breakfast", "snack"), \
@@ -47,6 +51,12 @@ only show that meal type — do NOT include the full menu
 - Only show the full menu grouped by meal type (Breakfast, Juice, Lunch, Dessert, Snack) \
 when the user asks for the full/today's menu
 - Be conversational and friendly
+
+When handling feedback:
+- Extract the user's feedback message from their chat message
+- If the user just says something like "give feedback" without a message, ask them what they'd like to say
+- Confirm when feedback has been submitted successfully
+- If feedback submission fails due to timing, let the user know the feedback window (12:00–16:15)
 
 For features you **cannot** handle directly, guide the user to the right micro app:
 - **Leave requests or balances** → "You can manage your leaves in the **Leave App** \
@@ -84,7 +94,8 @@ async def run_agent(user_message: str, access_token: str) -> str:
         temperature=0.3,
     )
 
-    llm_with_tools = llm.bind_tools([get_todays_menu])
+    tools = [get_todays_menu, submit_lunch_feedback]
+    llm_with_tools = llm.bind_tools(tools)
 
     messages = [
         SystemMessage(content=SYSTEM_PROMPT),
@@ -103,15 +114,25 @@ async def run_agent(user_message: str, access_token: str) -> str:
 
             if tool_name == "get_todays_menu":
                 try:
-                    # Exchange the super-app token for a meals-scoped token
                     meals_token = await exchange_token_for_meals(access_token)
-                    # Call the tool with the exchanged token
                     result = await get_todays_menu.ainvoke(
                         {"access_token": meals_token}
                     )
                 except Exception as e:
                     logger.error("Tool execution failed: %s", e)
                     result = {"error": "Failed to fetch data. Please try again later."}
+            elif tool_name == "submit_lunch_feedback":
+                try:
+                    meals_token = await exchange_token_for_meals(access_token)
+                    result = await submit_lunch_feedback.ainvoke(
+                        {
+                            "access_token": meals_token,
+                            "message": tool_call["args"].get("message", ""),
+                        }
+                    )
+                except Exception as e:
+                    logger.error("Feedback submission failed: %s", e)
+                    result = {"error": "Failed to submit feedback. Please try again later."}
             else:
                 result = {"error": f"Unknown tool: {tool_name}"}
 

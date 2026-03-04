@@ -49,3 +49,39 @@ async def get_todays_menu(access_token: str) -> dict:
         if response.status_code != 200:
             return {"error": f"Menu API returned {response.status_code}: {response.text}"}
         return response.json()
+
+
+@tool
+async def submit_lunch_feedback(access_token: str, message: str) -> dict:
+    """Submit feedback for today's lunch.
+    Use this when the user wants to give feedback, a review, or share their opinion
+    about today's lunch or meal. The feedback can only be submitted between 12:00 and 16:15.
+
+    Args:
+        access_token: The exchanged access token for authentication (injected by the agent).
+        message: The user's feedback message about today's lunch.
+    """
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+    }
+    if DEBUG:
+        headers["x-jwt-assertion"] = access_token
+
+    payload = {
+        "message": message,
+        "meal": "Lunch",
+    }
+
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        response = await client.post(
+            f"{MEALS_BACKEND_URL}/feedback",
+            json=payload,
+            headers=headers,
+        )
+        if response.status_code == 201:
+            return {"success": True, "message": "Feedback submitted successfully"}
+        if response.status_code == 400:
+            error_body = response.json() if response.text else {}
+            return {"error": error_body.get("message", "Feedback submission failed. It may be outside the feedback window (12:00–16:15).")}
+        return {"error": f"Feedback API returned {response.status_code}: {response.text}"}

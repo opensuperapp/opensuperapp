@@ -26,7 +26,8 @@ This document describes how the OpenSuperApp chat agent implements skill-based A
 | # | Skill | Trigger Examples | Backend | Auth |
 |---|-------|-----------------|---------|------|
 | 1 | **Meals & Menu** | "What's for lunch?", "Show today's menu" | Meals API — `GET /menu` (Ballerina) | Token exchange (RFC 8693) |
-| 2 | **Micro-App Guidance** | "How do I apply for leave?", "Book a room" | *None (prompt-only)* | N/A |
+| 2 | **Lunch Feedback** | "The lunch was great", "I want to give feedback" | Meals API — `POST /feedback` (Ballerina) | Token exchange (RFC 8693) |
+| 3 | **Micro-App Guidance** | "How do I apply for leave?", "Book a room" | *None (prompt-only)* | N/A |
 
 ---
 
@@ -123,7 +124,7 @@ LangChain's `@tool` decorator auto-generates an OpenAI-compatible function schem
 The agent binds tools explicitly in `app/agent.py`:
 
 ```python
-llm_with_tools = llm.bind_tools([get_todays_menu])
+llm_with_tools = llm.bind_tools([get_todays_menu, submit_lunch_feedback])
 ```
 
 This binding step is where skills are *registered*. The LLM receives the full JSON Schema for each tool and decides autonomously when to invoke them — the core of the Anthropic Skills pattern.
