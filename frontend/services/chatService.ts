@@ -32,7 +32,13 @@ const getValidAccessToken = async (): Promise<string | null> => {
 
   // Refresh if the token is expired (or about to expire)
   if (isTokenExpired(authData.accessToken)) {
-    const refreshed = await refreshAccessToken(logout);
+    // Wrap refresh in a timeout to avoid indefinite hang
+    const refreshed = await Promise.race([
+      refreshAccessToken(logout),
+      new Promise<null>((resolve) => {
+        setTimeout(() => resolve(null), 10_000);
+      }),
+    ]);
     return refreshed?.accessToken ?? null;
   }
 
@@ -60,24 +66,38 @@ export const sendChatMessage = async (message: string): Promise<string> => {
     throw new Error("Not authenticated");
   }
 
-  const response = await fetch(`${CHAT_AGENT_URL}/chat`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ message }),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30_000);
 
-  if (!response.ok) {
-    throw new Error(`Chat request failed: ${response.status}`);
+  try {
+    const response = await fetch(`${CHAT_AGENT_URL}/chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ message }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`Chat request failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (typeof data?.reply !== "string") {
+      throw new Error("Invalid response from chat agent");
+    }
+
+    return data.reply;
+  } catch (error: unknown) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("Chat request timed out. Please try again.");
+    }
+    throw error;
   }
-
-  const data = await response.json();
-
-  if (typeof data?.reply !== "string") {
-    throw new Error("Invalid response from chat agent");
-  }
-
-  return data.reply;
 };

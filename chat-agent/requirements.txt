@@ -1,7 +1,7 @@
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
-langchain>=0.3.81
-langchain-openai==0.3.0
+langchain>=0.3.25,<0.4.0
+langchain-openai>=0.3.0,<0.4.0
 httpx==0.28.1
 pydantic==2.10.4
 python-dotenv==1.0.1
