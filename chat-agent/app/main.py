@@ -23,7 +23,7 @@ the agent's response.
 """
 
 import logging
-from typing import Optional
+from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
@@ -39,8 +39,14 @@ app = FastAPI(
 )
 
 
+class HistoryMessage(BaseModel):
+    role: str  # "user" or "assistant"
+    content: str
+
+
 class ChatRequest(BaseModel):
     message: str
+    history: Optional[List[HistoryMessage]] = None
 
 
 class ChatResponse(BaseModel):
@@ -77,8 +83,15 @@ async def chat(
     if not access_token:
         raise HTTPException(status_code=401, detail="Access token is required")
 
+    # Convert history to list of dicts for the agent
+    history = (
+        [{"role": m.role, "content": m.content} for m in request.history]
+        if request.history
+        else []
+    )
+
     try:
-        reply = await run_agent(request.message, access_token)
+        reply = await run_agent(request.message, access_token, history)
         return ChatResponse(reply=reply)
     except Exception as e:
         logger.error("Agent error: %s", e)

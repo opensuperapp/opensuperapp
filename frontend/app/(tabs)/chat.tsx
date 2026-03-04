@@ -72,7 +72,7 @@ export default function ChatScreen() {
     setIsLoading(true);
 
     try {
-      const reply = await sendChatMessage(trimmed);
+      const reply = await sendChatMessage(trimmed, messages);
       const assistantMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: "assistant",

@@ -54,8 +54,12 @@ export interface ChatMessage {
 /**
  * Send a chat message to the AI agent backend.
  * Automatically refreshes the access token if expired.
+ * Includes conversation history for multi-turn context.
  */
-export const sendChatMessage = async (message: string): Promise<string> => {
+export const sendChatMessage = async (
+  message: string,
+  history?: ChatMessage[],
+): Promise<string> => {
   if (!CHAT_AGENT_URL) {
     throw new Error("Chat agent URL is not configured");
   }
@@ -76,7 +80,10 @@ export const sendChatMessage = async (message: string): Promise<string> => {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({
+        message,
+        history: history?.map(({ role, content }) => ({ role, content })),
+      }),
       signal: controller.signal,
     });
 

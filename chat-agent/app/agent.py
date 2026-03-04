@@ -22,8 +22,9 @@ micro-app backends (e.g., meals menu) and present it conversationally.
 """
 
 import logging
+from datetime import datetime, timezone, timedelta
 
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_openai import ChatOpenAI
 
 from app.config import OPENAI_API_KEY, OPENAI_MODEL
@@ -32,8 +33,23 @@ from app.tools import get_todays_menu, submit_lunch_feedback
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """You are a friendly and helpful AI assistant for the WSO2 Super App — \
+# Maximum number of tool-call rounds before forcing a text reply
+MAX_TOOL_ITERATIONS = 3
+
+# Sri Lanka timezone (UTC+5:30)
+SL_TIMEZONE = timezone(timedelta(hours=5, minutes=30))
+
+def build_system_prompt() -> str:
+    """Build the system prompt with the current server time."""
+    now = datetime.now(SL_TIMEZONE)
+    current_time = now.strftime("%H:%M")
+    current_date = now.strftime("%A, %d %B %Y")
+    in_feedback_window = "12:00" <= current_time <= "16:15"
+
+    return f"""You are a friendly and helpful AI assistant for the WSO2 Super App — \
 an internal company app used by WSO2 employees.
+
+**Current date and time**: {current_date}, {current_time} (Sri Lanka time)
 
 You can help employees with company-related queries. Currently you can:
 
@@ -42,7 +58,8 @@ Use the get_todays_menu tool when users ask about food, meals, lunch, breakfast,
 
 2. **Lunch Feedback**: Submit feedback about today's lunch using the submit_lunch_feedback tool. \
 Use this when the user wants to give feedback, review, or share their opinion about today's lunch. \
-Feedback can only be submitted between 12:00 and 16:15. If it's outside this window, let the user know.
+Feedback can only be submitted between 12:00 and 16:15 (Sri Lanka time). \
+The current time is {current_time}. {"The feedback window is currently OPEN." if in_feedback_window else "The feedback window is currently CLOSED — tell the user that feedback can only be submitted between 12:00 and 16:15."}
 
 When presenting menu information:
 - Format it in a clean, readable way using markdown
@@ -74,9 +91,13 @@ you're here to help with company-related queries and suggest what you can help w
 Always be concise, helpful, and professional while maintaining a friendly tone."""
 
 
-async def run_agent(user_message: str, access_token: str) -> str:
+async def run_agent(
+    user_message: str,
+    access_token: str,
+    history: list[dict] | None = None,
+) -> str:
     """
-    Run the LangChain agent with the user's message.
+    Run the LangChain agent with the user's message and conversation history.
 
     The agent will decide whether to invoke tools (e.g., get today's menu)
     based on the user's message, then compose a natural-language reply.
@@ -84,6 +105,8 @@ async def run_agent(user_message: str, access_token: str) -> str:
     Args:
         user_message: The message from the user.
         access_token: The user's super app access token (for tool auth).
+        history: Optional list of prior messages
+                 [{"role": "user"|"assistant", "content": "..."}].
 
     Returns:
         The agent's text response.
@@ -97,20 +120,33 @@ async def run_agent(user_message: str, access_token: str) -> str:
     tools = [get_todays_menu, submit_lunch_feedback]
     llm_with_tools = llm.bind_tools(tools)
 
-    messages = [
-        SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(content=user_message),
-    ]
+    messages = [SystemMessage(content=build_system_prompt())]
 
-    # First invocation — the model may request a tool call
-    ai_message = await llm_with_tools.ainvoke(messages)
-    messages.append(ai_message)
+    # Include conversation history for multi-turn context
+    if history:
+        for msg in history:
+            if msg["role"] == "user":
+                messages.append(HumanMessage(content=msg["content"]))
+            elif msg["role"] == "assistant":
+                messages.append(AIMessage(content=msg["content"]))
 
-    # If the model wants to call a tool, execute it
-    if ai_message.tool_calls:
+    messages.append(HumanMessage(content=user_message))
+
+    # Tool-call loop with a max iteration guard
+    for iteration in range(MAX_TOOL_ITERATIONS):
+        ai_message = await llm_with_tools.ainvoke(messages)
+        messages.append(ai_message)
+
+        # No tool calls — the model produced a final text answer
+        if not ai_message.tool_calls:
+            return ai_message.content
+
+        # Execute each requested tool
         for tool_call in ai_message.tool_calls:
             tool_name = tool_call["name"]
-            logger.info("Agent requested tool: %s", tool_name)
+            logger.info(
+                "Agent requested tool: %s (iteration %d)", tool_name, iteration + 1
+            )
 
             if tool_name == "get_todays_menu":
                 try:
@@ -132,20 +168,19 @@ async def run_agent(user_message: str, access_token: str) -> str:
                     )
                 except Exception as e:
                     logger.error("Feedback submission failed: %s", e)
-                    result = {"error": "Failed to submit feedback. Please try again later."}
+                    result = {
+                        "error": "Failed to submit feedback. Please try again later."
+                    }
             else:
                 result = {"error": f"Unknown tool: {tool_name}"}
-
-            # Add tool result as a ToolMessage
-            from langchain_core.messages import ToolMessage
 
             messages.append(
                 ToolMessage(content=str(result), tool_call_id=tool_call["id"])
             )
 
-        # Second invocation — model composes the final answer using tool results
-        final_response = await llm_with_tools.ainvoke(messages)
-        return final_response.content
-
-    # No tool call — the model answered directly
-    return ai_message.content
+    # If we exhausted all iterations, do one last call without tools to force text
+    logger.warning(
+        "Max tool iterations (%d) reached, forcing text reply", MAX_TOOL_ITERATIONS
+    )
+    final = await llm.ainvoke(messages)
+    return final.content
