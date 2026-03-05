@@ -33,6 +33,7 @@ import Markdown from "react-native-markdown-display";
 import { Colors } from "@/constants/Colors";
 import { isIos } from "@/constants/Constants";
 import { sendChatMessage, ChatMessage } from "@/services/chatService";
+import { Image } from "expo-image";
 
 export default function ChatScreen() {
   const colorScheme = useColorScheme();
@@ -106,7 +107,7 @@ export default function ChatScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [inputText, isLoading]);
+  }, [inputText, isLoading, messages]);
 
   const markdownStyles = {
     body: {
@@ -175,9 +176,16 @@ export default function ChatScreen() {
         size={64}
         color={theme.emptyText}
       />
-      <Text style={[styles.emptyTitle, { color: theme.emptyText }]}>
-        Hi there! 👋
-      </Text>
+      <View style={styles.titleContainer}>
+        <Text style={[styles.emptyTitle, { color: theme.emptyText }]}>
+          Hi there!
+        </Text>
+        <Image
+          source={require("@/assets/icons/waving-hand.svg")}
+          style={{ width: "8%", aspectRatio: 1 }}
+          contentFit="contain"
+        />
+      </View>
       <Text style={[styles.emptySubtitle, { color: theme.emptyText }]}>
         Ask me about today&apos;s menu, or anything about the super app!
       </Text>
@@ -358,5 +366,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "center",
     paddingHorizontal: 40,
+  },
+  titleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
 });
