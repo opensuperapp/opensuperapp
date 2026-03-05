@@ -182,8 +182,7 @@ export default function ChatScreen() {
         </Text>
         <Image
           source={require("@/assets/icons/waving-hand.svg")}
-          style={{ width: "8%", aspectRatio: 1 }}
-          contentFit="contain"
+          style={{ width: 26, height: 26 }}
         />
       </View>
       <Text style={[styles.emptySubtitle, { color: theme.emptyText }]}>
