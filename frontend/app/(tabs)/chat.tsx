@@ -23,15 +23,15 @@ import {
   FlatList,
   StyleSheet,
   KeyboardAvoidingView,
-  Platform,
   useColorScheme,
   ActivityIndicator,
+  Keyboard,
 } from "react-native";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import Markdown from "react-native-markdown-display";
-
 import { Colors } from "@/constants/Colors";
+import { isIos } from "@/constants/Constants";
 import { sendChatMessage, ChatMessage } from "@/services/chatService";
 
 export default function ChatScreen() {
@@ -42,7 +42,24 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isKeyboardVisible, setKeyboardVisible] = React.useState(false);
   const flatListRef = useRef<FlatList>(null);
+
+  React.useEffect(() => {
+    const showSubscription = Keyboard.addListener(
+      isIos ? "keyboardWillShow" : "keyboardDidShow",
+      () => setKeyboardVisible(true),
+    );
+    const hideSubscription = Keyboard.addListener(
+      isIos ? "keyboardWillHide" : "keyboardDidHide",
+      () => setKeyboardVisible(false),
+    );
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   const theme = {
     bg: isDark ? "#000" : "#fff",
@@ -153,7 +170,11 @@ export default function ChatScreen() {
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="chatbubble-ellipses-outline" size={64} color={theme.emptyText} />
+      <Ionicons
+        name="chatbubble-ellipses-outline"
+        size={64}
+        color={theme.emptyText}
+      />
       <Text style={[styles.emptyTitle, { color: theme.emptyText }]}>
         Hi there! 👋
       </Text>
@@ -166,8 +187,8 @@ export default function ChatScreen() {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: theme.bg }]}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      behavior="padding"
+      keyboardVerticalOffset={90}
     >
       <FlatList
         ref={flatListRef}
@@ -185,7 +206,12 @@ export default function ChatScreen() {
         ListEmptyComponent={renderEmpty}
         ListFooterComponent={
           isLoading ? (
-            <View style={[styles.typingContainer, { backgroundColor: theme.assistantBubble }]}>
+            <View
+              style={[
+                styles.typingContainer,
+                { backgroundColor: theme.assistantBubble },
+              ]}
+            >
               <ActivityIndicator size="small" color={Colors.companyOrange} />
               <Text style={[styles.typingText, { color: theme.placeholder }]}>
                 Thinking...
@@ -201,7 +227,13 @@ export default function ChatScreen() {
           {
             backgroundColor: theme.bg,
             borderTopColor: theme.border,
-            paddingBottom: Platform.OS === "ios" ? tabBarHeight + 4 : 8,
+            paddingBottom: isKeyboardVisible
+              ? isIos
+                ? 24
+                : 32
+              : isIos
+                ? tabBarHeight + 16
+                : 16,
           },
         ]}
       >
@@ -236,7 +268,7 @@ export default function ChatScreen() {
           disabled={!inputText.trim() || isLoading}
         >
           <Ionicons
-            name="arrow-up"
+            name="send"
             size={20}
             color={inputText.trim() && !isLoading ? "#fff" : theme.placeholder}
           />
