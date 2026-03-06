@@ -24,7 +24,7 @@ the agent's response.
 
 import logging
 from typing import List, Optional
-
+import uvicorn
 from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
 
@@ -99,3 +99,6 @@ async def chat(
             status_code=500,
             detail="An internal error occurred. Please try again later.",
         )
+        
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)

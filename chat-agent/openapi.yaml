@@ -31,7 +31,7 @@ paths:
     get:
       summary: Health check
       description: Returns the health status of the chat agent service.
-      operationId: health
+      operationId: health_health_get
       tags:
         - Health
       responses:
@@ -53,11 +53,18 @@ paths:
         The Authorization header must contain the user's access token as
         `Bearer <access_token>`. The token is forwarded to micro-app backends
         via Asgardeo token exchange for authentication.
-      operationId: chat
+      operationId: chat_chat_post
       tags:
         - Chat
-      security:
-        - BearerAuth: []
+      parameters:
+        - name: authorization
+          in: header
+          required: false
+          schema:
+            anyOf:
+              - type: string
+              - type: "null"
+          description: "Bearer <access_token>"
       requestBody:
         required: true
         content:
@@ -77,6 +84,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
         "500":
           description: Internal server error
           content:
@@ -85,13 +98,6 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
 components:
-  securitySchemes:
-    BearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-      description: Asgardeo access token
-
   schemas:
     HealthResponse:
       type: object
@@ -130,11 +136,12 @@ components:
           description: The user's chat message
           example: What's for lunch today?
         history:
-          type: array
-          nullable: true
+          anyOf:
+            - type: array
+              items:
+                $ref: "#/components/schemas/HistoryMessage"
+            - type: "null"
           description: Previous conversation messages for multi-turn context
-          items:
-            $ref: "#/components/schemas/HistoryMessage"
 
     ChatResponse:
       type: object
@@ -155,3 +162,29 @@ components:
           type: string
           description: Error message
           example: Authorization header must be in format: Bearer <token>
+
+    HTTPValidationError:
+      type: object
+      properties:
+        detail:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValidationError"
+
+    ValidationError:
+      type: object
+      required:
+        - loc
+        - msg
+        - type
+      properties:
+        loc:
+          type: array
+          items:
+            anyOf:
+              - type: string
+              - type: integer
+        msg:
+          type: string
+        type:
+          type: string
