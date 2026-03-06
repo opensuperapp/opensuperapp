@@ -1,0 +1,157 @@
+# Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
+#
+# WSO2 LLC. licenses this file to you under the Apache License,
+# Version 2.0 (the "License"); you may not use this file except
+# in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied. See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+openapi: 3.0.3
+info:
+  title: OpenSuperApp Chat Agent
+  description: AI-powered chat agent for OpenSuperApp
+  version: 0.1.0
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: /
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Returns the health status of the chat agent service.
+      operationId: health
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /chat:
+    post:
+      summary: Send a chat message
+      description: |
+        Process a chat message from the user. The agent uses LangChain with
+        tool-calling to fetch data from micro-app backends (e.g., meals menu,
+        leave management) and returns a conversational response.
+
+        The Authorization header must contain the user's access token as
+        `Bearer <access_token>`. The token is forwarded to micro-app backends
+        via Asgardeo token exchange for authentication.
+      operationId: chat
+      tags:
+        - Chat
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+      responses:
+        "200":
+          description: Chat response from the AI agent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResponse"
+        "401":
+          description: Missing or invalid authorization header
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Asgardeo access token
+
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          example: ok
+
+    HistoryMessage:
+      type: object
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          enum:
+            - user
+            - assistant
+          description: The role of the message sender
+          example: user
+        content:
+          type: string
+          description: The message content
+          example: What's for lunch today?
+
+    ChatRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: The user's chat message
+          example: What's for lunch today?
+        history:
+          type: array
+          nullable: true
+          description: Previous conversation messages for multi-turn context
+          items:
+            $ref: "#/components/schemas/HistoryMessage"
+
+    ChatResponse:
+      type: object
+      required:
+        - reply
+      properties:
+        reply:
+          type: string
+          description: The AI agent's response message
+          example: "Today's lunch includes rice, chicken curry, and salad!"
+
+    ErrorResponse:
+      type: object
+      required:
+        - detail
+      properties:
+        detail:
+          type: string
+          description: Error message
+          example: Authorization header must be in format: Bearer <token>
