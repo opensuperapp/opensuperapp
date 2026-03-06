@@ -62,6 +62,22 @@ export default function ChatScreen() {
     };
   }, []);
 
+  React.useEffect(() => {
+    if (messages.length > 0) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: false });
+      }, 100);
+    }
+  }, [messages]);
+
+  React.useEffect(() => {
+    if (isKeyboardVisible && messages.length > 0) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 500);
+    }
+  }, [isKeyboardVisible, messages]);
+
   const theme = {
     bg: isDark ? "#000" : "#fff",
     inputBg: isDark ? "#1c1c1e" : "#f2f2f7",
