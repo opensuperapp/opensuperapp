@@ -121,6 +121,33 @@ const MicroApp = () => {
   const [token, setToken] = useState<string | null>();
   const [idToken, setIdToken] = useState<string | null>();
 
+  // Keyboard Listeners
+  useEffect(() => {
+    const keyboardWillShowSubscription = Keyboard.addListener(
+      "keyboardWillShow",
+      () => sendResponseToWeb("resolveKeyboardWillShow")
+    );
+    const keyboardWillHideSubscription = Keyboard.addListener(
+      "keyboardWillHide",
+      () => sendResponseToWeb("resolveKeyboardWillHide")
+    );
+    const keyboardDidShowSubscription = Keyboard.addListener(
+      "keyboardDidShow",
+      () => sendResponseToWeb("resolveKeyboardDidShow")
+    );
+    const keyboardDidHideSubscription = Keyboard.addListener(
+      "keyboardDidHide",
+      () => sendResponseToWeb("resolveKeyboardDidHide")
+    );
+
+    return () => {
+      keyboardWillShowSubscription.remove();
+      keyboardWillHideSubscription.remove();
+      keyboardDidShowSubscription.remove();
+      keyboardDidHideSubscription.remove();
+    };
+  }, []);
+
   const pendingTokenRequests = useRef<((token: string) => void)[]>([]);
   const pendingIdTokenRequests = useRef<((idToken: string) => void)[]>([]);
   const tokenExchangePromise =

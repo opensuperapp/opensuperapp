@@ -45,6 +45,10 @@ export const TOPIC = {
   COMPOSE_EMAIL: "compose_email",
   OPEN_MICRO_APP: "open_micro_app",
   GET_LAUNCH_DATA: "get_launch_data",
+  KEYBOARD_WILL_SHOW: "keyboard_will_show",
+  KEYBOARD_WILL_HIDE: "keyboard_will_hide",
+  KEYBOARD_DID_SHOW: "keyboard_did_show",
+  KEYBOARD_DID_HIDE: "keyboard_did_hide",
 };
 
 // JavaScript code injected into the WebView to enable communication between
@@ -135,5 +139,17 @@ export const injectedJavaScript = `window.nativebridge = {
     requestGetLaunchData: () => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "get_launch_data" })),
     resolveGetLaunchData: (data) => console.log("Launch Data:", data),
     resolveIdToken: (token) => console.log("ID Token received:", token),
-    rejectIdToken: (err) => console.error("ID Token request failed:", err)
+    rejectIdToken: (err) => console.error("ID Token request failed:", err),
+    requestKeyboardWillShow: () => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "keyboard_will_show" })),
+    resolveKeyboardWillShow: () => console.log("Keyboard will show"),
+    rejectKeyboardWillShow: (err) => console.error("Keyboard will show failed:", err),
+    requestKeyboardWillHide: () => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "keyboard_will_hide" })),
+    resolveKeyboardWillHide: () => console.log("Keyboard will hide"),
+    rejectKeyboardWillHide: (err) => console.error("Keyboard will hide failed:", err),
+    requestKeyboardDidShow: () => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "keyboard_did_show" })),
+    resolveKeyboardDidShow: () => console.log("Keyboard did show"),
+    rejectKeyboardDidShow: (err) => console.error("Keyboard did show failed:", err),
+    requestKeyboardDidHide: () => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "keyboard_did_hide" })),
+    resolveKeyboardDidHide: () => console.log("Keyboard did hide"),
+    rejectKeyboardDidHide: (err) => console.error("Keyboard did hide failed:", err),
   };`;
