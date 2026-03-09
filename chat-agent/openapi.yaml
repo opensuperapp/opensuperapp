@@ -1,114 +1,101 @@
-# Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
-#
-# WSO2 LLC. licenses this file to you under the Apache License,
-# Version 2.0 (the "License"); you may not use this file except
-# in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied. See the License for the
-# specific language governing permissions and limitations
-# under the License.
-
 openapi: 3.1.0
+
 info:
   title: OpenSuperApp Chat Agent
   description: AI-powered chat agent for OpenSuperApp
   version: 0.1.0
-  license:
-    name: Apache 2.0
-    url: https://www.apache.org/licenses/LICENSE-2.0.html
-
-servers:
-  - url: /
 
 paths:
   /health:
     get:
-      summary: Health check
-      description: Returns the health status of the chat agent service.
+      summary: Health
       operationId: health_health_get
-      tags:
-        - Health
       responses:
         "200":
-          description: Service is healthy
+          description: Successful Response
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/HealthResponse"
+              schema: {}
 
   /chat:
     post:
-      summary: Send a chat message
+      summary: Chat
       description: |
-        Process a chat message from the user. The agent uses LangChain with
-        tool-calling to fetch data from micro-app backends (e.g., meals menu,
-        leave management) and returns a conversational response.
+        Process a chat message from the user.
 
-        The Authorization header must contain the user's access token as
-        `Bearer <access_token>`. The token is forwarded to micro-app backends
-        via Asgardeo token exchange for authentication.
+        The Authorization header must contain the user's access token as:
+        Bearer <access_token>
+
+        The access token is forwarded to micro-app backends for authentication.
       operationId: chat_chat_post
-      tags:
-        - Chat
+
       parameters:
         - name: authorization
           in: header
           required: false
+          description: Bearer <access_token>
           schema:
+            title: Authorization
+            description: Bearer <access_token>
             anyOf:
               - type: string
               - type: "null"
-          description: "Bearer <access_token>"
+
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/ChatRequest"
+
       responses:
         "200":
-          description: Chat response from the AI agent
+          description: Successful Response
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ChatResponse"
-        "401":
-          description: Missing or invalid authorization header
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+
         "422":
           description: Validation Error
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/HTTPValidationError"
-        "500":
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
 
 components:
   schemas:
-    HealthResponse:
+
+    ChatRequest:
+      title: ChatRequest
       type: object
       required:
-        - status
+        - message
       properties:
-        status:
+        message:
           type: string
-          example: ok
+          title: Message
+
+        history:
+          title: History
+          anyOf:
+            - type: array
+              items:
+                $ref: "#/components/schemas/HistoryMessage"
+            - type: "null"
+
+    ChatResponse:
+      title: ChatResponse
+      type: object
+      required:
+        - reply
+      properties:
+        reply:
+          type: string
+          title: Reply
 
     HistoryMessage:
+      title: HistoryMessage
       type: object
       required:
         - role
@@ -116,62 +103,23 @@ components:
       properties:
         role:
           type: string
-          enum:
-            - user
-            - assistant
-          description: The role of the message sender
-          example: user
+          title: Role
         content:
           type: string
-          description: The message content
-          example: What's for lunch today?
-
-    ChatRequest:
-      type: object
-      required:
-        - message
-      properties:
-        message:
-          type: string
-          description: The user's chat message
-          example: What's for lunch today?
-        history:
-          anyOf:
-            - type: array
-              items:
-                $ref: "#/components/schemas/HistoryMessage"
-            - type: "null"
-          description: Previous conversation messages for multi-turn context
-
-    ChatResponse:
-      type: object
-      required:
-        - reply
-      properties:
-        reply:
-          type: string
-          description: The AI agent's response message
-          example: "Today's lunch includes rice, chicken curry, and salad!"
-
-    ErrorResponse:
-      type: object
-      required:
-        - detail
-      properties:
-        detail:
-          type: string
-          description: Error message
-          example: Authorization header must be in format: Bearer <token>
+          title: Content
 
     HTTPValidationError:
+      title: HTTPValidationError
       type: object
       properties:
         detail:
+          title: Detail
           type: array
           items:
             $ref: "#/components/schemas/ValidationError"
 
     ValidationError:
+      title: ValidationError
       type: object
       required:
         - loc
@@ -179,6 +127,7 @@ components:
         - type
       properties:
         loc:
+          title: Location
           type: array
           items:
             anyOf:
@@ -186,5 +135,8 @@ components:
               - type: integer
         msg:
           type: string
+          title: Message
         type:
           type: string
+          title: Error Type
+          
