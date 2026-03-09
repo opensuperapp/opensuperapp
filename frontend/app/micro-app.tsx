@@ -69,6 +69,8 @@ import * as WebBrowser from "expo-web-browser";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Keyboard,
+  KeyboardAvoidingView,
   StyleSheet,
   Text,
   TouchableOpacity,
