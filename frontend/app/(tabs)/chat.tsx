@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import React, { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -43,10 +43,10 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isKeyboardVisible, setKeyboardVisible] = React.useState(false);
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const showSubscription = Keyboard.addListener(
       isIos ? "keyboardWillShow" : "keyboardDidShow",
       () => setKeyboardVisible(true),
@@ -62,7 +62,7 @@ export default function ChatScreen() {
     };
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (messages.length > 0) {
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: false });
@@ -70,7 +70,7 @@ export default function ChatScreen() {
     }
   }, [messages]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isKeyboardVisible && messages.length > 0) {
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
