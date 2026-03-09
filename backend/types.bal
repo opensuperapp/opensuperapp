@@ -30,5 +30,5 @@ public type AppConfig record {|
     # Micro App Ids
     string[] defaultMicroAppIds;
     # Micro App Scopes
-    MicroAppScope[] microAppScopes;
+    MicroAppScope[] appScopes;
 |};
