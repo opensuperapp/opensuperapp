@@ -69,6 +69,8 @@ import * as WebBrowser from "expo-web-browser";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Keyboard,
+  KeyboardAvoidingView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -120,6 +122,33 @@ const MicroApp = () => {
   // Token and ID token states
   const [token, setToken] = useState<string | null>();
   const [idToken, setIdToken] = useState<string | null>();
+
+  // Keyboard Listeners
+  useEffect(() => {
+    const keyboardWillShowSubscription = Keyboard.addListener(
+      "keyboardWillShow",
+      () => sendResponseToWeb("resolveKeyboardWillShow")
+    );
+    const keyboardWillHideSubscription = Keyboard.addListener(
+      "keyboardWillHide",
+      () => sendResponseToWeb("resolveKeyboardWillHide")
+    );
+    const keyboardDidShowSubscription = Keyboard.addListener(
+      "keyboardDidShow",
+      () => sendResponseToWeb("resolveKeyboardDidShow")
+    );
+    const keyboardDidHideSubscription = Keyboard.addListener(
+      "keyboardDidHide",
+      () => sendResponseToWeb("resolveKeyboardDidHide")
+    );
+
+    return () => {
+      keyboardWillShowSubscription.remove();
+      keyboardWillHideSubscription.remove();
+      keyboardDidShowSubscription.remove();
+      keyboardDidHideSubscription.remove();
+    };
+  }, []);
 
   const pendingTokenRequests = useRef<((token: string) => void)[]>([]);
   const pendingIdTokenRequests = useRef<((idToken: string) => void)[]>([]);
