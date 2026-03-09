@@ -26,7 +26,7 @@ configurable int maxHeaderSize = 16384; // 16KB header size for WSO2 Choreo supp
 configurable string[] regionRestrictedMicroApps = ?;
 configurable string userRegionFilter = ?; // Region to bypass region restricted micro-apps
 configurable string mobileAppReviewerEmail = ?; // App store reviewer email
-configurable MicroAppScope[] microAppScopes = []; // Additional scopes required for micro-apps
+configurable MicroAppScope[] appScopes = []; // Additional scopes required for micro-apps
 
 @display {
     label: "SuperApp Mobile Service",
@@ -96,12 +96,12 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
         }
 
         log:printDebug("Fetching app configurations...", userId = userInfo.userId, configs = appConfigs,
-                defaultMicroAppIds = defaultMicroAppIds, microAppScopes = microAppScopes);
+                defaultMicroAppIds = defaultMicroAppIds, appScopes = appScopes);
 
         return <AppConfig>{
             appConfigs,
             defaultMicroAppIds,
-            microAppScopes
+            appScopes
         };
     }
 
