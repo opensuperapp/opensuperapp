@@ -82,6 +82,7 @@ import prompt from "react-native-prompt-android";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 import { useDispatch, useSelector } from "react-redux";
+import * as DocumentPicker from "expo-document-picker";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -696,6 +697,37 @@ const MicroApp = () => {
     }
   };
 
+  // Function to pick a document from device storage
+  const handlePickDocument = async (
+    config?: DocumentPicker.DocumentPickerOptions,
+  ) => {
+    try {
+      if (!config) {
+        console.error("Missing Required DocumentPicker configuration.");
+        sendResponseToWeb(
+          "rejectPickDocument",
+          "Document picker configuration is missing.",
+        );
+        return;
+      }
+
+      const result = await DocumentPicker.getDocumentAsync(config);
+      if (result.canceled) {
+        sendResponseToWeb(
+          "rejectPickDocument",
+          "Document pick canceled by user.",
+        );
+        return;
+      }
+      sendResponseToWeb("resolvePickDocument", result);
+    } catch (error) {
+      const errMessage =
+        error instanceof Error ? error.message : "Failed to pick document";
+      console.error("Error picking document:", errMessage);
+      sendResponseToWeb("rejectPickDocument", errMessage);
+    }
+  };
+
   // Handle messages from WebView
   const onMessage = async (event: WebViewMessageEvent) => {
     try {
@@ -801,8 +833,12 @@ const MicroApp = () => {
         case TOPIC.MICRO_APP_VERSION:
           handleMicroAppVersion();
           break;
+        case TOPIC.PICK_DOCUMENT:
+          await handlePickDocument(data?.config);
+          break;
         case TOPIC.COMPOSE_EMAIL:
           await handleComposeEmail(data?.config);
+          break;
         case TOPIC.OPEN_MICRO_APP:
           await handleOpenMicroApp(data.appId, data.data);
           break;
