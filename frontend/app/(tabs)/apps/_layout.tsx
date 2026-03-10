@@ -25,6 +25,7 @@ import { useEffect, useRef } from "react";
 import {
   Animated,
   Easing,
+  Pressable,
   TouchableOpacity,
   useColorScheme,
   View,
@@ -67,7 +68,7 @@ export default function AppsStack() {
         Animated.delay(120),
         singleShake,
         Animated.delay(2200),
-      ])
+      ]),
     );
 
     loopAnimation.start();
@@ -94,7 +95,7 @@ export default function AppsStack() {
               style={{ flexDirection: "row", alignItems: "center", gap: 24 }}
             >
               <TouchableOpacity
-                onPress={() => router.push(ScreenPaths.STORE)}
+                onPressIn={() => router.push(ScreenPaths.STORE)}
                 hitSlop={20}
               >
                 <Ionicons
@@ -106,7 +107,7 @@ export default function AppsStack() {
 
               {accessToken ? (
                 <TouchableOpacity
-                  onPress={() => router.push(ScreenPaths.NOTIFICATIONS)}
+                  onPressIn={() => router.push(ScreenPaths.NOTIFICATIONS)}
                   hitSlop={20}
                 >
                   <View>

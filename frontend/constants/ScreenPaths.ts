@@ -1,4 +1,4 @@
-// Copyright (c) 2025 WSO2 LLC. (https://www.wso2.com).
+// Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
@@ -22,4 +22,6 @@ export enum ScreenPaths {
   MICRO_APP = "/micro-app",
   PROFILE = "/(tabs)/profile",
   UPDATE = "/update",
+  QR_SCANNER = "/qr-scanner",
+  CHAT = "/(tabs)/chat",
 }

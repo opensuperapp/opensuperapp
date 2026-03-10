@@ -1,4 +1,4 @@
-// Copyright (c) 2025 WSO2 LLC. (https://www.wso2.com).
+// Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
@@ -13,23 +13,20 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import {
-  DEFAULT_VIEWING_MODE,
-  FULL_SCREEN_VIEWING_MODE,
-} from "./../constants/Constants";
+import { NotificationsProvider } from "@/context/NotificationsContext";
+import { QrScannerProvider } from "@/context/QrScannerContext";
+import React from "react";
 
-export type MicroAppParams = {
-  webViewUri: string;
-  appName: string;
-  clientId: string;
-  exchangedToken: string;
-  exchangedIdToken: string;
-  appId: string;
-  displayMode?: DisplayMode;
-  version?: string;
-  launchData?: string;
+type AppProvidersProps = {
+  children: React.ReactNode;
 };
 
-export type DisplayMode =
-  | typeof FULL_SCREEN_VIEWING_MODE
-  | typeof DEFAULT_VIEWING_MODE;
+const AppProviders = ({ children }: AppProvidersProps) => {
+  return (
+    <NotificationsProvider>
+      <QrScannerProvider>{children}</QrScannerProvider>
+    </NotificationsProvider>
+  );
+};
+
+export default AppProviders;

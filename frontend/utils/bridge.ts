@@ -17,6 +17,7 @@
 // Bridge event topics used for communication between the main app and micro apps.
 export const TOPIC = {
   TOKEN: "token",
+  ID_TOKEN: "id_token",
   QR_REQUEST: "qr_request",
   SAVE_LOCAL_DATA: "save_local_data",
   GET_LOCAL_DATA: "get_local_data",
@@ -42,6 +43,13 @@ export const TOPIC = {
   OPEN_URL: "open_url",
   MICRO_APP_VERSION: "micro_app_version",
   PICK_DOCUMENT: "pick_document",
+  COMPOSE_EMAIL: "compose_email",
+  OPEN_MICRO_APP: "open_micro_app",
+  GET_LAUNCH_DATA: "get_launch_data",
+  KEYBOARD_WILL_SHOW: "keyboard_will_show",
+  KEYBOARD_WILL_HIDE: "keyboard_will_hide",
+  KEYBOARD_DID_SHOW: "keyboard_did_show",
+  KEYBOARD_DID_HIDE: "keyboard_did_hide",
 };
 
 // JavaScript code injected into the WebView to enable communication between
@@ -50,6 +58,11 @@ export const injectedJavaScript = `window.nativebridge = {
     requestToken: () => {
       window.ReactNativeWebView.postMessage(JSON.stringify({
         topic: 'token'
+      }));
+    },
+    requestIdToken: () => {
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        topic: 'id_token'
       }));
     },
     requestQr: () => {
@@ -122,5 +135,25 @@ export const injectedJavaScript = `window.nativebridge = {
     rejectMicroAppVersion: (err) => console.error("Failed to get Micro App version:", err),
     requestPickDocument: (config) => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "pick_document", data: { config } })),
     resolvePickDocument: (result) => console.log("Document picked:", result),
-    rejectPickDocument: (err) => console.error("Document pick failed:", err)
+    rejectPickDocument: (err) => console.error("Document pick failed:", err),
+    requestComposeEmail: (config) => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "compose_email", data: { config } })),
+    resolveComposeEmail: (result) => console.log("Email composition result:", result),
+    rejectComposeEmail: (err) => console.error("Email composition failed:", err),
+    requestOpenMicroApp: (appId, data) => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "open_micro_app", data: { appId, data } })),
+    requestGetLaunchData: () => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "get_launch_data" })),
+    resolveGetLaunchData: (data) => console.log("Launch Data:", data),
+    resolveIdToken: (token) => console.log("ID Token received:", token),
+    rejectIdToken: (err) => console.error("ID Token request failed:", err),
+    requestKeyboardWillShow: () => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "keyboard_will_show" })),
+    resolveKeyboardWillShow: () => console.log("Keyboard will show"),
+    rejectKeyboardWillShow: (err) => console.error("Keyboard will show failed:", err),
+    requestKeyboardWillHide: () => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "keyboard_will_hide" })),
+    resolveKeyboardWillHide: () => console.log("Keyboard will hide"),
+    rejectKeyboardWillHide: (err) => console.error("Keyboard will hide failed:", err),
+    requestKeyboardDidShow: () => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "keyboard_did_show" })),
+    resolveKeyboardDidShow: () => console.log("Keyboard did show"),
+    rejectKeyboardDidShow: (err) => console.error("Keyboard did show failed:", err),
+    requestKeyboardDidHide: () => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "keyboard_did_hide" })),
+    resolveKeyboardDidHide: () => console.log("Keyboard did hide"),
+    rejectKeyboardDidHide: (err) => console.error("Keyboard did hide failed:", err),
   };`;

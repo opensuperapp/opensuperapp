@@ -309,6 +309,7 @@ export default function HomeScreen() {
               appName={item.name}
               clientId={item.clientId ?? ""}
               exchangedToken={item.exchangedToken ?? ""}
+              exchangedIdToken={item.exchangedIdToken ?? ""}
               appId={item.appId}
               displayMode={item.displayMode}
               version={item.versions?.[0]?.version}

@@ -1,0 +1,142 @@
+openapi: 3.1.0
+
+info:
+  title: OpenSuperApp Chat Agent
+  description: AI-powered chat agent for OpenSuperApp
+  version: 0.1.0
+
+paths:
+  /health:
+    get:
+      summary: Health
+      operationId: health_health_get
+      responses:
+        "200":
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+
+  /chat:
+    post:
+      summary: Chat
+      description: |
+        Process a chat message from the user.
+
+        The Authorization header must contain the user's access token as:
+        Bearer <access_token>
+
+        The access token is forwarded to micro-app backends for authentication.
+      operationId: chat_chat_post
+
+      parameters:
+        - name: authorization
+          in: header
+          required: false
+          description: Bearer <access_token>
+          schema:
+            title: Authorization
+            description: Bearer <access_token>
+            anyOf:
+              - type: string
+              - type: "null"
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+
+      responses:
+        "200":
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResponse"
+
+        "422":
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+
+components:
+  schemas:
+
+    ChatRequest:
+      title: ChatRequest
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          title: Message
+
+        history:
+          title: History
+          anyOf:
+            - type: array
+              items:
+                $ref: "#/components/schemas/HistoryMessage"
+            - type: "null"
+
+    ChatResponse:
+      title: ChatResponse
+      type: object
+      required:
+        - reply
+      properties:
+        reply:
+          type: string
+          title: Reply
+
+    HistoryMessage:
+      title: HistoryMessage
+      type: object
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          title: Role
+        content:
+          type: string
+          title: Content
+
+    HTTPValidationError:
+      title: HTTPValidationError
+      type: object
+      properties:
+        detail:
+          title: Detail
+          type: array
+          items:
+            $ref: "#/components/schemas/ValidationError"
+
+    ValidationError:
+      title: ValidationError
+      type: object
+      required:
+        - loc
+        - msg
+        - type
+      properties:
+        loc:
+          title: Location
+          type: array
+          items:
+            anyOf:
+              - type: string
+              - type: integer
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+          

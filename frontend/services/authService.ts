@@ -23,7 +23,10 @@ import {
   TOKEN_URL,
   USER_INFO,
 } from "@/constants/Constants";
-import { updateExchangedToken } from "@/context/slices/appSlice";
+import {
+  updateExchangedIdToken,
+  updateExchangedToken,
+} from "@/context/slices/appSlice";
 import { AppDispatch } from "@/context/store";
 import { AppScope } from "@/types/appConfig.types";
 import createAuthRequestBody from "@/utils/authBody";
@@ -270,15 +273,21 @@ export const loadAuthData = async (): Promise<AuthData | null> => {
   return secureData ? (secureData as AuthData) : null;
 };
 
+export type TokenExchangeResult = {
+  accessToken?: string;
+  idToken?: string;
+};
+
 // token exchange
 export const tokenExchange = async (
   dispatch: AppDispatch,
   clientId: string,
   exchangedToken: string,
+  exchangedIdToken: string,
   appId: string,
   onLogout: () => Promise<void>,
   appScopes?: AppScope[]
-) => {
+): Promise<TokenExchangeResult | null> => {
   try {
     // Find and append app specific scopes if available
     const appScope = appScopes?.find((scope) => scope.appId === appId);
@@ -286,9 +295,14 @@ export const tokenExchange = async (
 
     if (!clientId || clientId === "CLIENT_ID") return null;
 
-    // Use existing exchanged token if it's still valid
-    if (exchangedToken && !isAccessTokenExpired(exchangedToken)) {
-      return exchangedToken;
+    // Use existing exchanged tokens if they're still valid
+    if (
+      exchangedToken &&
+      !isTokenExpired(exchangedToken) &&
+      exchangedIdToken &&
+      !isTokenExpired(exchangedIdToken)
+    ) {
+      return { accessToken: exchangedToken, idToken: exchangedIdToken };
     }
 
     // Retrieve stored authentication data
@@ -311,10 +325,10 @@ export const tokenExchange = async (
     }
 
     // Refresh access token if expired
-    if (isAccessTokenExpired(accessToken)) {
+    if (isTokenExpired(accessToken)) {
       const newAuthData = await refreshAccessToken(onLogout);
       if (!newAuthData?.accessToken) {
-        return; // Logout is triggered inside refreshAccessToken
+        return null; // Logout is triggered inside refreshAccessToken
       }
       accessToken = newAuthData.accessToken;
     }
@@ -387,7 +401,14 @@ export const tokenExchange = async (
     dispatch(
       updateExchangedToken({ appId, exchangedToken: data.access_token })
     );
-    return data.access_token;
+
+    if (data.id_token) {
+      dispatch(
+        updateExchangedIdToken({ appId, exchangedIdToken: data.id_token })
+      );
+    }
+
+    return { accessToken: data.access_token, idToken: data.id_token };
   } catch (error) {
     console.error("Error during token exchange:", error);
     return null;
@@ -395,12 +416,12 @@ export const tokenExchange = async (
 };
 
 // Helper function to check if the token is expired
-const isAccessTokenExpired = (accessToken: string): boolean => {
+export const isTokenExpired = (token: string): boolean => {
   try {
-    const decoded = jwtDecode<{ exp: number }>(accessToken);
+    const decoded = jwtDecode<{ exp: number }>(token);
     return dayjs.unix(decoded.exp).isBefore(dayjs());
   } catch {
-    return true; // Assume expired if decoding fails
+    return true;
   }
 };
 
