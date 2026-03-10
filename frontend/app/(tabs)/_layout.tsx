@@ -22,6 +22,7 @@ import {
   LIBRARY_TAB_NAME,
   MY_APPS_TAB_NAME,
   PROFILE_TAB_NAME,
+  WSO2_EMAIL_DOMAIN,
 } from "@/constants/Constants";
 import { RootState } from "@/context/store";
 import { useRestoreLastTab } from "@/hooks/useRestoreLastTab";
@@ -95,8 +96,14 @@ export default function TabLayout() {
   useRestoreLastTab();
 
   const isSignedIn = useSelector(
-    (state: RootState) => !!state.auth.accessToken
+    (state: RootState) => !!state.auth.accessToken,
   );
+
+  const userEmail = useSelector(
+    (state: RootState) => state.userInfo.userInfo?.workEmail ?? "",
+  );
+
+  const isWso2User = userEmail.endsWith(WSO2_EMAIL_DOMAIN);
 
   return (
     <Tabs
@@ -121,8 +128,13 @@ export default function TabLayout() {
             headerShown: tab.options.headerShown,
             title: tab.options.title,
             headerTitleAllowFontScaling: false,
-            // Hide tabs that require auth when not signed in
-            href: tab.requiresAuth && !isSignedIn ? null : undefined,
+            // Hide tabs requiring auth if the user isn't signed in or isn't a WSO2 employee
+            href:
+              tab.requiresAuth && !isSignedIn
+                ? null
+                : tab.name === "chat" && !isWso2User
+                  ? null
+                  : undefined,
             tabBarIcon: ({ focused, color }) => (
               <Ionicons
                 name={focused ? tab.options.iconFocused : tab.options.icon}

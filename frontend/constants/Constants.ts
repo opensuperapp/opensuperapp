@@ -126,6 +126,7 @@ export const NOTIFICATIONS_QUERY_KEY = "notifications";
 
 // Chat Agent
 export const CHAT_AGENT_URL = process.env.EXPO_PUBLIC_CHAT_AGENT_URL ?? "";
+export const WSO2_EMAIL_DOMAIN = "@wso2.com";
 
 // Tab Names
 export const FEED_TAB_NAME = "Feed";

@@ -96,7 +96,6 @@ export default function AppsStack() {
             >
               <TouchableOpacity
                 onPressIn={() => router.push(ScreenPaths.STORE)}
-                delayPressIn={0}
                 hitSlop={20}
               >
                 <Ionicons
@@ -109,7 +108,6 @@ export default function AppsStack() {
               {accessToken ? (
                 <TouchableOpacity
                   onPressIn={() => router.push(ScreenPaths.NOTIFICATIONS)}
-                  delayPressIn={0}
                   hitSlop={20}
                 >
                   <View>

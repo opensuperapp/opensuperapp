@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import React, { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -23,16 +23,17 @@ import {
   FlatList,
   StyleSheet,
   KeyboardAvoidingView,
-  Platform,
   useColorScheme,
   ActivityIndicator,
+  Keyboard,
 } from "react-native";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import Markdown from "react-native-markdown-display";
-
 import { Colors } from "@/constants/Colors";
+import { isIos } from "@/constants/Constants";
 import { sendChatMessage, ChatMessage } from "@/services/chatService";
+import { Image } from "expo-image";
 
 export default function ChatScreen() {
   const colorScheme = useColorScheme();
@@ -42,7 +43,40 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener(
+      isIos ? "keyboardWillShow" : "keyboardDidShow",
+      () => setKeyboardVisible(true),
+    );
+    const hideSubscription = Keyboard.addListener(
+      isIos ? "keyboardWillHide" : "keyboardDidHide",
+      () => setKeyboardVisible(false),
+    );
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: false });
+      }, 100);
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    if (isKeyboardVisible && messages.length > 0) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 500);
+    }
+  }, [isKeyboardVisible, messages]);
 
   const theme = {
     bg: isDark ? "#000" : "#fff",
@@ -89,7 +123,7 @@ export default function ChatScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [inputText, isLoading]);
+  }, [inputText, isLoading, messages]);
 
   const markdownStyles = {
     body: {
@@ -153,10 +187,20 @@ export default function ChatScreen() {
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="chatbubble-ellipses-outline" size={64} color={theme.emptyText} />
-      <Text style={[styles.emptyTitle, { color: theme.emptyText }]}>
-        Hi there! 👋
-      </Text>
+      <Ionicons
+        name="chatbubble-ellipses-outline"
+        size={64}
+        color={theme.emptyText}
+      />
+      <View style={styles.titleContainer}>
+        <Text style={[styles.emptyTitle, { color: theme.emptyText }]}>
+          Hi there!
+        </Text>
+        <Image
+          source={require("@/assets/icons/waving-hand.svg")}
+          style={{ width: 26, height: 26 }}
+        />
+      </View>
       <Text style={[styles.emptySubtitle, { color: theme.emptyText }]}>
         Ask me about today&apos;s menu, or anything about the super app!
       </Text>
@@ -166,8 +210,8 @@ export default function ChatScreen() {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: theme.bg }]}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      behavior="padding"
+      keyboardVerticalOffset={90}
     >
       <FlatList
         ref={flatListRef}
@@ -185,7 +229,12 @@ export default function ChatScreen() {
         ListEmptyComponent={renderEmpty}
         ListFooterComponent={
           isLoading ? (
-            <View style={[styles.typingContainer, { backgroundColor: theme.assistantBubble }]}>
+            <View
+              style={[
+                styles.typingContainer,
+                { backgroundColor: theme.assistantBubble },
+              ]}
+            >
               <ActivityIndicator size="small" color={Colors.companyOrange} />
               <Text style={[styles.typingText, { color: theme.placeholder }]}>
                 Thinking...
@@ -201,7 +250,13 @@ export default function ChatScreen() {
           {
             backgroundColor: theme.bg,
             borderTopColor: theme.border,
-            paddingBottom: Platform.OS === "ios" ? tabBarHeight + 4 : 8,
+            paddingBottom: isKeyboardVisible
+              ? isIos
+                ? 24
+                : 32
+              : isIos
+                ? tabBarHeight + 16
+                : 16,
           },
         ]}
       >
@@ -236,7 +291,7 @@ export default function ChatScreen() {
           disabled={!inputText.trim() || isLoading}
         >
           <Ionicons
-            name="arrow-up"
+            name="send"
             size={20}
             color={inputText.trim() && !isLoading ? "#fff" : theme.placeholder}
           />
@@ -326,5 +381,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "center",
     paddingHorizontal: 40,
+  },
+  titleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
 });
