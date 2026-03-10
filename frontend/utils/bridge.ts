@@ -42,6 +42,7 @@ export const TOPIC = {
   OPEN_URL: "open_url",
   MICRO_APP_VERSION: "micro_app_version",
   PICK_DOCUMENT: "pick_document",
+  COMPOSE_EMAIL: "compose_email",
 };
 
 // JavaScript code injected into the WebView to enable communication between
@@ -122,5 +123,8 @@ export const injectedJavaScript = `window.nativebridge = {
     rejectMicroAppVersion: (err) => console.error("Failed to get Micro App version:", err),
     requestPickDocument: (config) => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "pick_document", data: { config } })),
     resolvePickDocument: (result) => console.log("Document picked successfully:", result),
-    rejectPickDocument: (err) => console.error("Failed to pick document:", err)
+    rejectPickDocument: (err) => console.error("Failed to pick document:", err),
+    requestComposeEmail: (config) => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "compose_email", data: { config } })),
+    resolveComposeEmail: (result) => console.log("Email composed successfully:", result),
+    rejectComposeEmail: (err) => console.error("Failed to compose email:", err)
   };`;
