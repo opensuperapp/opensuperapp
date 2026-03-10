@@ -111,6 +111,12 @@ const MicroApp = () => {
   const shouldShowHeader: boolean = displayMode !== FULL_SCREEN_VIEWING_MODE;
   const { width, height } = useWindowDimensions();
 
+  /**
+   * Create styles for the micro app.
+   * @param colorScheme - The color scheme of the micro app
+   * @param bottomSafeArea - The bottom safe area of the micro app.
+   * @returns The styles for the micro app
+   */
   const styles = createStyles(
     colorScheme ?? "light",
     shouldShowHeader ? bottomSafeArea : 0
@@ -123,12 +129,14 @@ const MicroApp = () => {
     scopes: GOOGLE_SCOPES,
   });
 
+  // Function to send response to micro app
   const sendResponseToWeb = (method: string, data?: any) => {
     webviewRef.current?.injectJavaScript(
       `window.nativebridge.${method}(${JSON.stringify(data)});`
     );
   };
 
+  // Handle Google authentication response
   useEffect(() => {
     if (response) {
       googleAuthenticationService(response)
@@ -168,24 +176,29 @@ const MicroApp = () => {
     fetchToken();
   }, [clientId]);
 
+  // Function to send token to WebView
   const sendTokenToWebView = (token: string) => {
     if (!token) return;
     sendResponseToWeb("resolveToken", token);
 
+    // Resolve any pending token requests
     while (pendingTokenRequests.current.length > 0) {
       const resolve = pendingTokenRequests.current.shift();
       resolve?.(token);
     }
   };
 
+  // Function to send QR string to WebView
   const sendQrToWebView = (qrString: string) => {
     sendResponseToWeb("resolveQrCode", qrString);
   };
 
+  // Function to send safe area insets to WebView
   const sendSafeAreaInsetsToWebView = () => {
     sendResponseToWeb("resolveDeviceSafeAreaInsets", { insets });
   };
 
+  // Function to view alert from parent app
   const handleAlert = async (
     title: string,
     message: string,
@@ -194,6 +207,7 @@ const MicroApp = () => {
     Alert.alert(title, message, [{ text: buttonText }], { cancelable: false });
   };
 
+  // Function to get confirmation from parent app
   const handleConfirmAlert = async (
     title: string,
     message: string,
@@ -218,6 +232,11 @@ const MicroApp = () => {
     );
   };
 
+  /**
+   * Function to save data to secure store
+   * @param key - The key to save the data to
+   * @param value - The value to save to the secure store
+   */
   const handleSaveToSecureStore = async (key: string, value: string) => {
     try {
       await SecureStore.setItemAsync(key, value);
@@ -230,6 +249,10 @@ const MicroApp = () => {
     }
   };
 
+  /**
+   * Function to get data from secure store
+   * @param key - The key to get the data from
+   */
   const handleGetFromSecureStore = async (key: string) => {
     try {
       const value = await SecureStore.getItemAsync(key);
@@ -242,6 +265,10 @@ const MicroApp = () => {
     }
   };
 
+  /**
+   * Function to delete data from secure store
+   * @param key - The key to delete the data from
+   */
   const handleDeleteFromSecureStore = async (key: string) => {
     try {
       await SecureStore.deleteItemAsync(key);
@@ -254,6 +281,7 @@ const MicroApp = () => {
     }
   };
 
+  // Function to save data in device
   const handleSaveLocalData = async (key: string, value: string) => {
     try {
       await AsyncStorage.setItem(key, value);
@@ -265,6 +293,7 @@ const MicroApp = () => {
     }
   };
 
+  //Function to delete data in device
   const handleDeleteLocalData = async (key: string) => {
     try {
       await AsyncStorage.removeItem(key);
@@ -276,6 +305,7 @@ const MicroApp = () => {
     }
   };
 
+  // Function to get data from device
   const handleGetLocalData = async (key: string) => {
     try {
       const value = await AsyncStorage.getItem(key);
@@ -287,15 +317,18 @@ const MicroApp = () => {
     }
   };
 
+  // Function to migrate TOTP data
   const handleTotpQrMigrationData = () => {
     const mockData = "sample-data-1,sample-data-2";
     sendResponseToWeb("resolveTotpQrMigrationData", { data: mockData });
   };
 
+  // Fucntion to authenticate using google
   const authenticateWithGoogle = async () => {
     promptAsync();
   };
 
+  // Function to upload data to the Google Drive
   const handleUploadToGoogleDrive = async (data: any = {}) => {
     uploadToGoogleDrive(data)
       .then((res) => {
@@ -310,6 +343,7 @@ const MicroApp = () => {
       });
   };
 
+  // Function to check Google authentication state
   const handleCheckGoogleAuthState = async () => {
     isAuthenticatedWithGoogle()
       .then((res) => {
@@ -324,6 +358,7 @@ const MicroApp = () => {
       });
   };
 
+  // Function to restore the latest backup from Google Drive
   const restoreLatestFromGoogleDrive = async () => {
     restoreGoogleDriveBackup()
       .then((res) => {
@@ -338,6 +373,7 @@ const MicroApp = () => {
       });
   };
 
+  // Function to get Google user info
   const handleGetGoogleUserInfo = async () => {
     try {
       getGoogleUserInfo()
@@ -357,6 +393,7 @@ const MicroApp = () => {
     }
   };
 
+  // Function to open a URL using the browser
   const handleOpenUrlInBrowser = async (config: BrowserConfig) => {
     try {
       if (!config) {
@@ -391,6 +428,7 @@ const MicroApp = () => {
     }
   };
 
+  // Function to schedule a local notification
   const handleScheduleLocalNotification = async (
     data: ScheduledNotificationData
   ) => {
@@ -406,6 +444,7 @@ const MicroApp = () => {
     }
   };
 
+  // Function to cancel a local notification
   const handleCancelLocalNotification = async (
     data: ScheduledNotificationIdentifiable
   ) => {
@@ -421,6 +460,7 @@ const MicroApp = () => {
     }
   };
 
+  // Function to clear all local notifications
   const handleClearAllLocalNotifications = async () => {
     try {
       clearNotifications();
@@ -434,11 +474,13 @@ const MicroApp = () => {
     }
   };
 
+  // Function to get device screen size
   const handleDeviceScreenSize = async () => {
     const screenSize = { width: width, height: height };
     sendResponseToWeb("resolveDeviceScreenSize", screenSize);
   };
 
+  // Function to get micro app version
   const handleMicroAppVersion = async () => {
     sendResponseToWeb("resolveMicroAppVersion", version || "unknown");
   };
@@ -486,6 +528,7 @@ const MicroApp = () => {
         throw new Error("Mail services are not available on this device");
       }
 
+      // Validate attachments if provided
       if (config.attachments && config.attachments.length > 0) {
         for (const attachment of config.attachments) {
           let info;
@@ -498,7 +541,7 @@ const MicroApp = () => {
               }`,
             );
           }
-          
+
           if (!info.exists) {
             throw new Error(`Attachment file not found: ${attachment}`);
           }
@@ -515,6 +558,7 @@ const MicroApp = () => {
     }
   };
 
+  // Handle messages from WebView
   const onMessage = async (event: WebViewMessageEvent) => {
     try {
       const { topic, data } = JSON.parse(event.nativeEvent.data);
@@ -616,6 +660,10 @@ const MicroApp = () => {
     }
   };
 
+  /**
+   * Display microapp logs in the console
+   * @param data - The data to display
+   */
   const handleNativeLog = (data: any) => {
     if (!__DEV__) return;
     const level = data.level as NativeLogLevel;
@@ -655,6 +703,7 @@ const MicroApp = () => {
   };
 
   const renderWebView = (webViewUri: string) => {
+    // Check if web view uri is available
     if (!webViewUri) {
       Alert.alert("Error", "React app not found. Please unzip the file first.");
       return <NotFound />;
