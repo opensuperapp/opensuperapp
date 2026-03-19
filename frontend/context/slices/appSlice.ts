@@ -152,6 +152,12 @@ const appsSlice = createSlice({
       }
       void persistAppsWithoutTokens(state.apps); // strip tokens when saving
     },
+
+    resetApps(state) {
+      state.apps = [];
+      state.downloading = [];
+      state.downloadProgress = {};
+    },
   },
 });
 
@@ -163,5 +169,6 @@ export const {
   updateAppStatus,
   updateExchangedToken,
   updateExchangedIdToken,
+  resetApps,
 } = appsSlice.actions;
 export default appsSlice.reducer;

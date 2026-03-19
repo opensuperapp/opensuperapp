@@ -23,7 +23,7 @@ import {
   DOWNLOADED,
 } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
-import { MicroApp } from "@/context/slices/appSlice";
+import { MicroApp, resetApps } from "@/context/slices/appSlice";
 import { getUserConfigurations } from "@/context/slices/userConfigSlice";
 import { AppDispatch, RootState } from "@/context/store";
 import { useTrackActiveScreen } from "@/hooks/useTrackActiveScreen";
@@ -86,6 +86,7 @@ export default function HomeScreen() {
   });
   const [updatingApps, setUpdatingApps] = useState<string[]>([]);
   const isCheckingUpdates = useRef(false);
+  const previousEmail = useRef<string | null>(null);
   useTrackActiveScreen(ScreenPaths.MY_APPS);
   const updateCheckInterval = useSelector(
     (state: RootState) =>
@@ -166,6 +167,10 @@ export default function HomeScreen() {
   useEffect(() => {
     const initializeApp = async () => {
       try {
+        if (email && previousEmail.current === null) {
+          previousEmail.current = email;
+        }
+
         if (!apps || apps.length === 0) {
           await loadMicroAppDetails(
             dispatch,
@@ -192,6 +197,20 @@ export default function HomeScreen() {
 
     initializeApp();
   }, [email]);
+
+  // Handle email transitions (log in/log out)
+  useEffect(() => {
+    if (previousEmail.current === null && email) {
+      previousEmail.current = email;
+      return;
+    }
+
+    if (previousEmail.current && !email) {
+      previousEmail.current = null;
+      dispatch(resetApps());
+      setFilteredApps([]);
+    }
+  }, [email, dispatch]);
 
   // Load saved app order from AsyncStorage on mount
   useEffect(() => {
