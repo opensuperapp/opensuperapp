@@ -1,4 +1,4 @@
-import { shouldRefreshToken, isRefreshTokenNearExpiry } from '../tokenRefreshManager';
+import { shouldRefreshToken } from '../tokenRefreshManager';
 import * as authService from '@/services/authService';
 import * as authTokenStore from '@/utils/authTokenStore';
 import { jwtDecode } from 'jwt-decode';
@@ -53,6 +53,7 @@ describe('tokenRefreshManager', () => {
     jest.clearAllMocks();
     jest.useFakeTimers();
     jest.setSystemTime(1000000);
+    (jwtDecode as jest.Mock).mockReset();
   });
 
   afterEach(() => {
@@ -66,9 +67,12 @@ describe('tokenRefreshManager', () => {
       expect(result).toBe(false);
     });
 
-    it('returns false when token is not near expiry', async () => {
+    it('returns false when token is not near expiry (3600s lifetime)', async () => {
       const now = 1000000;
-      const expiresAt = now + (60 * 60 * 1000);
+      const iat = Math.floor(now / 1000);
+      const exp = iat + 3600;
+      const expiresAt = exp * 1000;
+      (jwtDecode as jest.Mock).mockReturnValue({ iat, exp });
       jest.spyOn(authTokenStore, 'loadAuthDataFromSecureStore').mockResolvedValue({
         accessToken: 'valid_token',
         idToken: 'id_token',
@@ -80,82 +84,91 @@ describe('tokenRefreshManager', () => {
       expect(result).toBe(false);
     });
 
-    it('returns true when token is at 80% of lifetime', async () => {
+    it('returns true when token is at 80% of lifetime (3600s)', async () => {
       const now = 1000000;
-      const tokenLifetime = 60 * 60 * 1000;
-      const expiresAt = now + tokenLifetime;
-      const timeElapsed = tokenLifetime * 0.801;
+      const iat = Math.floor(now / 1000);
+      const exp = iat + 3600;
+      const expiresAt = exp * 1000;
+      const timeElapsed = 3600 * 0.801;
+      (jwtDecode as jest.Mock).mockReturnValue({ iat, exp });
       jest.spyOn(authTokenStore, 'loadAuthDataFromSecureStore').mockResolvedValue({
         accessToken: 'token',
         idToken: 'id_token',
         refreshToken: 'refresh_token',
         expiresAt,
       });
-      jest.setSystemTime(now + timeElapsed);
+      jest.setSystemTime(now + (timeElapsed * 1000));
       const result = await shouldRefreshToken();
       expect(result).toBe(true);
     });
 
-    it('returns true when token is beyond 80% of lifetime', async () => {
+    it('returns true when token is beyond 80% of lifetime (3600s)', async () => {
       const now = 1000000;
-      const tokenLifetime = 60 * 60 * 1000;
-      const expiresAt = now + tokenLifetime;
-      const timeElapsed = tokenLifetime * 0.9;
+      const iat = Math.floor(now / 1000);
+      const exp = iat + 3600;
+      const expiresAt = exp * 1000;
+      const timeElapsed = 3600 * 0.9;
+      (jwtDecode as jest.Mock).mockReturnValue({ iat, exp });
       jest.spyOn(authTokenStore, 'loadAuthDataFromSecureStore').mockResolvedValue({
         accessToken: 'token',
         idToken: 'id_token',
         refreshToken: 'refresh_token',
         expiresAt,
       });
-      jest.setSystemTime(now + timeElapsed);
+      jest.setSystemTime(now + (timeElapsed * 1000));
       const result = await shouldRefreshToken();
       expect(result).toBe(true);
     });
-  });
 
-  describe('isRefreshTokenNearExpiry', () => {
-    it('returns false when no refresh token', async () => {
+    it('returns false when token is not near expiry (7200s lifetime)', async () => {
+      const now = 1000000;
+      const iat = Math.floor(now / 1000);
+      const exp = iat + 7200;
+      const expiresAt = exp * 1000;
+      (jwtDecode as jest.Mock).mockReturnValue({ iat, exp });
+      jest.spyOn(authTokenStore, 'loadAuthDataFromSecureStore').mockResolvedValue({
+        accessToken: 'valid_token',
+        idToken: 'id_token',
+        refreshToken: 'refresh_token',
+        expiresAt,
+      });
+      jest.setSystemTime(now);
+      const result = await shouldRefreshToken();
+      expect(result).toBe(false);
+    });
+
+    it('returns true when token is at 80% of lifetime (7200s)', async () => {
+      const now = 1000000;
+      const iat = Math.floor(now / 1000);
+      const exp = iat + 7200;
+      const expiresAt = exp * 1000;
+      const timeElapsed = 7200 * 0.801;
+      (jwtDecode as jest.Mock).mockReturnValue({ iat, exp });
       jest.spyOn(authTokenStore, 'loadAuthDataFromSecureStore').mockResolvedValue({
         accessToken: 'token',
         idToken: 'id_token',
-        refreshToken: null,
-      });
-      const result = await isRefreshTokenNearExpiry();
-      expect(result).toBe(false);
-    });
-
-    it('returns true when refresh token expires in 7 days', async () => {
-      const now = 1000000;
-      const expiresAt = now + (7 * 24 * 60 * 60 * 1000);
-      (jwtDecode as jest.Mock).mockReturnValue({ exp: Math.floor(expiresAt / 1000) });
-      jest.spyOn(authTokenStore, 'loadAuthDataFromSecureStore').mockResolvedValue({
         refreshToken: 'refresh_token',
+        expiresAt,
       });
-      jest.setSystemTime(now);
-      const result = await isRefreshTokenNearExpiry();
+      jest.setSystemTime(now + (timeElapsed * 1000));
+      const result = await shouldRefreshToken();
       expect(result).toBe(true);
     });
 
-    it('returns false when refresh token has 30 days remaining', async () => {
+    it('falls back to 3600s when JWT decode fails', async () => {
       const now = 1000000;
-      const expiresAt = now + (30 * 24 * 60 * 60 * 1000);
-      (jwtDecode as jest.Mock).mockReturnValue({ exp: Math.floor(expiresAt / 1000) });
-      jest.spyOn(authTokenStore, 'loadAuthDataFromSecureStore').mockResolvedValue({
-        refreshToken: 'refresh_token',
-      });
-      jest.setSystemTime(now);
-      const result = await isRefreshTokenNearExpiry();
-      expect(result).toBe(false);
-    });
-
-    it('returns false when jwt decode fails', async () => {
+      const expiresAt = now + (60 * 60 * 1000);
       (jwtDecode as jest.Mock).mockImplementation(() => {
         throw new Error('Invalid token');
       });
       jest.spyOn(authTokenStore, 'loadAuthDataFromSecureStore').mockResolvedValue({
-        refreshToken: 'invalid_token',
+        accessToken: 'invalid_token',
+        idToken: 'id_token',
+        refreshToken: 'refresh_token',
+        expiresAt,
       });
-      const result = await isRefreshTokenNearExpiry();
+      jest.setSystemTime(now);
+      const result = await shouldRefreshToken();
       expect(result).toBe(false);
     });
   });

@@ -241,10 +241,7 @@ export const logout = async () => {
     // If idToken is missing, proceed with local logout
     if (!idToken) {
       console.warn("No idToken found. Performing local logout only.");
-      await clearAllExchangedTokens(appIds);
-      await clearAuthDataFromSecureStore();
-      await AsyncStorage.removeItem(APPS);
-      await AsyncStorage.removeItem(USER_INFO);
+      await clearSessionData(appIds);
       return;
     }
 
@@ -253,10 +250,7 @@ export const logout = async () => {
       idToken,
       postLogoutRedirectUrl: REDIRECT_URI,
     });
-    await clearAllExchangedTokens(appIds);
-    await clearAuthDataFromSecureStore();
-    await AsyncStorage.removeItem(APPS);
-    await AsyncStorage.removeItem(USER_INFO);
+    await clearSessionData(appIds);
   } catch (error) {
     console.error("Error logging out from Asgardeo:", error);
     Alert.alert(
@@ -265,6 +259,13 @@ export const logout = async () => {
     );
     throw error;
   }
+};
+
+const clearSessionData = async (appIds: string[]) => {
+  await clearAllExchangedTokens(appIds);
+  await clearAuthDataFromSecureStore();
+  await AsyncStorage.removeItem(APPS);
+  await AsyncStorage.removeItem(USER_INFO);
 };
 
 // Restore auth data form secure storage
@@ -336,6 +337,17 @@ export const tokenExchange = async (
     // Function to attempt token exchange, with retry on 401 error
     const attemptTokenExchange = async (token: string) => {
       try {
+        console.log(
+          "[AUTH_SERV][attemptTokenExchange] Creating auth request body",
+          JSON.stringify({
+            clientId,
+            grantType: GRANT_TYPE_TOKEN_EXCHANGE,
+            subjectToken: token,
+            subjectTokenType: SUBJECT_TOKEN_TYPE,
+            requestedTokenType: REQUESTED_TOKEN_TYPE,
+            scope: selectedScopes,
+          })
+        );
         const response = await axios.post(
           TOKEN_URL,
           createAuthRequestBody({
@@ -350,6 +362,8 @@ export const tokenExchange = async (
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
           }
         );
+
+        console.log("[AUTH_SERV][attemptTokenExchange] Response", response);
 
         if (response.status === 200) return response.data;
 
@@ -392,6 +406,7 @@ export const tokenExchange = async (
 
     // Attempt token exchange
     const data = await attemptTokenExchange(accessToken);
+    console.log("[AUTH_SERV][tokenExchange] Data", data);
 
     if (!data?.access_token) {
       console.error("Token exchange response does not contain access_token.");

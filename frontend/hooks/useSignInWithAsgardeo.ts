@@ -15,6 +15,7 @@
 // under the License.
 import { AUTH_CONFIG } from "@/config/authConfig";
 import { getAppConfigurations } from "@/context/slices/appConfigSlice";
+import { setApps } from "@/context/slices/appSlice";
 import { setAuth, setAuthWithCheck } from "@/context/slices/authSlice";
 import { AppDispatch } from "@/context/store";
 import { processNativeAuthResult } from "@/services/authService";
@@ -37,6 +38,7 @@ export const useSignInWithAsgardeo = () => {
         try {
           const handleLogout = async () => {
             await dispatch(performLogout()).unwrap();
+            await dispatch(setApps([]));
           };
           await dispatch(getAppConfigurations(handleLogout)).unwrap();
         } catch (configError) {
