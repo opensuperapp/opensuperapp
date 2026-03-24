@@ -15,11 +15,12 @@
 // under the License.
 import { router } from "expo-router";
 import { jwtDecode } from "jwt-decode";
-import { Alert, AppState, AppStateStatus } from "react-native";
+import { AppState, AppStateStatus } from "react-native";
 import { ScreenPaths } from "../constants/ScreenPaths";
 import { refreshAccessToken } from "../services/authService";
 import { loadAuthDataFromSecureStore } from "./authTokenStore";
 import { performLogout } from "./performLogout";
+import { showLogoutConfirmation, resetAlertState } from "./authAlerts";
 
 const REFRESH_THRESHOLD_PERCENT = 0.8;
 const MAX_RETRIES = 3;
@@ -33,7 +34,6 @@ let refreshPromise: Promise<boolean> | null = null;
 let lastForegroundRefresh = 0;
 let periodicCheckTimer: NodeJS.Timeout | null = null;
 let appStateSubscription: { remove: () => void } | null = null;
-let alertShown = false;
 
 function getRetryDelay(attempt: number): number {
   const baseDelay = BASE_RETRY_DELAY * Math.pow(RETRY_MULTIPLIER, attempt - 1);
@@ -78,36 +78,20 @@ export async function shouldRefreshToken(): Promise<boolean> {
 async function performRefreshWithRetry(attempt: number = 1): Promise<boolean> {
   try {
     const onLogout = async () => {
-      if (!alertShown) {
-        alertShown = true;
-        await Alert.alert(
-          "Session Expired",
-          "Your session has expired. Would you like to sign in again?",
-          [
-            {
-              text: "Cancel",
-              style: "cancel",
-              onPress: () => {
-                alertShown = false;
-              },
-            },
-            {
-              text: "Sign Back In",
-              onPress: async () => {
-                alertShown = false;
-                await performLogout();
-                router.navigate(ScreenPaths.PROFILE);
-              },
-            },
-          ]
-        );
-      }
+      await showLogoutConfirmation(
+        "Session Expired",
+        "Your session has expired. Would you like to sign in again?",
+        async () => {
+          await performLogout();
+          router.navigate(ScreenPaths.PROFILE);
+        }
+      );
     };
 
     const newAuthData = await refreshAccessToken(onLogout);
 
     if (newAuthData?.accessToken) {
-      alertShown = false;
+      resetAlertState();
       return true;
     }
 
@@ -213,5 +197,5 @@ export function stopTokenRefreshManager() {
   }
 
   refreshPromise = null;
-  alertShown = false;
+  resetAlertState();
 }

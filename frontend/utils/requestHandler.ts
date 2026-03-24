@@ -84,6 +84,40 @@ const isAccessTokenExpired = (accessToken: string): boolean => {
   }
 };
 
+// Helper function to check if error is retryable
+const isRetryableError = (error: unknown): boolean => {
+  if (error instanceof Error) {
+    return (
+      error.message.includes("Network request failed") ||
+      error.message.includes("timeout") ||
+      error.message.includes("ETIMEDOUT")
+    );
+  }
+  return false;
+};
+
+// Exponential backoff retry helper
+export async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  baseDelay = 100,
+  multiplier = 2
+): Promise<T> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (attempt === maxRetries || !isRetryableError(error)) {
+        throw error;
+      }
+
+      const delay = baseDelay * Math.pow(multiplier, attempt - 1);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  throw new Error('Max retries exceeded');
+}
+
 // Helper function to get the stored access token
 const getAccessToken = async (): Promise<string> => {
   const secureStore = await loadAuthDataFromSecureStore();

@@ -37,6 +37,7 @@ import {
   SecureAuthData,
 } from "@/utils/authTokenStore";
 import { clearAllExchangedTokens } from "@/utils/exchangedTokenStore";
+import { showLogoutConfirmation, showNetworkError } from "@/utils/authAlerts";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import dayjs from "dayjs";
@@ -167,7 +168,13 @@ export const refreshAccessToken = async (
         console.error(
           `Token refresh failed: ${response.status} ${response.statusText}`
         );
-        if (response.status === 400) await onLogout();
+        if (response.status === 400) {
+          await showLogoutConfirmation(
+            "Session Expired",
+            "Your session has expired. Would you like to sign in again?",
+            onLogout
+          );
+        }
 
         refreshPromise = null;
         return null;
@@ -200,14 +207,22 @@ export const refreshAccessToken = async (
     } catch (err: unknown) {
       if (err instanceof Error) {
         console.error("Token refresh error:", err.message);
-        if (err.message.includes("Network request failed")) {
-          Alert.alert("Network Error", "Check your connection and try again.");
+        if (err.message.includes("Network request failed") || err.message.includes("timeout")) {
+          await showNetworkError("Check your connection and try again.");
         } else {
-          await onLogout();
+          await showLogoutConfirmation(
+            "Error",
+            "An error occurred while refreshing your session. Would you like to sign in again?",
+            onLogout
+          );
         }
       } else {
         console.error("An unexpected error occurred during token refresh.");
-        await onLogout();
+        await showLogoutConfirmation(
+          "Error",
+          "An unexpected error occurred. Would you like to sign in again?",
+          onLogout
+        );
       }
 
       refreshPromise = null;
