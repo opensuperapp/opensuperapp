@@ -18,9 +18,13 @@ import { jwtDecode } from "jwt-decode";
 import { AppState, AppStateStatus } from "react-native";
 import { ScreenPaths } from "../constants/ScreenPaths";
 import { refreshAccessToken } from "../services/authService";
+import {
+  resetAlertState,
+  showLogoutConfirmation,
+  showRefreshRetryDialog,
+} from "./authAlerts";
 import { loadAuthDataFromSecureStore } from "./authTokenStore";
 import { performLogout } from "./performLogout";
-import { showLogoutConfirmation, resetAlertState } from "./authAlerts";
 
 const REFRESH_THRESHOLD_PERCENT = 0.8;
 const MAX_RETRIES = 3;
@@ -45,10 +49,6 @@ function getTokenLifetimeFromJWT(accessToken: string): number {
   try {
     const decoded = jwtDecode<{ iat?: number; exp?: number }>(accessToken);
     if (decoded.iat && decoded.exp) {
-      console.log(
-        "[TOK_REF][getTokenLifetimeFromJWT] Token lifetime:",
-        (decoded.exp - decoded.iat) * 1000
-      );
       return (decoded.exp - decoded.iat) * 1000;
     }
   } catch {}
@@ -64,11 +64,6 @@ export async function shouldRefreshToken(): Promise<boolean> {
   const now = Date.now();
   const timeUntilExpiry = authData.expiresAt - now;
   const tokenLifetime = getTokenLifetimeFromJWT(authData.accessToken);
-  console.log(
-    "[TOK_REF][shouldRefreshToken] Remaining Token lifetime:",
-    tokenLifetime,
-    timeUntilExpiry
-  );
   const threshold = tokenLifetime * (1 - REFRESH_THRESHOLD_PERCENT);
 
   const needsRefresh = timeUntilExpiry <= threshold;
@@ -97,17 +92,24 @@ async function performRefreshWithRetry(attempt: number = 1): Promise<boolean> {
 
     if (attempt < MAX_RETRIES) {
       const delay = getRetryDelay(attempt);
-      console.log(
-        `[TOK_REF][performRefreshWithRetry] Failed, retrying in ${delay}ms`
-      );
       await new Promise((resolve) => setTimeout(resolve, delay));
       return performRefreshWithRetry(attempt + 1);
     }
 
-    console.log("[TOK_REF][performRefreshWithRetry] Max retries reached");
+    await showRefreshRetryDialog(
+      "Session Refresh Failed",
+      "Could not refresh your session. Would you like to try again or sign in?",
+      async () => {
+        resetAlertState();
+        await performRefreshWithRetry(1);
+      },
+      async () => {
+        await performLogout();
+        router.navigate(ScreenPaths.PROFILE);
+      }
+    );
     return false;
   } catch (error) {
-    console.log("[TOK_REF][performRefreshWithRetry] Error caught", error);
     if (attempt < MAX_RETRIES && isNetworkError(error)) {
       const delay = getRetryDelay(attempt);
       await new Promise((resolve) => setTimeout(resolve, delay));
@@ -131,9 +133,6 @@ function isNetworkError(error: unknown): boolean {
 
 export async function checkAndRefreshTokenIfNeeded(): Promise<boolean> {
   if (refreshPromise) {
-    console.log(
-      "[TOK_REF][checkAndRefreshTokenIfNeeded] Re-using existing refresh promise"
-    );
     return refreshPromise;
   }
 
@@ -153,7 +152,6 @@ export async function checkAndRefreshTokenIfNeeded(): Promise<boolean> {
 }
 
 function handleAppStateChange(nextAppState: AppStateStatus) {
-  console.log(`[TOK_REF][handleAppStateChange] App is now: ${nextAppState}`);
   if (nextAppState === "active") {
     const now = Date.now();
     const cooldownElapsed = now - lastForegroundRefresh >= FOREGROUND_COOLDOWN;
@@ -161,23 +159,17 @@ function handleAppStateChange(nextAppState: AppStateStatus) {
     if (cooldownElapsed) {
       lastForegroundRefresh = now;
       checkAndRefreshTokenIfNeeded();
-    } else {
-      console.log(
-        "[TOK_REF][handleAppStateChange] Foreground refresh blocked by cooldown"
-      );
     }
   }
 }
 
 export function startTokenRefreshManager() {
-  console.log("[TOK_REF][startTokenRefreshManager] Initializing");
   appStateSubscription = AppState.addEventListener(
     "change",
     handleAppStateChange
   );
 
   periodicCheckTimer = setInterval(() => {
-    console.log("[TOK_REF][periodicCheckTimer] Triggering periodic check");
     checkAndRefreshTokenIfNeeded();
   }, PERIODIC_CHECK_INTERVAL);
 
@@ -185,7 +177,6 @@ export function startTokenRefreshManager() {
 }
 
 export function stopTokenRefreshManager() {
-  console.log("[TOK_REF][stopTokenRefreshManager] Stopping manager");
   if (appStateSubscription) {
     appStateSubscription.remove();
     appStateSubscription = null;

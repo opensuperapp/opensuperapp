@@ -40,7 +40,41 @@ export async function showLogoutConfirmation(
         },
       },
       {
-        text: "Sign In",
+        text: "Sign Out",
+        onPress: async () => {
+          await onLogout();
+          alertShown = false;
+        },
+      },
+    ]);
+  }
+}
+
+/**
+ * Shows a retry dialog with Retry and Sign In buttons.
+ * @param title - The title of the dialog.
+ * @param message - The message of the dialog.
+ * @param onRetry - The function to call when the user clicks Retry.
+ * @param onLogout - The function to call when the user clicks Sign In.
+ */
+export async function showRefreshRetryDialog(
+  title: string,
+  message: string,
+  onRetry: () => Promise<void>,
+  onLogout: () => Promise<void>
+) {
+  if (!alertShown) {
+    alertShown = true;
+    Alert.alert(title, message, [
+      {
+        text: "Retry",
+        onPress: async () => {
+          await onRetry();
+          alertShown = false;
+        },
+      },
+      {
+        text: "Sign Out",
         onPress: async () => {
           await onLogout();
           alertShown = false;
