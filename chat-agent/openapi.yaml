@@ -30,7 +30,7 @@ paths:
       operationId: chat_chat_post
 
       parameters:
-        - name: authorization
+        - name: Authorization
           in: header
           required: false
           description: Bearer <access_token>
