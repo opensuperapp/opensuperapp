@@ -202,7 +202,7 @@ export default function RootLayout() {
           </PersistGate>
         </Provider>
       </QueryClientProvider>
-      <StatusBar style="auto" />
+      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
     </ThemeProvider>
   );
 }
