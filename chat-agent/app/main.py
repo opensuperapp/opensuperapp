@@ -25,6 +25,11 @@ the agent's response.
 import logging
 from typing import List, Optional
 import uvicorn
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
 from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
 
@@ -61,27 +66,18 @@ async def health():
 @app.post("/chat", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,
-    authorization: Optional[str] = Header(None, description="Bearer <access_token>"),
+    x_jwt_assertion: Optional[str] = Header(None, alias="x-jwt-assertion"),
 ):
     """
     Process a chat message from the user.
 
-    The Authorization header must contain the user's access token as:
-        Bearer <access_token>
-
-    The access token is forwarded to micro-app backends for authentication.
+    The x-jwt-assertion header must contain the user's access token.
+    This is populated automatically by Choreo when 'Pass End User Attributes' is enabled.
     """
-    # Extract the token from "Bearer <token>"
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(
-            status_code=401,
-            detail="Authorization header must be in format: Bearer <token>",
-        )
+    if not x_jwt_assertion:
+        raise HTTPException(status_code=401, detail="x-jwt-assertion header is required")
 
-    access_token = authorization[len("Bearer "):]
-
-    if not access_token:
-        raise HTTPException(status_code=401, detail="Access token is required")
+    access_token = x_jwt_assertion
 
     # Convert history to list of dicts for the agent
     history = (

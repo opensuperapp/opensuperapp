@@ -21,6 +21,8 @@ Uses the OpenAI GPT model with tool-calling to fetch data from
 micro-app backends (e.g., meals menu) and present it conversationally.
 """
 
+import base64
+import json
 import logging
 from datetime import datetime, timezone, timedelta
 
@@ -28,13 +30,27 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, Tool
 from langchain_openai import ChatOpenAI
 
 from app.config import OPENAI_API_KEY, OPENAI_MODEL
-from app.token_exchange import exchange_token_for_meals
-from app.tools import get_todays_menu, submit_lunch_feedback
+from app.token_exchange import exchange_token_for_meals, exchange_token_for_guest_wifi
+from app.tools import get_todays_menu, submit_lunch_feedback, create_guest_wifi_account, get_guest_wifi_accounts, delete_guest_wifi_account
 
 logger = logging.getLogger(__name__)
 
 # Maximum number of tool-call rounds before forcing a text reply
 MAX_TOOL_ITERATIONS = 3
+
+
+def _get_email_prefix(token: str) -> str:
+    """Decode a JWT and return the part of the email/sub claim before '@'."""
+    try:
+        payload_b64 = token.split(".")[1]
+        padding = 4 - len(payload_b64) % 4
+        if padding != 4:
+            payload_b64 += "=" * padding
+        payload = json.loads(base64.urlsafe_b64decode(payload_b64))
+        identifier = payload.get("email") or payload.get("sub", "")
+        return identifier.split("@")[0] if "@" in identifier else ""
+    except Exception:
+        return ""
 
 # Sri Lanka timezone (UTC+5:30)
 SL_TIMEZONE = timezone(timedelta(hours=5, minutes=30))
@@ -60,6 +76,14 @@ Use the get_todays_menu tool when users ask about food, meals, lunch, breakfast,
 Use this when the user wants to give feedback, review, or share their opinion about today's lunch. \
 Feedback can only be submitted between 12:00 and 16:15 (Sri Lanka time). \
 The current time is {current_time}. {"The feedback window is currently OPEN." if in_feedback_window else "The feedback window is currently CLOSED — tell the user that feedback can only be submitted between 12:00 and 16:15."}
+
+3. **Guest Wi-Fi**: Create, view, and delete guest Wi-Fi accounts. \
+Use the create_guest_wifi_account tool when the user wants to create a guest Wi-Fi account. \
+Use the get_guest_wifi_accounts tool when the user wants to see their existing guest Wi-Fi accounts. \
+Use the delete_guest_wifi_account tool when the user wants to delete a guest Wi-Fi account. \
+Credentials are generated automatically — do NOT ask the user for a username or password when creating. \
+For deletion, ask the user for the username of the account to delete if they haven't provided it. \
+After successful creation, display the username and password clearly so the user can share them with their guest.
 
 When presenting menu information:
 - Format it in a clean, readable way using markdown
@@ -117,7 +141,7 @@ async def run_agent(
         temperature=0.3,
     )
 
-    tools = [get_todays_menu, submit_lunch_feedback]
+    tools = [get_todays_menu, submit_lunch_feedback, create_guest_wifi_account, get_guest_wifi_accounts, delete_guest_wifi_account]
     llm_with_tools = llm.bind_tools(tools)
 
     messages = [SystemMessage(content=build_system_prompt())]
@@ -170,6 +194,46 @@ async def run_agent(
                     logger.error("Feedback submission failed: %s", e)
                     result = {
                         "error": "Failed to submit feedback. Please try again later."
+                    }
+            elif tool_name == "create_guest_wifi_account":
+                try:
+                    wifi_token = await exchange_token_for_guest_wifi(access_token)
+                    result = await create_guest_wifi_account.ainvoke(
+                        {"access_token": wifi_token}
+                    )
+                    if result.get("success"):
+                        email_prefix = _get_email_prefix(access_token)
+                        if email_prefix:
+                            result["username"] = f"{result['username']}.guestof.{email_prefix}"
+                except Exception as e:
+                    logger.error("Guest Wi-Fi account creation failed: %s", e)
+                    result = {
+                        "error": "Failed to create guest Wi-Fi account. Please try again later."
+                    }
+            elif tool_name == "get_guest_wifi_accounts":
+                try:
+                    wifi_token = await exchange_token_for_guest_wifi(access_token)
+                    result = await get_guest_wifi_accounts.ainvoke(
+                        {"access_token": wifi_token}
+                    )
+                except Exception as e:
+                    logger.error("Failed to fetch guest Wi-Fi accounts: %s", e)
+                    result = {
+                        "error": "Failed to fetch guest Wi-Fi accounts. Please try again later."
+                    }
+            elif tool_name == "delete_guest_wifi_account":
+                try:
+                    wifi_token = await exchange_token_for_guest_wifi(access_token)
+                    result = await delete_guest_wifi_account.ainvoke(
+                        {
+                            "access_token": wifi_token,
+                            "username": tool_call["args"].get("username", ""),
+                        }
+                    )
+                except Exception as e:
+                    logger.error("Failed to delete guest Wi-Fi account: %s", e)
+                    result = {
+                        "error": "Failed to delete guest Wi-Fi account. Please try again later."
                     }
             else:
                 result = {"error": f"Unknown tool: {tool_name}"}

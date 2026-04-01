@@ -26,41 +26,43 @@ import logging
 
 import httpx
 
-from app.config import ASGARDEO_TOKEN_URL, MEALS_APP_CLIENT_ID
+from app.config import ASGARDEO_TOKEN_URL, MEALS_APP_CLIENT_ID, GUEST_WIFI_APP_CLIENT_ID, MEALS_EXTRA_SCOPES, GUEST_WIFI_EXTRA_SCOPES
 
 logger = logging.getLogger(__name__)
 
 GRANT_TYPE_TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange"
 SUBJECT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt"
 REQUESTED_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token"
-SCOPE = "openid email groups profile"
+DEFAULT_SCOPE = "openid email groups profile"
 
 
-async def exchange_token_for_meals(access_token: str) -> str:
+async def exchange_token(access_token: str, client_id: str, scope: str = DEFAULT_SCOPE) -> str:
     """
-    Exchange the super app access token for a meals-app-scoped access token.
+    Exchange the super app access token for a micro-app-scoped access token.
 
     Args:
         access_token: The super app's access token from Asgardeo.
+        client_id: The OAuth2 client ID of the target micro-app.
+        scope: The requested scope (defaults to openid email groups profile).
 
     Returns:
-        The exchanged access token scoped to the meals app.
+        The exchanged access token scoped to the target micro-app.
 
     Raises:
         Exception: If the token exchange fails.
     """
     if not ASGARDEO_TOKEN_URL:
         raise ValueError("ASGARDEO_TOKEN_URL is not configured")
-    if not MEALS_APP_CLIENT_ID:
-        raise ValueError("MEALS_APP_CLIENT_ID is not configured")
+    if not client_id:
+        raise ValueError("client_id is not configured")
 
     payload = {
         "grant_type": GRANT_TYPE_TOKEN_EXCHANGE,
         "subject_token": access_token,
         "subject_token_type": SUBJECT_TOKEN_TYPE,
         "requested_token_type": REQUESTED_TOKEN_TYPE,
-        "client_id": MEALS_APP_CLIENT_ID,
-        "scope": SCOPE,
+        "client_id": client_id,
+        "scope": scope,
     }
 
     async with httpx.AsyncClient(timeout=15.0) as client:
@@ -87,5 +89,22 @@ async def exchange_token_for_meals(access_token: str) -> str:
             logger.error("Token exchange response missing access_token: %s", data)
             raise Exception("Token exchange response does not contain access_token")
 
-        logger.info("Token exchange successful for meals app")
+        logger.debug("Token exchange successful for client_id: %s", client_id)
         return exchanged_token
+
+
+def _build_scope(extra_scopes: str) -> str:
+    """Append extra scopes to the default scope if provided."""
+    if extra_scopes:
+        return f"{DEFAULT_SCOPE} {extra_scopes.strip()}"
+    return DEFAULT_SCOPE
+
+
+async def exchange_token_for_meals(access_token: str) -> str:
+    """Exchange the super app access token for a meals-app-scoped access token."""
+    return await exchange_token(access_token, MEALS_APP_CLIENT_ID, _build_scope(MEALS_EXTRA_SCOPES))
+
+
+async def exchange_token_for_guest_wifi(access_token: str) -> str:
+    """Exchange the super app access token for a guest-wifi-app-scoped access token."""
+    return await exchange_token(access_token, GUEST_WIFI_APP_CLIENT_ID, _build_scope(GUEST_WIFI_EXTRA_SCOPES))
