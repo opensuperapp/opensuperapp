@@ -30,10 +30,11 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Header, Request
 from pydantic import BaseModel
 
 from app.agent import run_agent
+from app.config import DEBUG
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +67,7 @@ async def health():
 @app.post("/chat", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,
+    raw_request: Request,
     authorization: Optional[str] = Header(None, description="Bearer <access_token>"),
 ):
     """
@@ -76,6 +78,9 @@ async def chat(
 
     The access token is forwarded to micro-app backends for authentication.
     """
+    if DEBUG:
+        logger.info("Incoming headers: %s", list(raw_request.headers.keys()))
+
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(
             status_code=401,
