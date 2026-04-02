@@ -68,29 +68,32 @@ async def health():
 async def chat(
     request: ChatRequest,
     raw_request: Request,
-    authorization: Optional[str] = Header(None, description="Bearer <access_token>"),
+    x_jwt_assertion: Optional[str] = Header(None, alias="x-jwt-assertion"),
+    x_user_assertion: Optional[str] = Header(None, alias="x-user-assertion"),
 ):
     """
     Process a chat message from the user.
 
-    The Authorization header must contain the user's access token as:
-        Bearer <access_token>
-
-    The access token is forwarded to micro-app backends for authentication.
+    Both headers are required:
+      - x-jwt-assertion: <access_token>
+      - x-user-assertion: <access_token> (used as the token for micro-app token exchange)
     """
     if DEBUG:
         logger.info("Incoming headers: %s", list(raw_request.headers.keys()))
 
-    if not authorization or not authorization.startswith("Bearer "):
+    if not x_jwt_assertion:
         raise HTTPException(
             status_code=401,
-            detail="Authorization header must be in format: Bearer <token>",
+            detail="x-jwt-assertion header is required",
         )
 
-    access_token = authorization[len("Bearer "):]
+    if not x_user_assertion:
+        raise HTTPException(
+            status_code=401,
+            detail="x-user-assertion header is required",
+        )
 
-    if not access_token:
-        raise HTTPException(status_code=401, detail="Access token is required")
+    access_token = x_user_assertion
 
     # Convert history to list of dicts for the agent
     history = (
@@ -110,4 +113,4 @@ async def chat(
         )
         
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000, h11_max_incomplete_event_size=16384)
