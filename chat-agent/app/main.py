@@ -68,25 +68,23 @@ async def health():
 async def chat(
     request: ChatRequest,
     raw_request: Request,
+    x_jwt_assertion: Optional[str] = Header(None, alias="x-jwt-assertion"),
     x_user_assertion: Optional[str] = Header(None, alias="x-user-assertion"),
-    authorization: Optional[str] = Header(None, description="Bearer <access_token>"),
 ):
     """
     Process a chat message from the user.
 
-    Provide the user's access token via either:
-      - x-user-assertion header (used by Choreo), or
-      - Authorization: Bearer <access_token> header (used locally)
-
-    The access token is forwarded to micro-app backends for authentication.
+    Both headers are required:
+      - x-jwt-assertion: <access_token>
+      - x-user-assertion: <access_token> (used as the token for micro-app token exchange)
     """
     if DEBUG:
         logger.info("Incoming headers: %s", list(raw_request.headers.keys()))
 
-    if not authorization or not authorization.startswith("Bearer "):
+    if not x_jwt_assertion:
         raise HTTPException(
             status_code=401,
-            detail="Authorization header must be in format: Bearer <token>",
+            detail="x-jwt-assertion header is required",
         )
 
     if not x_user_assertion:
