@@ -27,7 +27,10 @@ This document describes how the OpenSuperApp chat agent implements skill-based A
 |---|-------|-----------------|---------|------|
 | 1 | **Meals & Menu** | "What's for lunch?", "Show today's menu" | Meals API — `GET /menu` (Ballerina) | Token exchange (RFC 8693) |
 | 2 | **Lunch Feedback** | "The lunch was great", "I want to give feedback" | Meals API — `POST /feedback` (Ballerina) | Token exchange (RFC 8693) |
-| 3 | **Micro-App Guidance** | "How do I apply for leave?", "Book a room" | *None (prompt-only)* | N/A |
+| 3 | **Create Guest Wi-Fi** | "Create a guest wifi account", "Set up wifi for my guest" | Guest Wi-Fi API — `POST /guest-wifi-accounts` | Token exchange (RFC 8693) |
+| 4 | **Get Guest Wi-Fi Accounts** | "Show my guest wifi accounts", "What wifi accounts do I have?" | Guest Wi-Fi API — `GET /guest-wifi-accounts` | Token exchange (RFC 8693) |
+| 5 | **Delete Guest Wi-Fi Account** | "Delete guest wifi account guest_xy12", "Remove wifi access for guest" | Guest Wi-Fi API — `DELETE /guest-wifi-accounts/{username}` | Token exchange (RFC 8693) |
+| 6 | **Micro-App Guidance** | "How do I apply for leave?", "Book a room" | *None (prompt-only)* | N/A |
 
 ---
 
@@ -124,7 +127,10 @@ LangChain's `@tool` decorator auto-generates an OpenAI-compatible function schem
 The agent binds tools explicitly in `app/agent.py`:
 
 ```python
-llm_with_tools = llm.bind_tools([get_todays_menu, submit_lunch_feedback])
+llm_with_tools = llm.bind_tools([
+    get_todays_menu, submit_lunch_feedback,
+    create_guest_wifi_account, get_guest_wifi_accounts, delete_guest_wifi_account,
+])
 ```
 
 This binding step is where skills are *registered*. The LLM receives the full JSON Schema for each tool and decides autonomously when to invoke them — the core of the Anthropic Skills pattern.
@@ -196,19 +202,26 @@ This is where our architecture goes beyond the standard Skills framework. Each m
 
 ```python
 # app/token_exchange.py
-async def exchange_token_for_meals(access_token: str) -> str:
+async def exchange_token(access_token: str, client_id: str, scope: str = DEFAULT_SCOPE) -> str:
     payload = {
         "grant_type": GRANT_TYPE_TOKEN_EXCHANGE,       # RFC 8693
         "subject_token": access_token,                  # super app token
         "subject_token_type": SUBJECT_TOKEN_TYPE,       # jwt
         "requested_token_type": REQUESTED_TOKEN_TYPE,   # access_token
-        "client_id": MEALS_APP_CLIENT_ID,               # per-app scoped
-        "scope": SCOPE,                                 # openid email groups profile
+        "client_id": client_id,                         # per-app scoped
+        "scope": scope,                                 # openid email groups profile [+ extras]
     }
     # ... POST to Asgardeo token endpoint
+
+# Thin wrappers per micro-app:
+async def exchange_token_for_meals(access_token: str) -> str:
+    return await exchange_token(access_token, MEALS_APP_CLIENT_ID, _build_scope(MEALS_EXTRA_SCOPES))
+
+async def exchange_token_for_guest_wifi(access_token: str) -> str:
+    return await exchange_token(access_token, GUEST_WIFI_APP_CLIENT_ID, _build_scope(GUEST_WIFI_EXTRA_SCOPES))
 ```
 
-**Key design decision:** Each backend gets its own `client_id` and exchange function. When a new backend is added (e.g., Leave, Facilities), it gets a *new* exchange function with its own `CLIENT_ID` environment variable. This mirrors the existing micro-app pattern in the React Native frontend's `authService.ts` and ensures least-privilege token scoping.
+**Key design decision:** All exchange logic lives in a single `exchange_token()` function. Each micro-app gets a thin wrapper with its own `CLIENT_ID` and optional extra scopes (via `*_EXTRA_SCOPES` env vars). Adding a new backend only requires a one-liner wrapper. This mirrors the existing micro-app pattern in the React Native frontend's `authService.ts` and ensures least-privilege token scoping.
 
 ---
 
@@ -301,7 +314,7 @@ async def get_leave_balance(access_token: str) -> dict:
 
 ### Step 2: Add Token Exchange
 
-In `app/token_exchange.py`, add a new exchange function with the app's client ID:
+In `app/token_exchange.py`, add a one-liner wrapper using the shared `exchange_token()` function:
 
 ```python
 from app.config import LEAVE_APP_CLIENT_ID
