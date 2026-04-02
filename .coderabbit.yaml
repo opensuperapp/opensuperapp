@@ -5,3 +5,4 @@ reviews:
     base_branches: ["main", "v1", "release.*", "dev-.*"]
 chat:
   auto_reply: true
+  
