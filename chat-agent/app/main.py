@@ -66,18 +66,26 @@ async def health():
 @app.post("/chat", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,
-    x_jwt_assertion: Optional[str] = Header(None, alias="x-jwt-assertion"),
+    authorization: Optional[str] = Header(None, description="Bearer <access_token>"),
 ):
     """
     Process a chat message from the user.
 
-    The x-jwt-assertion header must contain the user's access token.
-    This is populated automatically by Choreo when 'Pass End User Attributes' is enabled.
-    """
-    if not x_jwt_assertion:
-        raise HTTPException(status_code=401, detail="x-jwt-assertion header is required")
+    The Authorization header must contain the user's access token as:
+        Bearer <access_token>
 
-    access_token = x_jwt_assertion
+    The access token is forwarded to micro-app backends for authentication.
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=401,
+            detail="Authorization header must be in format: Bearer <token>",
+        )
+
+    access_token = authorization[len("Bearer "):]
+
+    if not access_token:
+        raise HTTPException(status_code=401, detail="Access token is required")
 
     # Convert history to list of dicts for the agent
     history = (
