@@ -68,13 +68,15 @@ async def health():
 async def chat(
     request: ChatRequest,
     raw_request: Request,
+    x_user_assertion: Optional[str] = Header(None, alias="x-user-assertion"),
     authorization: Optional[str] = Header(None, description="Bearer <access_token>"),
 ):
     """
     Process a chat message from the user.
 
-    The Authorization header must contain the user's access token as:
-        Bearer <access_token>
+    Provide the user's access token via either:
+      - x-user-assertion header (used by Choreo), or
+      - Authorization: Bearer <access_token> header (used locally)
 
     The access token is forwarded to micro-app backends for authentication.
     """
@@ -87,10 +89,13 @@ async def chat(
             detail="Authorization header must be in format: Bearer <token>",
         )
 
-    access_token = authorization[len("Bearer "):]
+    if not x_user_assertion:
+        raise HTTPException(
+            status_code=401,
+            detail="x-user-assertion header is required",
+        )
 
-    if not access_token:
-        raise HTTPException(status_code=401, detail="Access token is required")
+    access_token = x_user_assertion
 
     # Convert history to list of dicts for the agent
     history = (
@@ -110,4 +115,4 @@ async def chat(
         )
         
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000, h11_max_incomplete_event_size=16384)
