@@ -43,7 +43,7 @@ import {
   makeDirectoryAsync,
   readAsStringAsync,
   writeAsStringAsync,
-} from "expo-file-system";
+} from "expo-file-system/legacy";
 import JSZip from "jszip";
 import { Alert } from "react-native";
 import { UpdateUserConfiguration } from "./userConfigService";
