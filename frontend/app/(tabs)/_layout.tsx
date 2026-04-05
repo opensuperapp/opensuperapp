@@ -22,10 +22,11 @@ import {
   LIBRARY_TAB_NAME,
   MY_APPS_TAB_NAME,
   PROFILE_TAB_NAME,
-  WSO2_EMAIL_DOMAIN,
 } from "@/constants/Constants";
 import { RootState } from "@/context/store";
 import { useRestoreLastTab } from "@/hooks/useRestoreLastTab";
+import { useTabVisibilityRules } from "@/hooks/useTabVisibilityRules";
+import { shouldShowTab } from "@/utils/tab-visibility-rules";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { Platform } from "react-native";
@@ -91,9 +92,15 @@ const tabs: TabType[] = [
   },
 ];
 
+/**
+ * Bottom tab layout; each tab’s visibility is driven by Remote Config rules (or bundled defaults).
+ * @returns {JSX.Element} Tab navigator for primary app sections.
+ */
 export default function TabLayout() {
   // Load last active tab and navigate to it
   useRestoreLastTab();
+
+  const { rules } = useTabVisibilityRules();
 
   const isSignedIn = useSelector(
     (state: RootState) => !!state.auth.accessToken,
@@ -102,8 +109,6 @@ export default function TabLayout() {
   const userEmail = useSelector(
     (state: RootState) => state.userInfo.userInfo?.workEmail ?? "",
   );
-
-  const isWso2User = userEmail.endsWith(WSO2_EMAIL_DOMAIN);
 
   return (
     <Tabs
@@ -128,13 +133,13 @@ export default function TabLayout() {
             headerShown: tab.options.headerShown,
             title: tab.options.title,
             headerTitleAllowFontScaling: false,
-            // Hide tabs requiring auth if the user isn't signed in or isn't a WSO2 employee
-            href:
-              tab.requiresAuth && !isSignedIn
-                ? null
-                : tab.name === "chat" && !isWso2User
-                  ? null
-                  : undefined,
+            href: shouldShowTab(tab.name, rules, {
+              isSignedIn,
+              email: userEmail,
+              tabRequiresAuth: tab.requiresAuth,
+            })
+              ? undefined
+              : null,
             tabBarIcon: ({ focused, color }) => (
               <Ionicons
                 name={focused ? tab.options.iconFocused : tab.options.icon}
