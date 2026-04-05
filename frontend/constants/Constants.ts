@@ -134,3 +134,10 @@ export const LIBRARY_TAB_NAME = "Library";
 export const MY_APPS_TAB_NAME = "My Apps";
 export const CHAT_TAB_NAME = "Chat";
 export const PROFILE_TAB_NAME = "Profile";
+
+// Firebase Remote Config parameter key for tab bar visibility JSON.
+export const TAB_VISIBILITY_RULES_REMOTE_CONFIG_KEY = "tab_visibility_rules";
+
+// Basename of Android `res/xml/` and iOS bundle plist produced on prebuild.
+export const TAB_VISIBILITY_RC_DEFAULTS_RESOURCE_NAME =
+  "remote_config_tab_visibility_defaults";
