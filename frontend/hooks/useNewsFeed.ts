@@ -58,6 +58,9 @@ const useNewsFeed = () => {
           const parser = new XMLParser({
             ignoreAttributes: false,
             attributeNamePrefix: "@_",
+            processEntities: {
+              maxTotalExpansions: 10000,
+            },
           });
           const json = parser.parse(response.data);
 
