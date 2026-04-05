@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "tabs": {
+    "index": {
+      "mode": "public"
+    },
+    "library": {
+      "mode": "public"
+    },
+    "apps": {
+      "mode": "public"
+    },
+    "profile": {
+      "mode": "public"
+    },
+    "chat": {
+      "mode": "allow_domains",
+      "domains": ["wso2.com"],
+      "requiresAuth": true
+    }
+  }
+}
