@@ -54,6 +54,9 @@ export const withFirebase = (config: ExpoConfig) => {
   // Adds the Firebase plugins to the Expo config.
   if (config.plugins) {
     config.plugins.push(...FIREBASE_PLUGINS);
+    config.plugins.push(
+      "./integrations/firebase/withRemoteConfigTabVisibilityDefaults.ts",
+    );
   }
 
   // Add the iOS google services file to the config and set the packages build properties to static.
