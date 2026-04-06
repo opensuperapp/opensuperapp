@@ -38,9 +38,10 @@ function cloneDefaults(): TabVisibilityRules {
 }
 
 /**
- * Returns the registrable domain part of an email, lowercased, or null if missing.
+ * Returns the full host portion of the email after the final `@`, lowercased (e.g.
+ * `team.mail.example.com`), or null if the address is missing or invalid.
  * @param email - Raw email from the user profile.
- * @returns Domain substring or null.
+ * @returns Email host substring after `@`, lowercased, or null.
  */
 export function extractEmailDomain(email: string): string | null {
   const t = email.trim().toLowerCase();
@@ -125,8 +126,6 @@ function legacyShouldShowTab(
   return true;
 }
 
-const DEFAULT_ORDER_FALLBACK_BASE = 100_000;
-
 /**
  * Reorders tab definitions using per-tab `order` on `rules.tabs[name]` (Remote Config).
  * Tabs without a finite `order` sort after any ordered tabs, preserving the app default order.
@@ -150,16 +149,19 @@ export function sortTabsByVisibilityRules<T extends { name: string }>(
     .sort((a, b) => {
       const orderA = rules.tabs[a.t.name]?.order;
       const orderB = rules.tabs[b.t.name]?.order;
-      const keyA =
-        typeof orderA === "number" && Number.isFinite(orderA)
-          ? orderA
-          : DEFAULT_ORDER_FALLBACK_BASE + a.defaultIndex;
-      const keyB =
-        typeof orderB === "number" && Number.isFinite(orderB)
-          ? orderB
-          : DEFAULT_ORDER_FALLBACK_BASE + b.defaultIndex;
-      if (keyA !== keyB) {
-        return keyA - keyB;
+      const finiteA = typeof orderA === "number" && Number.isFinite(orderA);
+      const finiteB = typeof orderB === "number" && Number.isFinite(orderB);
+      if (finiteA && finiteB) {
+        if (orderA !== orderB) {
+          return orderA - orderB;
+        }
+        return a.defaultIndex - b.defaultIndex;
+      }
+      if (finiteA && !finiteB) {
+        return -1;
+      }
+      if (!finiteA && finiteB) {
+        return 1;
       }
       return a.defaultIndex - b.defaultIndex;
     })
@@ -201,10 +203,11 @@ export function shouldShowTab(
     if (list.length === 0) {
       return false;
     }
-    if (list.includes("*")) {
+    const normalizedList = list.map((e) => e.trim().toLowerCase());
+    if (normalizedList.includes("*")) {
       return true;
     }
-    return list.some((d) => d.trim().toLowerCase() === domain);
+    return normalizedList.includes(domain);
   }
   return true;
 }
