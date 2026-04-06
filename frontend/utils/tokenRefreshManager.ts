@@ -1,35 +1,25 @@
-// Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
-//
-// WSO2 LLC. licenses this file to you under the Apache License,
-// Version 2.0 (the "License"); you may not use this file except
-// in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
 import { router } from "expo-router";
 import { jwtDecode } from "jwt-decode";
 import { AppState, AppStateStatus } from "react-native";
 import { ScreenPaths } from "../constants/ScreenPaths";
-import { refreshAccessToken } from "../services/authService";
 import {
   resetAlertState,
   showLogoutConfirmation,
+  showNetworkError,
   showRefreshRetryDialog,
 } from "./authAlerts";
-import { loadAuthDataFromSecureStore } from "./authTokenStore";
+import {
+  loadAuthDataFromSecureStore,
+  saveAuthDataToSecureStore,
+  SecureAuthData,
+} from "./authTokenStore";
 import { performLogout } from "./performLogout";
+import { AUTH_CONFIG } from "@/config/authConfig";
+import { CLIENT_ID, TOKEN_URL } from "@/constants/Constants";
+import createAuthRequestBody from "@/utils/authBody";
+import { isRetryableError, retryWithBackoff } from "./requestHandler";
 
 const REFRESH_THRESHOLD_PERCENT = 0.8;
-const MAX_RETRIES = 3;
-const BASE_RETRY_DELAY = 500;
-const RETRY_MULTIPLIER = 2;
 const FOREGROUND_COOLDOWN = 30000;
 const PERIODIC_CHECK_INTERVAL = 40000;
 const DEFAULT_TOKEN_LIFETIME = 60 * 60 * 1000;
@@ -38,12 +28,6 @@ let refreshPromise: Promise<boolean> | null = null;
 let lastForegroundRefresh = 0;
 let periodicCheckTimer: NodeJS.Timeout | null = null;
 let appStateSubscription: { remove: () => void } | null = null;
-
-function getRetryDelay(attempt: number): number {
-  const baseDelay = BASE_RETRY_DELAY * Math.pow(RETRY_MULTIPLIER, attempt - 1);
-  const jitter = Math.random() * 100;
-  return baseDelay + jitter;
-}
 
 function getTokenLifetimeFromJWT(accessToken: string): number {
   try {
@@ -70,64 +54,167 @@ export async function shouldRefreshToken(): Promise<boolean> {
   return needsRefresh;
 }
 
-async function performRefreshWithRetry(attempt: number = 1): Promise<boolean> {
+export interface AuthData {
+  accessToken: string;
+  refreshToken: string;
+  idToken: string;
+  email?: string;
+  userId?: string;
+  expiresAt: number;
+}
+
+export interface DecodedIdToken {
+  email?: string;
+  userid?: string;
+}
+
+const MILLISECONDS_IN_A_SECOND = 1000;
+const GRANT_TYPE_REFRESH_TOKEN = "refresh_token";
+
+export async function performTokenRefresh(
+  onLogout: () => Promise<void>
+): Promise<AuthData | null> {
   try {
-    const onLogout = async () => {
-      await showLogoutConfirmation(
-        "Session Expired",
-        "Your session has expired. Would you like to sign in again?",
+    const storedData = await loadAuthDataFromSecureStore();
+    if (!storedData) {
+      return null;
+    }
+
+    const authData: AuthData = storedData;
+    if (!authData.refreshToken) {
+      return null;
+    }
+
+    if (!TOKEN_URL) {
+      console.error(
+        "TOKEN_URL is not defined. Check your environment variables."
+      );
+      return null;
+    }
+
+    const requestBody = createAuthRequestBody({
+      grantType: GRANT_TYPE_REFRESH_TOKEN,
+      clientId: CLIENT_ID,
+      refreshToken: authData.refreshToken,
+    });
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15_000);
+
+    const response = await fetch(TOKEN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: requestBody,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      console.error(
+        `Token refresh failed: ${response.status} ${response.statusText}`
+      );
+      if (response.status === 400) {
+        await showLogoutConfirmation(
+          "Session Expired",
+          "Your session has expired. Would you like to sign in again?",
+          async () => {
+            await performLogout();
+            router.navigate(ScreenPaths.PROFILE);
+          }
+        );
+      }
+
+      return null;
+    }
+
+    const data = await response.json();
+
+    if (data.access_token && data.id_token) {
+      const decodedIdToken = jwtDecode<DecodedIdToken>(data.id_token);
+      const exp = jwtDecode<{ exp: number }>(data.access_token).exp || 0;
+      const { email, userid: userId } = decodedIdToken;
+
+      const updatedAuthData: AuthData = {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token || authData.refreshToken,
+        idToken: data.id_token,
+        email,
+        userId,
+        expiresAt: exp * MILLISECONDS_IN_A_SECOND,
+      };
+
+      await saveAuthDataToSecureStore(updatedAuthData as SecureAuthData);
+      return updatedAuthData;
+    }
+
+    return null;
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      if (err.name === "AbortError") {
+        console.error("Token refresh timed out after 15 seconds");
+        await showNetworkError("Request timed out. Check your connection and try again.");
+      } else if (err.message.includes("Network request failed") || err.message.includes("timeout")) {
+        console.error("Token refresh error:", err.message);
+        await showNetworkError("Check your connection and try again.");
+      } else {
+        console.error("Token refresh error:", err.message);
+        await showRefreshRetryDialog(
+          "Error",
+          "An error occurred while refreshing your session. Would you like to try again or sign in?",
+          async () => {
+            await performTokenRefresh(onLogout);
+          },
+          async () => {
+            await performLogout();
+            router.navigate(ScreenPaths.PROFILE);
+          }
+        );
+      }
+    } else {
+      console.error("An unexpected error occurred during token refresh.");
+      await showRefreshRetryDialog(
+        "Error",
+        "An unexpected error occurred. Would you like to try again or sign in?",
+        async () => {
+          await performTokenRefresh(onLogout);
+        },
         async () => {
           await performLogout();
           router.navigate(ScreenPaths.PROFILE);
         }
       );
-    };
-
-    const newAuthData = await refreshAccessToken(onLogout);
-
-    if (newAuthData?.accessToken) {
-      resetAlertState();
-      return true;
     }
 
-    if (attempt < MAX_RETRIES) {
-      const delay = getRetryDelay(attempt);
-      await new Promise((resolve) => setTimeout(resolve, delay));
-      return performRefreshWithRetry(attempt + 1);
-    }
-
-    await showRefreshRetryDialog(
-      "Session Refresh Failed",
-      "Could not refresh your session. Would you like to try again or sign in?",
-      async () => {
-        resetAlertState();
-        await performRefreshWithRetry(1);
-      },
-      async () => {
-        await performLogout();
-        router.navigate(ScreenPaths.PROFILE);
-      }
-    );
-    return false;
-  } catch (error) {
-    if (attempt < MAX_RETRIES && isNetworkError(error)) {
-      const delay = getRetryDelay(attempt);
-      await new Promise((resolve) => setTimeout(resolve, delay));
-      return performRefreshWithRetry(attempt + 1);
-    }
-
-    return false;
+    return null;
   }
 }
 
-function isNetworkError(error: unknown): boolean {
-  if (error instanceof Error) {
-    return (
-      error.message.includes("Network request failed") ||
-      error.message.includes("timeout") ||
-      error.message.includes("ETIMEDOUT")
-    );
+async function performRefreshWithRetry(): Promise<boolean> {
+  const onLogout = async () => {
+    await performLogout();
+    router.navigate(ScreenPaths.PROFILE);
+  };
+
+  const newAuthData = await retryWithBackoff(
+    async () => {
+      const result = await performTokenRefresh(onLogout);
+      if (!result?.accessToken) {
+        throw new Error("Token refresh failed");
+      }
+      return result;
+    },
+    3,
+    500,
+    2,
+    100
+  );
+
+  if (newAuthData?.accessToken) {
+    resetAlertState();
+    return true;
   }
+
   return false;
 }
 
