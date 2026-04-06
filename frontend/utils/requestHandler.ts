@@ -16,6 +16,7 @@
 import { checkAndRefreshTokenIfNeeded } from "@/utils/tokenRefreshManager";
 import { loadAuthDataFromSecureStore } from "@/utils/authTokenStore";
 import { refreshAccessToken } from "@/services/authService";
+import { addToQueue } from "@/utils/offlineQueue";
 import axios, { AxiosRequestConfig } from "axios";
 
 // General API request handler
@@ -59,6 +60,16 @@ export const apiRequest = async (
           throw retryError;
         }
       }
+    }
+
+    // Add to offline queue for retryable network errors
+    if (isRetryableError(error) && config.method && config.url) {
+      await addToQueue({
+        url: config.url,
+        method: config.method,
+        headers: config.headers as Record<string, string>,
+        body: config.data ? JSON.stringify(config.data) : undefined,
+      });
     }
 
     throw error;
