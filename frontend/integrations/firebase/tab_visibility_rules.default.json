@@ -2,21 +2,20 @@
   "version": 1,
   "tabs": {
     "index": {
-      "mode": "public"
+      "mode": "public",
+      "order": 0
     },
     "library": {
-      "mode": "public"
-    },
-    "apps": {
-      "mode": "public"
-    },
-    "profile": {
-      "mode": "public"
+      "mode": "public",
+      "order": 1
     },
     "chat": {
-      "mode": "allow_domains",
+      "mode": "domain_specific",
       "domains": ["wso2.com"],
-      "requiresAuth": true
-    }
+      "requiresAuth": true,
+      "order": 2
+    },
+    "apps": { "mode": "public", "order": 3 },
+    "profile": { "mode": "public", "order": 4 }
   }
 }
