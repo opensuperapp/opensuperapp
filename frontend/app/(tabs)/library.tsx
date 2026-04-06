@@ -22,6 +22,7 @@ import {
 } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import useDebounce from "@/hooks/useDebounce";
+import useNetworkQuality from "@/hooks/useNetworkQuality";
 import { useTrackActiveScreen } from "@/hooks/useTrackActiveScreen";
 import { fetchLibraryArticles } from "@/services/libraryService";
 import { LibraryArticle } from "@/types/library.types";
@@ -55,6 +56,7 @@ const Library = () => {
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   const debouncedQuery = useDebounce(searchQuery, 500);
+  const networkQuality = useNetworkQuality();
   const tabBarHeight: number = useBottomTabBarHeight();
   const colorScheme = useColorScheme();
   const styles = createStyles(colorScheme ?? "light", tabBarHeight);
@@ -210,6 +212,14 @@ const Library = () => {
         setSearchQuery={setSearchQuery}
         placeholder="Search by keywords"
       />
+
+      {!loading && networkQuality === "offline" && (
+        <View style={styles.offlineMessage}>
+          <Text style={styles.offlineText}>
+            You're offline. Showing cached content.
+          </Text>
+        </View>
+      )}
 
       {loading ? (
         <LibrarySkelton />
@@ -385,6 +395,20 @@ const createStyles = (colorScheme: "light" | "dark", tabBarHeight: number) =>
     emptyText: {
       color: Colors[colorScheme].secondaryTextColor,
       fontSize: 16,
+      textAlign: "center",
+    },
+    offlineMessage: {
+      backgroundColor: Colors[colorScheme].ternaryBackgroundColor,
+      padding: 12,
+      borderRadius: 8,
+      marginHorizontal: 16,
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: Colors.companyOrange,
+    },
+    offlineText: {
+      color: Colors[colorScheme].primaryTextColor,
+      fontSize: 14,
       textAlign: "center",
     },
   });

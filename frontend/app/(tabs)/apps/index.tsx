@@ -26,6 +26,7 @@ import { ScreenPaths } from "@/constants/ScreenPaths";
 import { MicroApp, resetApps } from "@/context/slices/appSlice";
 import { getUserConfigurations } from "@/context/slices/userConfigSlice";
 import { AppDispatch, RootState } from "@/context/store";
+import useNetworkQuality from "@/hooks/useNetworkQuality";
 import { useTrackActiveScreen } from "@/hooks/useTrackActiveScreen";
 import {
   downloadMicroApp,
@@ -74,6 +75,7 @@ export default function HomeScreen() {
     (state: RootState) => state.userConfig.configurations
   );
   const [syncing, setSyncing] = useState(false);
+  const networkQuality = useNetworkQuality();
   const colorScheme = useColorScheme();
   const styles = createStyles(colorScheme ?? "light");
   const version = Constants.expoConfig?.version;
@@ -309,6 +311,14 @@ export default function HomeScreen() {
         placeholder="Search apps..."
       />
 
+      {networkQuality === "offline" && (
+        <View style={styles.offlineMessage}>
+          <Text style={styles.offlineText}>
+            You're offline. Some features may not be available.
+          </Text>
+        </View>
+      )}
+
       <SyncingModal
         syncing={syncing}
         currentAction={currentAction}
@@ -421,5 +431,19 @@ const createStyles = (colorScheme: "light" | "dark") =>
       alignItems: "center",
       justifyContent: "center",
       elevation: 3,
+    },
+    offlineMessage: {
+      backgroundColor: Colors[colorScheme].ternaryBackgroundColor,
+      padding: 12,
+      borderRadius: 8,
+      marginHorizontal: 16,
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: Colors.companyOrange,
+    },
+    offlineText: {
+      color: Colors[colorScheme].primaryTextColor,
+      fontSize: 14,
+      textAlign: "center",
     },
   });
