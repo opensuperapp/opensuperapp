@@ -19,10 +19,8 @@ import {
   TAB_VISIBILITY_RC_DEFAULTS_RESOURCE_NAME,
 } from "@/constants/Constants";
 import defaultRulesJson from "@/integrations/firebase/tab_visibility_rules.default.json";
-import {
-  parseTabVisibilityRules,
-  type TabVisibilityRules,
-} from "@/utils/tab-visibility-rules";
+import { parseTabVisibilityRules } from "@/utils/tabVisibilityControl";
+import { type TabVisibilityRules } from "@/types/tabVisibility.types";
 import { useEffect, useState } from "react";
 import { Platform } from "react-native";
 
@@ -68,22 +66,21 @@ export function useTabVisibilityRules(): {
         });
         await setDefaultsFromResource(rc, TAB_VISIBILITY_RC_DEFAULTS_RESOURCE_NAME);
 
-        const readRules = (source: string) => {
+        const readRules = () => {
           const raw = getString(rc, TAB_VISIBILITY_RULES_REMOTE_CONFIG_KEY);
           const effective = raw.trim() ? raw : bundledDefaultsString;
-          const parsed = parseTabVisibilityRules(effective);
-          return parsed;
+          return parseTabVisibilityRules(effective);
         };
 
         if (!cancelled) {
-          setRules(readRules("Cache/Defaults"));
+          setRules(readRules());
           setReady(true);
         }
 
         await fetchAndActivate(rc);
 
         if (!cancelled) {
-          setRules(readRules("Firebase"));
+          setRules(readRules());
         }
       } catch (e) {
         console.warn("Tab visibility Remote Config unavailable, using bundled defaults:", e);
