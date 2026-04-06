@@ -21,6 +21,7 @@ import path from "path";
 const FIREBASE_PLUGINS = [
   "@react-native-firebase/app",
   "@react-native-firebase/messaging",
+  "@react-native-firebase/remote-config",
 ];
 
 /**
