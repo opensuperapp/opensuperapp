@@ -16,8 +16,8 @@
 import { removeGoogleAuthState } from "@/services/googleService";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { getItemAsync, setItemAsync } from "expo-secure-store";
+import { AuthData } from "../../utils/tokenRefreshManager";
 import {
-  AuthData,
   loadAuthData,
   logout,
   refreshAccessToken,
