@@ -90,7 +90,7 @@ const withRemoteConfigTabVisibilityDefaultsImpl: ConfigPlugin = (config) => {
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(plistAbsolute, buildIosDefaultsPlist(jsonString));
 
-    if (!projectConfig.modResults.hasFile(plistAbsolute)) {
+    if (!projectConfig.modResults.hasFile(plistRelative)) {
       projectConfig.modResults = IOSConfig.XcodeUtils.addResourceFileToGroup({
         filepath: plistRelative,
         groupName: projectName,
