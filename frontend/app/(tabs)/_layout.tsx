@@ -26,10 +26,14 @@ import {
 import { RootState } from "@/context/store";
 import { useRestoreLastTab } from "@/hooks/useRestoreLastTab";
 import { useTabVisibilityRules } from "@/hooks/useTabVisibilityRules";
-import { shouldShowTab } from "@/utils/tab-visibility-rules";
+import {
+  shouldShowTab,
+  sortTabsByVisibilityRules,
+} from "@/utils/tabVisibilityControl";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { Platform } from "react-native";
+import { useMemo } from "react";
+import { ActivityIndicator, Platform, View } from "react-native";
 import { useSelector } from "react-redux";
 
 type TabType = {
@@ -100,7 +104,7 @@ export default function TabLayout() {
   // Load last active tab and navigate to it
   useRestoreLastTab();
 
-  const { rules } = useTabVisibilityRules();
+  const { rules, ready } = useTabVisibilityRules();
 
   const isSignedIn = useSelector(
     (state: RootState) => !!state.auth.accessToken,
@@ -109,6 +113,25 @@ export default function TabLayout() {
   const userEmail = useSelector(
     (state: RootState) => state.userInfo.userInfo?.workEmail ?? "",
   );
+
+  const orderedTabs = useMemo(
+    () => sortTabsByVisibilityRules(tabs, rules),
+    [rules],
+  );
+
+  if (!ready) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <ActivityIndicator size="large" color={Colors.companyOrange} />
+      </View>
+    );
+  }
 
   return (
     <Tabs
@@ -124,9 +147,9 @@ export default function TabLayout() {
         }),
       }}
     >
-      {tabs.map((tab, index) => (
+      {orderedTabs.map((tab) => (
         <Tabs.Screen
-          key={`tab-${index}`}
+          key={tab.name}
           name={tab.name}
           options={{
             tabBarAccessibilityLabel: `tab_${tab.name}`,
