@@ -138,6 +138,12 @@ export const PROFILE_TAB_NAME = "Profile";
 // Firebase Remote Config parameter key for tab bar visibility JSON.
 export const TAB_VISIBILITY_RULES_REMOTE_CONFIG_KEY = "tab_visibility_rules";
 
+// Schema version for the tab visibility Remote Config JSON.
+export const TAB_VISIBILITY_RULES_SCHEMA_VERSION = parseInt(
+  process.env.EXPO_PUBLIC_TAB_VISIBILITY_RULES_SCHEMA_VERSION ?? "1",
+  10,
+);
+
 // Basename of Android `res/xml/` and iOS bundle plist produced on prebuild.
 export const TAB_VISIBILITY_RC_DEFAULTS_RESOURCE_NAME =
   "remote_config_tab_visibility_defaults";
