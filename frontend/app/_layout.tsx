@@ -32,6 +32,7 @@ import { buildAppsWithTokens } from "@/utils/exchangedTokenRehydrator";
 import { handleFreshInstall } from "@/utils/freshInstall";
 import { performLogout } from "@/utils/performLogout";
 import {
+  setInitializing,
   startTokenRefreshManager,
   stopTokenRefreshManager,
 } from "@/utils/tokenRefreshManager";
@@ -112,7 +113,12 @@ function AppInitializer({ onReady }: { onReady: () => void }) {
 
         dispatch(getVersions(handleLogout));
         dispatch(getUserConfigurations(handleLogout));
-        await dispatch(restoreAuth()).unwrap();
+        setInitializing(true);
+        try {
+          await dispatch(restoreAuth()).unwrap();
+        } finally {
+          setInitializing(false);
+        }
       } catch (error) {
         console.error("Initialization error:", error);
       } finally {

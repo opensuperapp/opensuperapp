@@ -1,4 +1,5 @@
 import { CLIENT_ID, TOKEN_URL } from "@/constants/Constants";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import createAuthRequestBody from "@/utils/authBody";
 import { router } from "expo-router";
 import { jwtDecode } from "jwt-decode";
@@ -20,7 +21,9 @@ import { retryWithBackoff } from "./requestHandler";
 
 const REFRESH_THRESHOLD_PERCENT = 0.8;
 
-// Calculates check intervals as 6.25% (1/16th) of the refresh window
+const REFRESH_IN_PROGRESS_KEY = "token_refresh_in_progress";
+const REFRESH_TIMESTAMP_KEY = "token_refresh_timestamp";
+
 const CHECK_INTERVAL_PERCENT = 0.0625;
 
 const DEFAULT_TOKEN_LIFETIME = 60 * 60 * 1000;
@@ -29,6 +32,11 @@ let refreshPromise: Promise<boolean> | null = null;
 let lastForegroundRefresh = 0;
 let periodicCheckTimer: NodeJS.Timeout | null = null;
 let appStateSubscription: { remove: () => void } | null = null;
+let isInitializing = false;
+
+export function setInitializing(initializing: boolean) {
+  isInitializing = initializing;
+}
 
 function getTokenLifetimeFromJWT(accessToken: string): number {
   try {
@@ -136,14 +144,30 @@ export async function performTokenRefresh(
         `Token refresh failed: ${response.status} ${response.statusText}`
       );
       if (response.status === 400) {
-        await showLogoutConfirmation(
-          "Session Expired",
-          "Your session has expired. Would you like to sign in again?",
-          async () => {
-            await performLogout();
-            router.navigate(ScreenPaths.PROFILE);
-          }
-        );
+        if (isInitializing) {
+          await showRefreshRetryDialog(
+            "Session Expired",
+            "Your session expired during app update. Would you like to try refreshing or sign in?",
+            async () => {
+              isInitializing = false;
+              await performTokenRefresh(onLogout);
+            },
+            async () => {
+              isInitializing = false;
+              await performLogout();
+              router.navigate(ScreenPaths.PROFILE);
+            }
+          );
+        } else {
+          await showLogoutConfirmation(
+            "Session Expired",
+            "Your session has expired. Would you like to sign in again?",
+            async () => {
+              await performLogout();
+              router.navigate(ScreenPaths.PROFILE);
+            }
+          );
+        }
       }
 
       return null;
@@ -222,26 +246,34 @@ async function performRefreshWithRetry(): Promise<boolean> {
     router.navigate(ScreenPaths.PROFILE);
   };
 
-  const newAuthData = await retryWithBackoff(
-    async () => {
-      const result = await performTokenRefresh(onLogout);
-      if (!result?.accessToken) {
-        throw new Error("Token refresh failed");
-      }
-      return result;
-    },
-    3,
-    500,
-    2,
-    100
-  );
+  await AsyncStorage.setItem(REFRESH_IN_PROGRESS_KEY, "true");
+  await AsyncStorage.setItem(REFRESH_TIMESTAMP_KEY, String(Date.now()));
 
-  if (newAuthData?.accessToken) {
-    resetAlertState();
-    return true;
+  try {
+    const newAuthData = await retryWithBackoff(
+      async () => {
+        const result = await performTokenRefresh(onLogout);
+        if (!result?.accessToken) {
+          throw new Error("Token refresh failed");
+        }
+        return result;
+      },
+      3,
+      500,
+      2,
+      100
+    );
+
+    if (newAuthData?.accessToken) {
+      resetAlertState();
+      return true;
+    }
+
+    return false;
+  } finally {
+    await AsyncStorage.removeItem(REFRESH_IN_PROGRESS_KEY);
+    await AsyncStorage.removeItem(REFRESH_TIMESTAMP_KEY);
   }
-
-  return false;
 }
 
 export async function checkAndRefreshTokenIfNeeded(): Promise<boolean> {
