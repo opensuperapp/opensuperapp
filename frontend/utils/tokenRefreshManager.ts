@@ -1,3 +1,5 @@
+import { CLIENT_ID, TOKEN_URL } from "@/constants/Constants";
+import createAuthRequestBody from "@/utils/authBody";
 import { router } from "expo-router";
 import { jwtDecode } from "jwt-decode";
 import { AppState, AppStateStatus } from "react-native";
@@ -14,14 +16,13 @@ import {
   SecureAuthData,
 } from "./authTokenStore";
 import { performLogout } from "./performLogout";
-import { AUTH_CONFIG } from "@/config/authConfig";
-import { CLIENT_ID, TOKEN_URL } from "@/constants/Constants";
-import createAuthRequestBody from "@/utils/authBody";
-import { isRetryableError, retryWithBackoff } from "./requestHandler";
+import { retryWithBackoff } from "./requestHandler";
 
 const REFRESH_THRESHOLD_PERCENT = 0.8;
-const FOREGROUND_COOLDOWN = 30000;
-const PERIODIC_CHECK_INTERVAL = 40000;
+
+// Calculates check intervals as 6.25% (1/16th) of the refresh window
+const CHECK_INTERVAL_PERCENT = 0.0625;
+
 const DEFAULT_TOKEN_LIFETIME = 60 * 60 * 1000;
 
 let refreshPromise: Promise<boolean> | null = null;
@@ -37,6 +38,26 @@ function getTokenLifetimeFromJWT(accessToken: string): number {
     }
   } catch {}
   return DEFAULT_TOKEN_LIFETIME;
+}
+
+async function getCheckIntervals(): Promise<{
+  foregroundCooldown: number;
+  periodicCheckInterval: number;
+}> {
+  const authData = await loadAuthDataFromSecureStore();
+  let tokenLifetime = DEFAULT_TOKEN_LIFETIME;
+
+  if (authData?.accessToken) {
+    tokenLifetime = getTokenLifetimeFromJWT(authData.accessToken);
+  }
+
+  const refreshWindow = tokenLifetime * (1 - REFRESH_THRESHOLD_PERCENT);
+  const checkInterval = Math.floor(refreshWindow * CHECK_INTERVAL_PERCENT);
+
+  return {
+    foregroundCooldown: checkInterval,
+    periodicCheckInterval: checkInterval,
+  };
 }
 
 export async function shouldRefreshToken(): Promise<boolean> {
@@ -153,8 +174,13 @@ export async function performTokenRefresh(
     if (err instanceof Error) {
       if (err.name === "AbortError") {
         console.error("Token refresh timed out after 15 seconds");
-        await showNetworkError("Request timed out. Check your connection and try again.");
-      } else if (err.message.includes("Network request failed") || err.message.includes("timeout")) {
+        await showNetworkError(
+          "Request timed out. Check your connection and try again."
+        );
+      } else if (
+        err.message.includes("Network request failed") ||
+        err.message.includes("timeout")
+      ) {
         console.error("Token refresh error:", err.message);
         await showNetworkError("Check your connection and try again.");
       } else {
@@ -238,10 +264,11 @@ export async function checkAndRefreshTokenIfNeeded(): Promise<boolean> {
   return refreshPromise;
 }
 
-function handleAppStateChange(nextAppState: AppStateStatus) {
+async function handleAppStateChange(nextAppState: AppStateStatus) {
   if (nextAppState === "active") {
     const now = Date.now();
-    const cooldownElapsed = now - lastForegroundRefresh >= FOREGROUND_COOLDOWN;
+    const { foregroundCooldown } = await getCheckIntervals();
+    const cooldownElapsed = now - lastForegroundRefresh >= foregroundCooldown;
 
     if (cooldownElapsed) {
       lastForegroundRefresh = now;
@@ -250,7 +277,9 @@ function handleAppStateChange(nextAppState: AppStateStatus) {
   }
 }
 
-export function startTokenRefreshManager() {
+export async function startTokenRefreshManager() {
+  const { periodicCheckInterval } = await getCheckIntervals();
+
   appStateSubscription = AppState.addEventListener(
     "change",
     handleAppStateChange
@@ -258,7 +287,7 @@ export function startTokenRefreshManager() {
 
   periodicCheckTimer = setInterval(() => {
     checkAndRefreshTokenIfNeeded();
-  }, PERIODIC_CHECK_INTERVAL);
+  }, periodicCheckInterval);
 
   checkAndRefreshTokenIfNeeded();
 }
