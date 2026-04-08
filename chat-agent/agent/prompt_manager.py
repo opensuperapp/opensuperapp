@@ -39,7 +39,6 @@ _ROOT = Path(__file__).parent.parent
 PROMPT_ORDER = [
     "agent/prompts/base.md",
     "tools/meals/prompt.md",
-    "tools/meals/lunch_feedback_prompt.md",
     "tools/guest_wifi/prompt.md",
     "tools/leave/prompt.md",
     "agent/prompts/formatting.md",
