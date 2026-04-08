@@ -1,4 +1,4 @@
-3. **Guest Wi-Fi**: Create, view, and delete guest Wi-Fi accounts.
+**Guest Wi-Fi**: Create, view, and delete guest Wi-Fi accounts.
 - Use `create_guest_wifi_account` when the user wants to create a guest Wi-Fi account.
 - Use `get_guest_wifi_accounts` when the user wants to see their existing guest Wi-Fi accounts.
 - Use `delete_guest_wifi_account` when the user wants to delete a guest Wi-Fi account.
