@@ -605,7 +605,7 @@ async def run_agent(
         messages.append(ai_message)
 
         if not ai_message.tool_calls:
-            return ai_message.content
+            return ai_message.content or ""
 
         for tool_call in ai_message.tool_calls:
             tool_name = tool_call["name"]
@@ -808,4 +808,4 @@ async def run_agent(
 
     logger.warning("Max tool iterations (%d) reached, forcing text reply", MAX_TOOL_ITERATIONS)
     final = await llm.ainvoke(messages)
-    return final.content
+    return final.content or ""
