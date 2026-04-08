@@ -23,6 +23,10 @@ import {
 import { DEFAULT_TAB_CONFIG, TabVisibilityConfig } from "@/types/remoteConfig.types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+/**
+ * Fetches a remote config value by key.
+ * Falls back to defaultValue if Firebase is disabled or fetch fails.
+ */
 export const useRemoteConfig = <T>(
   key: string,
   defaultValue: T
@@ -71,6 +75,10 @@ export const useRemoteConfig = <T>(
   );
 };
 
+/**
+ * Fetches tab visibility rules from Firebase remote config.
+ * Listens for real-time updates and refreshes rules automatically.
+ */
 export const useTabVisibilityRules = (): {
   loading: boolean;
   rules: TabVisibilityConfig;
@@ -90,8 +98,9 @@ export const useTabVisibilityRules = (): {
 
     try {
       setLoading(true);
-      const result = await getRemoteConfigValueAsJson<TabVisibilityConfig>(TAB_VISIBILITY_RULES_KEY);
-      console.log("Tab visibility rules:", result);
+      const result = await getRemoteConfigValueAsJson<TabVisibilityConfig>(
+        TAB_VISIBILITY_RULES_KEY
+      );
       setRules(result);
       setError(null);
     } catch (err) {

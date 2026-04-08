@@ -15,6 +15,14 @@
 // under the License.
 import { DEFAULT_TAB_CONFIG } from "@/types/remoteConfig.types";
 
+/**
+ * Default values for Firebase Remote Config parameters.
+ * These values are set locally and are used as fallbacks when remote values
+ * are unavailable (network offline, fetch failures, or initial app load before activation).
+ *
+ * The tab_visibility_rules value is serialized as JSON because Firebase Remote Config
+ * stores all values as strings.
+ */
 export const REMOTE_CONFIG_INITIAL_VALUES = {
   tab_visibility_rules: JSON.stringify(DEFAULT_TAB_CONFIG),
 };

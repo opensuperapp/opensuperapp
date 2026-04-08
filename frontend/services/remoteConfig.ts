@@ -23,6 +23,10 @@ import {
   setDefaults,
 } from "@react-native-firebase/remote-config";
 
+/**
+ * Sets the default values for the remote config.
+ * @returns void
+ */
 export const setRemoteConfigDefaults = () => {
   try {
     setDefaults(getRemoteConfig(), REMOTE_CONFIG_INITIAL_VALUES);
@@ -31,6 +35,7 @@ export const setRemoteConfigDefaults = () => {
   }
 };
 
+//Fetches the latest remote config values from Firebase.
 export const fetchAndActivateRemoteConfig = async () => {
   try {
     await fetchAndActivate(getRemoteConfig());
@@ -39,25 +44,46 @@ export const fetchAndActivateRemoteConfig = async () => {
   }
 };
 
+/**
+ * Retrieves a remote config value as a string.
+ * @param key - The remote config parameter key
+ * @returns The string value of the remote config parameter
+ */
 export const getRemoteConfigValueAsString = (key: string): string => {
   return getValue(getRemoteConfig(), key).asString();
 };
 
+/**
+ * Retrieves a remote config value as a boolean.
+ * @param key - The remote config parameter key
+ * @returns The boolean value of the remote config parameter
+ */
 export const getRemoteConfigValueAsBoolean = (key: string): boolean => {
   return getValue(getRemoteConfig(), key).asBoolean();
 };
 
+/**
+ * Retrieves a remote config value as a number.
+ * @param key - The remote config parameter key
+ * @returns The number value of the remote config parameter
+ */
 export const getRemoteConfigValueAsNumber = (key: string): number => {
   return getValue(getRemoteConfig(), key).asNumber();
 };
 
+/**
+ * Retrieves a remote config value as a parsed JSON object.
+ * @param key - The remote config parameter key
+ * @returns The parsed JSON value of the remote config parameter
+ * @throws {SyntaxError} If the stored value is not valid JSON
+ */
 export const getRemoteConfigValueAsJson = <T>(key: string): T => {
   const jsonString = getValue(getRemoteConfig(), key).asString();
   return JSON.parse(jsonString) as T;
 };
 
 /**
- * Listen for remote config changes.
+ * Listens for remote config changes.
  * @param callback - The callback function to call when the remote config changes.
  * @returns An unsubscribe function.
  */
