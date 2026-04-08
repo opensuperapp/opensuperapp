@@ -27,7 +27,6 @@ paths:
           - x-jwt-assertion: <access_token>
           - x-user-assertion: <access_token> (used for micro-app token exchange)
       operationId: chat_chat_post
-
       parameters:
         - name: x-jwt-assertion
           in: header
@@ -81,7 +80,6 @@ paths:
 
 components:
   schemas:
-
     ChatRequest:
       title: ChatRequest
       type: object
@@ -174,4 +172,3 @@ components:
         type:
           type: string
           title: Error Type
-          
