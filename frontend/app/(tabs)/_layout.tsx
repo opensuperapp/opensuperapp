@@ -24,13 +24,13 @@ import {
   PROFILE_TAB_NAME,
 } from "@/constants/Constants";
 import { RootState } from "@/context/store";
-import { useRestoreLastTab } from "@/hooks/useRestoreLastTab";
 import { useTabVisibilityRules } from "@/hooks/useRemoteConfig";
+import { useRestoreLastTab } from "@/hooks/useRestoreLastTab";
+import { shouldShowTab } from "@/utils/tabVisibility";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { Platform } from "react-native";
 import { useSelector } from "react-redux";
-import { shouldShowTab } from "@/utils/tabVisibility";
 
 type TabType = {
   name: string;

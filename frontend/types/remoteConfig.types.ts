@@ -26,7 +26,6 @@ export interface TabRule {
   visibleForGuests?: boolean;
   defaultVisible?: boolean;
   order?: number;
-  labelOverride?: string;
 }
 
 export const DEFAULT_TAB_CONFIG: TabVisibilityConfig = {
@@ -45,9 +44,9 @@ export const DEFAULT_TAB_CONFIG: TabVisibilityConfig = {
       defaultVisible: true,
     },
     apps: {
-      mode: "auth_required",
-      requiresAuth: true,
-      visibleForGuests: false,
+      mode: "public",
+      requiresAuth: false,
+      visibleForGuests: true,
       defaultVisible: true,
     },
     chat: {

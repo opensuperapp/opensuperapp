@@ -15,10 +15,12 @@
 // under the License.
 import { REMOTE_CONFIG_INITIAL_VALUES } from "@/config/remoteConfig";
 import {
+  activate,
   fetchAndActivate,
   getRemoteConfig,
   getValue,
-  setDefaults
+  onConfigUpdate,
+  setDefaults,
 } from "@react-native-firebase/remote-config";
 
 export const setRemoteConfigDefaults = () => {
@@ -54,30 +56,26 @@ export const getRemoteConfigValueAsJson = <T>(key: string): T => {
   return JSON.parse(jsonString) as T;
 };
 
-// export const onRemoteConfigChange = (
-//   callback: (error: Error | null, updatedKeys: string[] | null) => void
-// ) => {
-//   const unsubscribe = onConfigUpdate(
-//     getRemoteConfig(),
-//     async () => {
-//       if (error) {
-//         console.error("Error fetching remote config:", error);
-//         return;
-//       }
-
-//       if (event) {
-//         try {
-//           await getRemoteConfig().activate();
-//           callback(null, event.updatedKeys);
-//         } catch (activationError) {
-//           console.error(
-//             "Error activating updated remote config:",
-//             activationError
-//           );
-//           callback(activationError as Error, null);
-//         }
-//       }
-//     }
-//   );
-//   return unsubscribe;
-// };
+/**
+ * Listen for remote config changes.
+ * @param callback - The callback function to call when the remote config changes.
+ * @returns An unsubscribe function.
+ */
+export const onRemoteConfigChange = (
+  callback: (error: Error | null, updatedKeys: Set<string> | null) => void
+) => {
+  const unsubscribe = onConfigUpdate(getRemoteConfig(), {
+    next: async (update) => {
+      await activate(getRemoteConfig());
+      callback(null, update.getUpdatedKeys());
+    },
+    error: (error) => {
+      console.error("Error fetching remote config:", error);
+      callback(error as Error, null);
+    },
+    complete: () => {
+      callback(null, null);
+    },
+  });
+  return unsubscribe;
+};

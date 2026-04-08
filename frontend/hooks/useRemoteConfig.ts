@@ -18,6 +18,7 @@ import { TAB_VISIBILITY_RULES_KEY } from "@/constants/RemoteConfigDefaults";
 import {
   getRemoteConfigValueAsJson,
   getRemoteConfigValueAsString,
+  onRemoteConfigChange,
 } from "@/services/remoteConfig";
 import { DEFAULT_TAB_CONFIG, TabVisibilityConfig } from "@/types/remoteConfig.types";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -90,6 +91,7 @@ export const useTabVisibilityRules = (): {
     try {
       setLoading(true);
       const result = await getRemoteConfigValueAsJson<TabVisibilityConfig>(TAB_VISIBILITY_RULES_KEY);
+      console.log("Tab visibility rules:", result);
       setRules(result);
       setError(null);
     } catch (err) {
@@ -103,6 +105,22 @@ export const useTabVisibilityRules = (): {
 
   useEffect(() => {
     fetchRules();
+  }, [fetchRules]);
+
+  useEffect(() => {
+    if (!ENABLE_FIREBASE) return;
+
+    const unsubscribe = onRemoteConfigChange((error, updatedKeys) => {
+      if (error) {
+        return;
+      }
+
+      if (updatedKeys && updatedKeys.has(TAB_VISIBILITY_RULES_KEY)) {
+        fetchRules();
+      }
+    });
+
+    return unsubscribe;
   }, [fetchRules]);
 
   return useMemo(
