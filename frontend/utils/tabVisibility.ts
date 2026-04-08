@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 import { BasicUserInfo } from "@/types/basicUserInfo.types";
-import { TabVisibilityConfig, TabRule } from "@/types/remoteConfig.types";
+import { DEFAULT_TAB_CONFIG, TabVisibilityConfig, TabRule } from "@/types/remoteConfig.types";
 
 const extractDomain = (email: string | undefined): string | null => {
   if (!email) return null;
@@ -32,9 +32,9 @@ const extractDomain = (email: string | undefined): string | null => {
 
 const evaluateRule = (
   rule: TabRule,
-  user: BasicUserInfo | null
+  user: BasicUserInfo | null,
+  isAuthenticated: boolean
 ): boolean => {
-  const isAuthenticated = user != null;
   const userDomain = extractDomain(user?.workEmail);
 
   switch (rule.mode) {
@@ -52,16 +52,12 @@ const evaluateRule = (
 
       return isAuthenticated;
 
-    case "domain_specific":
+    case "domain_specific": {
       if (!isAuthenticated) {
         return false;
       }
 
-      if (rule.requiresAuth !== false && !isAuthenticated) {
-        return false;
-      }
-
-      if (!rule.domains || rule.domains.length === 0) {
+      if (!rule.domains?.length) {
         return rule.defaultVisible ?? true;
       }
 
@@ -69,12 +65,12 @@ const evaluateRule = (
         return rule.defaultVisible ?? false;
       }
 
-      const normalizedUserDomain = userDomain.toLowerCase().trim();
       const allowedDomains = rule.domains.map((d) =>
         d.toLowerCase().trim()
       );
 
-      return allowedDomains.includes(normalizedUserDomain);
+      return allowedDomains.includes(userDomain);
+    }
 
     default:
       return rule.defaultVisible ?? true;
@@ -84,17 +80,15 @@ const evaluateRule = (
 export const shouldShowTab = (
   tabName: string,
   user: BasicUserInfo | null,
+  isAuthenticated: boolean,
   rules: TabVisibilityConfig | null | undefined
 ): boolean => {
-  if (!rules || !rules.tabs) {
-    return true;
-  }
-
-  const rule = rules.tabs[tabName];
+  const effectiveRules = rules ?? DEFAULT_TAB_CONFIG;
+  const rule = effectiveRules.tabs[tabName] ?? DEFAULT_TAB_CONFIG.tabs[tabName];
 
   if (!rule) {
     return true;
   }
 
-  return evaluateRule(rule, user);
+  return evaluateRule(rule, user, isAuthenticated);
 };

@@ -13,6 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import { TAB_VISIBILITY_RULES_KEY } from "@/constants/RemoteConfigDefaults";
 import { DEFAULT_TAB_CONFIG } from "@/types/remoteConfig.types";
 
 /**
@@ -24,5 +25,5 @@ import { DEFAULT_TAB_CONFIG } from "@/types/remoteConfig.types";
  * stores all values as strings.
  */
 export const REMOTE_CONFIG_INITIAL_VALUES = {
-  tab_visibility_rules: JSON.stringify(DEFAULT_TAB_CONFIG),
+  [TAB_VISIBILITY_RULES_KEY]: JSON.stringify(DEFAULT_TAB_CONFIG),
 };

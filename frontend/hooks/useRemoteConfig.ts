@@ -50,7 +50,33 @@ export const useRemoteConfig = <T>(
     try {
       setLoading(true);
       const result = await getRemoteConfigValueAsString(key);
-      setValue((result || defaultValue) as T);
+
+      if (result == null) {
+        setValue(defaultValue);
+        return;
+      }
+
+      let parsedValue: T;
+      if (typeof defaultValue === 'string') {
+        parsedValue = result as T;
+      } else if (typeof defaultValue === 'boolean') {
+        parsedValue = (result.toLowerCase() === 'true') as T;
+      } else if (typeof defaultValue === 'number') {
+        parsedValue = parseFloat(result) as T;
+        if (isNaN(parsedValue as unknown as number)) {
+          setValue(defaultValue);
+          return;
+        }
+      } else {
+        try {
+          parsedValue = JSON.parse(result) as T;
+        } catch {
+          setValue(defaultValue);
+          return;
+        }
+      }
+
+      setValue(parsedValue);
       setError(null);
     } catch (err) {
       console.error(`Error fetching remote config for key "${key}":`, err);
@@ -121,6 +147,7 @@ export const useTabVisibilityRules = (): {
 
     const unsubscribe = onRemoteConfigChange((error, updatedKeys) => {
       if (error) {
+        setError(error);
         return;
       }
 

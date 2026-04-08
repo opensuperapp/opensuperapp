@@ -14,5 +14,3 @@
 // specific language governing permissions and limitations
 // under the License.
 export const TAB_VISIBILITY_RULES_KEY = "tab_visibility_rules";
-
-export const REMOTE_CONFIG_FETCH_INTERVAL = 1800000;

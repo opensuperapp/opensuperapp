@@ -27,9 +27,9 @@ import {
  * Sets the default values for the remote config.
  * @returns void
  */
-export const setRemoteConfigDefaults = () => {
+export const setRemoteConfigDefaults = async () => {
   try {
-    setDefaults(getRemoteConfig(), REMOTE_CONFIG_INITIAL_VALUES);
+    await setDefaults(getRemoteConfig(), REMOTE_CONFIG_INITIAL_VALUES);
   } catch (error) {
     console.error("Error setting remote config defaults:", error);
   }
@@ -92,8 +92,13 @@ export const onRemoteConfigChange = (
 ) => {
   const unsubscribe = onConfigUpdate(getRemoteConfig(), {
     next: async (update) => {
-      await activate(getRemoteConfig());
-      callback(null, update.getUpdatedKeys());
+      try {
+        await activate(getRemoteConfig());
+        callback(null, update.getUpdatedKeys());
+      } catch (error) {
+        console.error("Error activating remote config:", error);
+        callback(error as Error, null);
+      }
     },
     error: (error) => {
       console.error("Error fetching remote config:", error);

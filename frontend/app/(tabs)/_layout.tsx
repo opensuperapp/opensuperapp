@@ -24,6 +24,7 @@ import {
   PROFILE_TAB_NAME,
 } from "@/constants/Constants";
 import { RootState } from "@/context/store";
+import { DEFAULT_TAB_CONFIG } from "@/types/remoteConfig.types";
 import { useTabVisibilityRules } from "@/hooks/useRemoteConfig";
 import { useRestoreLastTab } from "@/hooks/useRestoreLastTab";
 import { shouldShowTab } from "@/utils/tabVisibility";
@@ -96,6 +97,8 @@ export default function TabLayout() {
   useRestoreLastTab();
 
   const user = useSelector((state: RootState) => state.userInfo.userInfo);
+  const authState = useSelector((state: RootState) => state.auth.accessToken);
+  const isAuthenticated = Boolean(authState);
 
   const { loading, rules } = useTabVisibilityRules();
 
@@ -114,7 +117,8 @@ export default function TabLayout() {
       }}
     >
       {tabs.map((tab, index) => {
-        const showTab = loading || shouldShowTab(tab.name, user, rules);
+        const effectiveRules = loading ? DEFAULT_TAB_CONFIG : rules;
+        const showTab = shouldShowTab(tab.name, user, isAuthenticated, effectiveRules);
 
         return (
           <Tabs.Screen
