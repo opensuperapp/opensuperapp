@@ -22,6 +22,7 @@ micro-app backends (e.g., meals menu) and present it conversationally.
 """
 
 import base64
+import calendar
 import json
 import logging
 import re
@@ -190,15 +191,142 @@ _NATURAL_DATE_RE = re.compile(
     re.IGNORECASE,
 )
 
+_DAY_MAP: dict[str, int] = {
+    "monday": 0, "mon": 0,
+    "tuesday": 1, "tue": 1, "tues": 1,
+    "wednesday": 2, "wed": 2,
+    "thursday": 3, "thu": 3, "thur": 3, "thurs": 3,
+    "friday": 4, "fri": 4,
+    "saturday": 5, "sat": 5,
+    "sunday": 6, "sun": 6,
+}
+
+# "next monday", "this friday", "coming thursday"
+_WEEKDAY_RE = re.compile(
+    r"\b(?:next|this|coming)\s+(monday|mon|tuesday|tue|tues|wednesday|wed"
+    r"|thursday|thu|thur|thurs|friday|fri|saturday|sat|sunday|sun)\b",
+    re.IGNORECASE,
+)
+
+# "in N days", "after N days", "N days later", "N days from now/today"
+_IN_N_DAYS_RE = re.compile(
+    r"\b(?:in|after)\s+(\d+)\s+days?\b"
+    r"|\b(\d+)\s+days?\s+(?:later|from\s+(?:now|today))\b",
+    re.IGNORECASE,
+)
+
+_ORDINAL_WORD_MAP: dict[str, int] = {
+    "first": 1, "1st": 1,
+    "second": 2, "2nd": 2,
+    "third": 3, "3rd": 3,
+    "fourth": 4, "4th": 4,
+    "fifth": 5, "5th": 5,
+    "sixth": 6, "6th": 6,
+    "seventh": 7, "7th": 7,
+    "eighth": 8, "8th": 8,
+    "ninth": 9, "9th": 9,
+    "tenth": 10, "10th": 10,
+    "eleventh": 11, "11th": 11,
+    "twelfth": 12, "12th": 12,
+    "thirteenth": 13, "13th": 13,
+    "fourteenth": 14, "14th": 14,
+    "fifteenth": 15, "15th": 15,
+    "sixteenth": 16, "16th": 16,
+    "seventeenth": 17, "17th": 17,
+    "eighteenth": 18, "18th": 18,
+    "nineteenth": 19, "19th": 19,
+    "twentieth": 20, "20th": 20,
+    "twenty-first": 21, "twenty first": 21, "21st": 21,
+    "twenty-second": 22, "twenty second": 22, "22nd": 22,
+    "twenty-third": 23, "twenty third": 23, "23rd": 23,
+    "twenty-fourth": 24, "twenty fourth": 24, "24th": 24,
+    "twenty-fifth": 25, "twenty fifth": 25, "25th": 25,
+    "twenty-sixth": 26, "twenty sixth": 26, "26th": 26,
+    "twenty-seventh": 27, "twenty seventh": 27, "27th": 27,
+    "twenty-eighth": 28, "twenty eighth": 28, "28th": 28,
+    "twenty-ninth": 29, "twenty ninth": 29, "29th": 29,
+    "thirtieth": 30, "30th": 30,
+    "thirty-first": 31, "thirty first": 31, "31st": 31,
+}
+
+_ORDINAL_WORDS = "|".join(re.escape(k) for k in sorted(_ORDINAL_WORD_MAP, key=len, reverse=True))
+
+# "first day of/at/in march", "last day of april", "second day at march"
+_ORDINAL_DAY_OF_MONTH_RE = re.compile(
+    rf"\b({_ORDINAL_WORDS}|last)\s+day\s+(?:of|at|in)\s+({_MONTH_PAT})\b",
+    re.IGNORECASE,
+)
+
+
+def _resolve_relative_dates(text: str, today: "datetime") -> list[str]:
+    """Resolve relative date expressions to yyyy-mm-dd strings."""
+    from datetime import timedelta
+    found: list[str] = []
+    text_lower = text.lower()
+
+    # "today"
+    if re.search(r"\btoday\b", text_lower):
+        found.append(today.strftime("%Y-%m-%d"))
+
+    # Tolerates common typos: tomorrow / tommorow / tommorrow / tomorow / tomoro
+    _TOMORROW_PAT = r"tom+or+ow?"
+
+    # "tomorrow"
+    if re.search(rf"\b{_TOMORROW_PAT}\b", text_lower):
+        found.append((today + timedelta(days=1)).strftime("%Y-%m-%d"))
+
+    # "day after tomorrow" / "day after tommorow"
+    if re.search(rf"\bday\s+after\s+{_TOMORROW_PAT}\b", text_lower):
+        found.append((today + timedelta(days=2)).strftime("%Y-%m-%d"))
+
+    # "next/this/coming <weekday>"
+    for m in _WEEKDAY_RE.finditer(text):
+        day_name = m.group(1).lower()
+        target_dow = _DAY_MAP.get(day_name)
+        if target_dow is not None:
+            days_ahead = (target_dow - today.weekday()) % 7
+            if days_ahead == 0:
+                days_ahead = 7  # "next monday" when today is monday → 7 days ahead
+            found.append((today + timedelta(days=days_ahead)).strftime("%Y-%m-%d"))
+
+    # "in N days" / "after N days" / "N days later" / "N days from now"
+    for m in _IN_N_DAYS_RE.finditer(text):
+        n = int(m.group(1) or m.group(2))
+        found.append((today + timedelta(days=n)).strftime("%Y-%m-%d"))
+
+    # "first day of march", "last day of april", "second day at january"
+    for m in _ORDINAL_DAY_OF_MONTH_RE.finditer(text):
+        ordinal_str = m.group(1).lower()
+        month_str = m.group(2).lower()
+        month = _MONTH_MAP.get(month_str)
+        if month is None:
+            continue
+        year = today.year
+        if ordinal_str == "last":
+            day = calendar.monthrange(year, month)[1]
+        else:
+            day = _ORDINAL_WORD_MAP.get(ordinal_str)
+            if day is None:
+                continue
+        try:
+            found.append(f"{year}-{month:02d}-{day:02d}")
+        except Exception:
+            pass
+
+    return found
+
 
 def _extract_dates_from_text(text: str) -> list[str]:
     """Return deduplicated yyyy-mm-dd dates extracted from free text."""
-    current_year = datetime.now(_SL_TIMEZONE).year
+    today = datetime.now(_SL_TIMEZONE)
+    current_year = today.year
     found: list[str] = []
 
+    # ISO dates: "2026-04-14"
     for m in _ISO_DATE_RE.finditer(text):
         found.append(m.group(1))
 
+    # Natural language month+day: "14th april", "april 14"
     for m in _NATURAL_DATE_RE.finditer(text):
         if m.group(1) and m.group(2):
             day, month_str = int(m.group(1)), m.group(2).lower()
@@ -207,6 +335,9 @@ def _extract_dates_from_text(text: str) -> list[str]:
         month = _MONTH_MAP.get(month_str)
         if month and 1 <= day <= 31:
             found.append(f"{current_year}-{month:02d}-{day:02d}")
+
+    # Relative expressions: "tomorrow", "next monday", "in 3 days", etc.
+    found.extend(_resolve_relative_dates(text, today))
 
     seen: set[str] = set()
     result: list[str] = []
@@ -417,6 +548,7 @@ async def run_agent(
         mentioned_dates = _extract_dates_from_text(user_message)
         logger.info("Proactive date extraction from user message: %s", mentioned_dates)
         if mentioned_dates and not _dates_already_validated(messages, mentioned_dates):
+            today_date = datetime.now(_SL_TIMEZONE).date()
             date_validation_pairs = await _run_proactive_date_validation(mentioned_dates, access_token)
             for date_str, val_result in date_validation_pairs:
                 tool_call_id = f"date_check_{uuid.uuid4().hex[:8]}"
@@ -430,10 +562,36 @@ async def run_agent(
                             "end_date": date_str,
                             "period_type": "one",
                             "leave_type": "casual",
+                            "_validation_only_note": (
+                                "SYSTEM: period_type and leave_type above are temporary "
+                                "placeholders used only to check whether this date is a "
+                                "working day. They are NOT the user's chosen values. "
+                                "Do NOT use them in responses or summaries."
+                            ),
                         },
                     }],
                 ))
-                messages.append(ToolMessage(content=str(val_result), tool_call_id=tool_call_id))
+                val_result_with_note = dict(val_result) if isinstance(val_result, dict) else {"raw": val_result}
+                note = (
+                    "Working-day check only. leave_type='casual' and period_type='one' "
+                    "were placeholders — do NOT present them as the user's choices. "
+                    "Still ask the user for leave type, period, and all other details."
+                )
+                try:
+                    parsed_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+                    if parsed_date < today_date:
+                        next_year_date = date_str.replace(str(parsed_date.year), str(parsed_date.year + 1), 1)
+                        note += (
+                            f" IMPORTANT: {date_str} is in the past (today is {today_date}). "
+                            f"The user did not specify a year. Before proceeding, ask the user: "
+                            f"'Just to confirm — did you mean {date_str} ({parsed_date.year}) "
+                            f"or {next_year_date} ({parsed_date.year + 1})?' "
+                            f"Do NOT assume either year — wait for the user's confirmation."
+                        )
+                except ValueError:
+                    pass
+                val_result_with_note["_note"] = note
+                messages.append(ToolMessage(content=str(val_result_with_note), tool_call_id=tool_call_id))
 
     for _iteration in range(MAX_TOOL_ITERATIONS):
         ai_message = await llm_with_tools.ainvoke(messages)
