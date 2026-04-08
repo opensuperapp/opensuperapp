@@ -54,6 +54,7 @@ def _normalize_leave_type(leave_type: str) -> str:
     raw = str(leave_type or "").strip()
     if ":" in raw:
         raw = raw.split(":")[-1].strip()
+    raw = re.sub(r"\s*\(.*?\)", "", raw).strip()
     value = raw.lower().replace("-", "_").replace(" ", "_")
     aliases = {
         "casual": "casual",

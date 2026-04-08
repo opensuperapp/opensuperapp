@@ -142,13 +142,20 @@ def _missing_leave_fields_response(missing_fields: list[str]) -> dict:
 
 
 def _coerce_email_recipients_list(args: dict) -> list:
-    """Ensure email_recipients is always a list ([] when omitted or null)."""
+    """Ensure email_recipients is always a list ([] when omitted or null).
+
+    Raises ValueError if a non-null, non-list value is provided so the caller
+    can surface an error rather than silently dropping the user's recipients.
+    """
     raw = args.get("email_recipients")
     if raw is None:
         return []
     if isinstance(raw, list):
         return raw
-    return []
+    raise ValueError(
+        f"email_recipients must be a list of email strings, got: {type(raw).__name__!r} ({raw!r}). "
+        "Please provide recipients as a JSON array, e.g. [\"alice@wso2.com\"]."
+    )
 
 
 def _get_leave_types_for_location(location: str | None) -> list[str]:
@@ -671,6 +678,9 @@ async def run_agent(
                     result = await validate_additional_recipient_emails.ainvoke(
                         {"email_recipients": _coerce_email_recipients_list(args)}
                     )
+                except ValueError as e:
+                    logger.error("validate_additional_recipient_emails bad args: %s", e)
+                    result = {"error": str(e)}
                 except Exception as e:
                     logger.error("validate_additional_recipient_emails failed: %s", e)
                     result = {"error": "Could not validate recipient emails."}
@@ -748,6 +758,12 @@ async def run_agent(
                     if raw_id is None:
                         leave_id = ""
                     elif isinstance(raw_id, float):
+                        if raw_id != int(raw_id):
+                            raise ValueError(
+                                f"leave_id has a fractional value ({raw_id!r}) which would "
+                                "target the wrong leave record. Use the exact string ID "
+                                "returned by list_my_leaves."
+                            )
                         leave_id = str(int(raw_id))
                     else:
                         leave_id = str(raw_id)
