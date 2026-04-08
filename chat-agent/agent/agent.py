@@ -50,7 +50,7 @@ from tools.leave.leave_tools import (
     submit_leave_request,
     validate_additional_recipient_emails,
     validate_leave_request,
-    _normalize_period_type,
+    normalize_period_type,
 )
 
 logger = logging.getLogger(__name__)
@@ -115,7 +115,7 @@ def _get_missing_leave_fields(args: dict) -> list[str]:
     if (
         isinstance(period_type, str)
         and period_type.strip()
-        and _normalize_period_type(period_type) == "half"
+        and normalize_period_type(period_type) == "half"
         and args.get("is_morning_leave") is None
     ):
         missing.append("is_morning_leave")
@@ -287,7 +287,7 @@ async def run_agent(
 
     messages.append(HumanMessage(content=user_message))
 
-    for iteration in range(MAX_TOOL_ITERATIONS):
+    for _iteration in range(MAX_TOOL_ITERATIONS):
         ai_message = await llm_with_tools.ainvoke(messages)
         messages.append(ai_message)
 

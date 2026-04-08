@@ -176,7 +176,7 @@ chat-agent/
 3. Add the env vars in `config.py` and `.env.example`
 4. Import the tools in `agent/agent.py`, add to the `tools` list, and add a handler in the tool-call loop
 5. Add `tools/<skill_name>/prompt.md` to `PROMPT_ORDER` in `agent/prompt_manager.py`
-6. Update the [Current Skills](#) table in `SKILLS.md`
+6. Update the [Current Skills](SKILLS.md#current-skills) table in `SKILLS.md`
 
 ## License
 

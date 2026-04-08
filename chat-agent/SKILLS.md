@@ -48,12 +48,11 @@ Every backend capability is isolated into its own `@tool` function inside a dedi
 | `<skill>_tools.py` | LangChain `@tool` functions — HTTP logic, error handling, structured return |
 | `prompt.md` | System prompt section — when to trigger this skill and how to behave |
 
-```
+```text
 tools/
 ├── meals/
 │   ├── meals_tools.py          ← get_todays_menu, submit_lunch_feedback
-│   ├── prompt.md               ← "Use get_todays_menu when user asks about food…"
-│   └── lunch_feedback_prompt.md
+│   └── prompt.md               ← "Use get_todays_menu when user asks about food…"
 ├── guest_wifi/
 │   ├── wifi_tools.py           ← create/get/delete_guest_wifi_account
 │   └── prompt.md
@@ -185,7 +184,7 @@ As each micro-app gains a backend API, its knowledge skill can be upgraded to an
 
 > *"The skill architecture should make it easy to add new capabilities without modifying existing ones."*
 
-```
+```text
 chat-agent/
 ├── main.py               # HTTP interface — never changes for new skills
 ├── config.py             # Env vars — add new vars only

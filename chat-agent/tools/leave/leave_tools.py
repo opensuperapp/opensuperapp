@@ -69,7 +69,7 @@ def _normalize_leave_type(leave_type: str) -> str:
     return aliases.get(value, value)
 
 
-def _normalize_period_type(period_type: str) -> str:
+def normalize_period_type(period_type: str) -> str:
     """Normalize period labels to backend enum values (one | half | multiple)."""
     raw = str(period_type or "").strip()
     if ":" in raw:
@@ -156,7 +156,7 @@ def _prepare_leave_payload_inputs(
     email_recipients: Optional[List[str]],
 ) -> dict:
     """Normalize and validate leave inputs before calling backend."""
-    normalized_period_type = _normalize_period_type(period_type)
+    normalized_period_type = normalize_period_type(period_type)
     normalized_leave_type = _normalize_leave_type(leave_type)
     normalized_is_morning_leave = _normalize_is_morning_leave(is_morning_leave)
 
@@ -209,7 +209,7 @@ def _build_leave_json_body(
     comment: str,
     is_morning_leave: Optional[bool],
     is_public_comment: bool = False,
-    email_recipients: List[str] = None,
+    email_recipients: Optional[List[str]] = None,
 ) -> dict:
     body: dict = {
         "startDate": start_date,
@@ -258,8 +258,8 @@ def _leave_error_from_response(response: httpx.Response) -> dict:
         msg = body.get("message") if isinstance(body, dict) else None
         if msg:
             return {"error": msg}
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("Failed to parse Leave API JSON response: %s", response.text, exc_info=e)
     logger.error("Leave API error: %s - %s", response.status_code, response.text)
     return {"error": f"Leave API returned {response.status_code}: {response.text}"}
 

@@ -49,7 +49,8 @@ async def get_todays_menu(access_token: str) -> dict:
         url = f"{MEALS_BACKEND_URL}/menu"
         response = await client.get(url, headers=headers)
         if response.status_code != 200:
-            return {"error": f"Menu API returned {response.status_code}: {response.text}"}
+            logger.error("Menu API error: %s - %s", response.status_code, response.text)
+            return {"error": f"Menu API returned {response.status_code}"}
         return response.json()
 
 
@@ -78,11 +79,15 @@ async def submit_lunch_feedback(access_token: str, message: str) -> dict:
         if response.status_code == 201:
             return {"success": True, "message": "Feedback submitted successfully"}
         if response.status_code == 400:
-            error_body = response.json() if response.text else {}
+            try:
+                error_body = response.json() if response.text else {}
+            except Exception:
+                error_body = {}
             return {
                 "error": error_body.get(
                     "message",
                     "Feedback submission failed. It may be outside the feedback window (12:00–16:15).",
                 )
             }
-        return {"error": f"Feedback API returned {response.status_code}: {response.text}"}
+        logger.error("Feedback API error: %s - %s", response.status_code, response.text)
+        return {"error": f"Feedback API returned {response.status_code}"}

@@ -26,6 +26,7 @@ Covers:
 import logging
 import secrets
 import string
+from urllib.parse import quote
 
 import httpx
 from langchain_core.tools import tool
@@ -69,7 +70,8 @@ async def create_guest_wifi_account(access_token: str) -> dict:
         response = await client.post(url, json=payload, headers=headers)
         if response.status_code in (200, 201):
             return {"success": True, "username": username, "password": password}
-        return {"error": f"Guest Wi-Fi API returned {response.status_code}: {response.text}"}
+        logger.error("Guest Wi-Fi create failed: %s - %s", response.status_code, response.text)
+        return {"error": "Unable to reach Guest Wi-Fi service; please try again later."}
 
 
 @tool
@@ -89,7 +91,8 @@ async def get_guest_wifi_accounts(access_token: str) -> dict:
         url = f"{GUEST_WIFI_BACKEND_URL}/guest-wifi-accounts"
         response = await client.get(url, headers=headers)
         if response.status_code != 200:
-            return {"error": f"Guest Wi-Fi API returned {response.status_code}: {response.text}"}
+            logger.error("Guest Wi-Fi list failed: %s - %s", response.status_code, response.text)
+            return {"error": "Unable to reach Guest Wi-Fi service; please try again later."}
         return response.json()
 
 
@@ -112,8 +115,10 @@ async def delete_guest_wifi_account(access_token: str, username: str) -> dict:
         headers["User-Agent"] = "Mozilla/5.0 (compatible; OpenSuperApp/1.0; DEBUG)"
 
     async with httpx.AsyncClient(timeout=15.0) as client:
-        url = f"{GUEST_WIFI_BACKEND_URL}/guest-wifi-accounts/{username}"
+        encoded_username = quote(username, safe="")
+        url = f"{GUEST_WIFI_BACKEND_URL}/guest-wifi-accounts/{encoded_username}"
         response = await client.delete(url, headers=headers)
         if response.status_code in (200, 204):
             return {"success": True, "message": f"Guest Wi-Fi account '{username}' deleted successfully."}
-        return {"error": f"Guest Wi-Fi API returned {response.status_code}: {response.text}"}
+        logger.error("Guest Wi-Fi delete failed: %s - %s", response.status_code, response.text)
+        return {"error": "Unable to reach Guest Wi-Fi service; please try again later."}

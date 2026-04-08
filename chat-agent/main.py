@@ -107,11 +107,11 @@ async def chat(
         reply = await run_agent(request.message, access_token, history)
         return ChatResponse(reply=reply)
     except Exception as e:
-        logger.error("Agent error: %s", e)
+        logger.error("Agent error: %s", e, exc_info=True)
         raise HTTPException(
             status_code=500,
             detail="An internal error occurred. Please try again later.",
-        )
+        ) from e
 
 
 if __name__ == "__main__":
