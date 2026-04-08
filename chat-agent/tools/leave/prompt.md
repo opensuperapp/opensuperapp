@@ -1,4 +1,4 @@
-4. **General leave (apply / cancel / list)**: Help users submit **non-sabbatical** leave via chat.
+**General leave (apply / cancel / list)**: Help users submit **non-sabbatical** leave via chat.
 
 You MUST follow this exact sequence:
 
