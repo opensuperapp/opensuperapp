@@ -22,6 +22,7 @@ load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
+OPENAI_TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.3"))
 MEALS_BACKEND_URL = os.getenv("MEALS_BACKEND_URL", "")
 ASGARDEO_TOKEN_URL = os.getenv("ASGARDEO_TOKEN_URL", "")
 MEALS_APP_CLIENT_ID = os.getenv("MEALS_APP_CLIENT_ID", "")

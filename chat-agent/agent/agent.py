@@ -30,7 +30,7 @@ import httpx
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_openai import ChatOpenAI
 
-from config import DEBUG, LEAVE_BACKEND_URL, OPENAI_API_KEY, OPENAI_MODEL
+from config import DEBUG, LEAVE_BACKEND_URL, OPENAI_API_KEY, OPENAI_MODEL, OPENAI_TEMPERATURE
 from agent.prompt_manager import compose_system_prompt
 from agent.token_exchange import (
     exchange_token_for_guest_wifi,
@@ -258,7 +258,7 @@ async def run_agent(
     llm = ChatOpenAI(
         model=OPENAI_MODEL,
         api_key=OPENAI_API_KEY,
-        temperature=0.3,
+        temperature=OPENAI_TEMPERATURE,
     )
 
     tools = [
@@ -439,9 +439,12 @@ async def run_agent(
                     leave_token = await exchange_token_for_leave(access_token)
                     args = tool_call["args"]
                     raw_id = args.get("leave_id")
-                    # Keep as string — list_my_leaves returns IDs as strings to
-                    # prevent float precision loss on large values like 3232312366.
-                    leave_id = str(raw_id).split(".")[0] if raw_id is not None else ""
+                    if raw_id is None:
+                        leave_id = ""
+                    elif isinstance(raw_id, float):
+                        leave_id = str(int(raw_id))
+                    else:
+                        leave_id = str(raw_id)
                     result = await cancel_leave_request.ainvoke(
                         {"access_token": leave_token, "leave_id": leave_id}
                     )

@@ -31,6 +31,7 @@ import json
 import logging
 import re
 import string
+import urllib.parse
 from datetime import datetime
 from typing import List, Optional
 
@@ -250,18 +251,37 @@ def _leave_api_headers(access_token: str) -> dict:
     return headers
 
 
+_SAFE_STATUS_MESSAGES: dict[int, str] = {
+    400: "The leave request was invalid. Please check the details and try again.",
+    401: "Authentication failed. Please sign in again.",
+    403: "You do not have permission to perform this action.",
+    404: "The leave record was not found.",
+    409: "There is a conflict with an existing leave (e.g. overlap).",
+    422: "The leave request could not be processed. Please check your dates and type.",
+    500: "The leave service encountered an error. Please try again later.",
+}
+
+
 def _leave_error_from_response(response: httpx.Response) -> dict:
     if response.status_code in (200, 201, 204):
         return {}
     try:
         body = response.json()
         msg = body.get("message") if isinstance(body, dict) else None
-        if msg:
+        if msg and isinstance(msg, str) and len(msg) <= 200 and not any(
+            token in msg.lower() for token in ("exception", "stacktrace", "traceback", "at line", "sql")
+        ):
+            logger.debug("Leave API error body: %s", body)
             return {"error": msg}
+        logger.debug("Leave API error body (suppressed): %s", body)
     except Exception as e:
         logger.debug("Failed to parse Leave API JSON response: %s", response.text, exc_info=e)
-    logger.error("Leave API error: %s - %s", response.status_code, response.text)
-    return {"error": f"Leave API returned {response.status_code}: {response.text}"}
+    logger.debug("Leave API raw error response: %s", response.text)
+    logger.error("Leave API error: status=%s", response.status_code)
+    safe_msg = _SAFE_STATUS_MESSAGES.get(
+        response.status_code, f"Leave API returned {response.status_code}"
+    )
+    return {"error": safe_msg}
 
 
 
@@ -385,7 +405,7 @@ async def cancel_leave_request(access_token: str, leave_id: str) -> dict:
     if DEBUG:
         headers["x-jwt-assertion"] = access_token
 
-    url = f"{LEAVE_BACKEND_URL.rstrip('/')}/leaves/{leave_id}"
+    url = f"{LEAVE_BACKEND_URL.rstrip('/')}/leaves/{urllib.parse.quote(str(leave_id), safe='')}"
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.delete(url, headers=headers)
