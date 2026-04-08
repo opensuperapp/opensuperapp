@@ -24,6 +24,8 @@ micro-app backends (e.g., meals menu) and present it conversationally.
 import base64
 import json
 import logging
+import re
+import uuid
 from datetime import datetime, timezone, timedelta
 
 import httpx
@@ -153,6 +155,127 @@ def _get_leave_types_for_location(location: str | None) -> list[str]:
     if not location:
         return _ALL_LEAVE_TYPES
     return _LOCATION_LEAVE_TYPES.get(location.strip().lower(), _ALL_LEAVE_TYPES)
+
+
+# ---------------------------------------------------------------------------
+# Proactive date validation helpers
+# ---------------------------------------------------------------------------
+
+_ISO_DATE_RE = re.compile(r"\b(\d{4}-\d{2}-\d{2})\b")
+
+_MONTH_MAP: dict[str, int] = {
+    "january": 1, "jan": 1, "february": 2, "feb": 2, "march": 3, "mar": 3,
+    "april": 4, "apr": 4, "may": 5,
+    "june": 6, "jun": 6, "july": 7, "jul": 7,
+    "august": 8, "aug": 8, "september": 9, "sep": 9, "sept": 9,
+    "october": 10, "oct": 10, "november": 11, "nov": 11, "december": 12, "dec": 12,
+}
+
+# Month names pattern — used in regex to avoid false matches like "on 11 th april"
+# where a non-month word ("on") consumed the digit before the real month was reached.
+_MONTH_PAT = (
+    r"(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may"
+    r"|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?"
+    r"|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+)
+
+# Handles: "11th april", "11 th april", "11th of april", "14 april", "april 14", "april 14th"
+# Both alternatives are anchored to known month names so non-month words (e.g. "on")
+# cannot consume the digit before a real month name is reached.
+_NATURAL_DATE_RE = re.compile(
+    rf"\b(?:"
+    rf"(\d{{1,2}})\s*(?:st|nd|rd|th)?\s+(?:of\s+)?({_MONTH_PAT})"  # "14th april" / "11 th april"
+    rf"|({_MONTH_PAT})\s+(\d{{1,2}})\s*(?:st|nd|rd|th)?"            # "april 14" / "april 14th"
+    rf")\b",
+    re.IGNORECASE,
+)
+
+
+def _extract_dates_from_text(text: str) -> list[str]:
+    """Return deduplicated yyyy-mm-dd dates extracted from free text."""
+    current_year = datetime.now(_SL_TIMEZONE).year
+    found: list[str] = []
+
+    for m in _ISO_DATE_RE.finditer(text):
+        found.append(m.group(1))
+
+    for m in _NATURAL_DATE_RE.finditer(text):
+        if m.group(1) and m.group(2):
+            day, month_str = int(m.group(1)), m.group(2).lower()
+        else:
+            month_str, day = m.group(3).lower(), int(m.group(4))
+        month = _MONTH_MAP.get(month_str)
+        if month and 1 <= day <= 31:
+            found.append(f"{current_year}-{month:02d}-{day:02d}")
+
+    seen: set[str] = set()
+    result: list[str] = []
+    for d in found:
+        if d not in seen:
+            seen.add(d)
+            result.append(d)
+    return result
+
+
+def _dates_already_validated(messages: list, dates: list[str]) -> bool:
+    """Return True if all dates already appear in prior ToolMessage content."""
+    validated: set[str] = set()
+    for msg in messages:
+        if isinstance(msg, ToolMessage):
+            content = msg.content or ""
+            for d in dates:
+                if d in content:
+                    validated.add(d)
+    return all(d in validated for d in dates)
+
+
+async def _run_proactive_date_validation(
+    dates: list[str],
+    access_token: str,
+) -> list[tuple[str, dict]]:
+    """Call isValidationOnlyMode=true for each date; return (date, result) pairs."""
+    results: list[tuple[str, dict]] = []
+    try:
+        leave_token = await exchange_token_for_leave(access_token)
+    except Exception as exc:
+        logger.warning("Token exchange failed for proactive date validation: %s", exc)
+        return results
+
+    for date_str in dates:
+        try:
+            logger.info("Proactive date validation: checking %s", date_str)
+            val_result = await validate_leave_request.ainvoke({
+                "access_token": leave_token,
+                "start_date": date_str,
+                "end_date": date_str,
+                "period_type": "one",
+                "leave_type": "casual",
+                "is_morning_leave": None,
+                "comment": "",
+                "is_public_comment": False,
+                "email_recipients": [],
+            })
+            if (
+                isinstance(val_result, dict)
+                and "error" not in val_result
+                and val_result.get("workingDays") == 0
+            ):
+                val_result = {
+                    "error": (
+                        f"{date_str} has no working days — it may fall on a weekend or public holiday. "
+                        "Please choose a different date."
+                    ),
+                    "workingDays": 0,
+                    "date_checked": date_str,
+                }
+            else:
+                if isinstance(val_result, dict):
+                    val_result["date_checked"] = date_str
+            logger.info("Proactive date validation result for %s: %s", date_str, val_result)
+            results.append((date_str, val_result))
+        except Exception as exc:
+            logger.warning("Proactive date validation error for %s: %s", date_str, exc)
+    return results
 
 
 # ---------------------------------------------------------------------------
@@ -286,6 +409,31 @@ async def run_agent(
                 messages.append(AIMessage(content=msg["content"]))
 
     messages.append(HumanMessage(content=user_message))
+
+    # Proactively validate any dates in the user message by calling the leave
+    # backend before the LLM runs. This guarantees workingDays is checked even
+    # if the LLM skips calling validate_leave_request on its own.
+    if LEAVE_BACKEND_URL:
+        mentioned_dates = _extract_dates_from_text(user_message)
+        logger.info("Proactive date extraction from user message: %s", mentioned_dates)
+        if mentioned_dates and not _dates_already_validated(messages, mentioned_dates):
+            date_validation_pairs = await _run_proactive_date_validation(mentioned_dates, access_token)
+            for date_str, val_result in date_validation_pairs:
+                tool_call_id = f"date_check_{uuid.uuid4().hex[:8]}"
+                messages.append(AIMessage(
+                    content="",
+                    tool_calls=[{
+                        "id": tool_call_id,
+                        "name": "validate_leave_request",
+                        "args": {
+                            "start_date": date_str,
+                            "end_date": date_str,
+                            "period_type": "one",
+                            "leave_type": "casual",
+                        },
+                    }],
+                ))
+                messages.append(ToolMessage(content=str(val_result), tool_call_id=tool_call_id))
 
     for _iteration in range(MAX_TOOL_ITERATIONS):
         ai_message = await llm_with_tools.ainvoke(messages)
