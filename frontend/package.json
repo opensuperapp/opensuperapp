@@ -27,8 +27,9 @@
     "@expo/vector-icons": "^14.0.2",
     "@notifee/react-native": "^9.1.8",
     "@react-native-async-storage/async-storage": "1.23.1",
-    "@react-native-firebase/app": "^23.0.1",
-    "@react-native-firebase/messaging": "^23.0.1",
+    "@react-native-firebase/app": "^23.1.2",
+    "@react-native-firebase/messaging": "^23.1.2",
+    "@react-native-firebase/remote-config": "^23.1.2",
     "@react-native-google-signin/google-signin": "^14.0.1",
     "@react-navigation/bottom-tabs": "^7.2.0",
     "@react-navigation/native": "^7.0.14",
@@ -51,6 +52,7 @@
     "expo-camera": "~16.0.18",
     "expo-crypto": "~14.0.2",
     "expo-dev-client": "~5.0.20",
+    "expo-document-picker": "~13.0.3",
     "expo-font": "~13.0.4",
     "expo-haptics": "~14.0.1",
     "expo-image": "~2.0.5",
@@ -87,8 +89,7 @@
     "react-native-webview": "13.12.5",
     "react-redux": "^9.2.0",
     "redux-persist": "^6.0.0",
-    "redux-thunk": "^3.1.0",
-    "expo-document-picker": "~13.0.3"
+    "redux-thunk": "^3.1.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
