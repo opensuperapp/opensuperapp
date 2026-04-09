@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 import SearchBar from "@/components/SearchBar";
+import SignInMessage from "@/components/SignInMessage";
 import SyncingModal from "@/components/SyncingModal";
 import Widget from "@/components/Widget";
 import { Colors } from "@/constants/Colors";
@@ -59,7 +60,7 @@ export default function HomeScreen() {
   const downloadProgress = useSelector(
     (state: RootState) => state.apps.downloadProgress
   );
-  const { email } = useSelector((state: RootState) => state.auth);
+  const { accessToken, email } = useSelector((state: RootState) => state.auth);
   const isForceUpdate = useSelector(
     (state: RootState) =>
       state.appConfig.configs.find(
@@ -89,6 +90,22 @@ export default function HomeScreen() {
   const [updatingApps, setUpdatingApps] = useState<string[]>([]);
   const isCheckingUpdates = useRef(false);
   const previousEmail = useRef<string | null>(null);
+
+  if (!accessToken) {
+    return (
+      <SafeAreaView
+        style={{
+          flex: 1,
+          backgroundColor: Colors[colorScheme ?? "light"].primaryBackgroundColor,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <SignInMessage message="Sign in to view your installed apps" />
+      </SafeAreaView>
+    );
+  }
+
   useTrackActiveScreen(ScreenPaths.MY_APPS);
   const updateCheckInterval = useSelector(
     (state: RootState) =>
