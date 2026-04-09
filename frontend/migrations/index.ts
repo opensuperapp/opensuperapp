@@ -14,8 +14,10 @@
 // specific language governing permissions and limitations
 // under the License.
 import { migrateToSecureStore } from "./1_move_auth_to_secure_store";
+import { recoverTokenRefreshState } from "./2_recover_token_refresh_state";
 
 // Migrations registry
 export const migrations: Record<number, () => Promise<void>> = {
   1: migrateToSecureStore,
+  2: recoverTokenRefreshState,
 };
