@@ -23,6 +23,7 @@ the agent's response.
 """
 
 import logging
+import os
 from typing import List, Optional
 
 import uvicorn
@@ -115,4 +116,5 @@ async def chat(
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000, h11_max_incomplete_event_size=16384)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port, h11_max_incomplete_event_size=16384)
