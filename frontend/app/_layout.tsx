@@ -28,6 +28,10 @@ import { useNotificationNavigation } from "@/hooks/useNotificationNavigation";
 import { useNotifications } from "@/hooks/useNotifications";
 import { usePushNotificationHandler } from "@/hooks/usePushNotificationHandler";
 import { runMigrations } from "@/migrations/migrator";
+import {
+  onRemoteConfigChange,
+  setRemoteConfigDefaults,
+} from "@/services/remoteConfig";
 import { buildAppsWithTokens } from "@/utils/exchangedTokenRehydrator";
 import { handleFreshInstall } from "@/utils/freshInstall";
 import { performLogout } from "@/utils/performLogout";
@@ -144,6 +148,19 @@ export default function RootLayout() {
     const unsubscribe = setupMessagingListener();
 
     setupBackgroundNotificationListeners();
+    return () => unsubscribe();
+  }, []);
+
+  // Initialize Firebase Remote Config
+  useEffect(() => {
+    setRemoteConfigDefaults();
+
+    const unsubscribe = onRemoteConfigChange((error, _) => {
+      if (error) {
+        console.error("Error fetching remote config:", error);
+        return;
+      }
+    });
     return () => unsubscribe();
   }, []);
 

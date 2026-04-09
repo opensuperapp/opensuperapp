@@ -22,10 +22,12 @@ import {
   LIBRARY_TAB_NAME,
   MY_APPS_TAB_NAME,
   PROFILE_TAB_NAME,
-  WSO2_EMAIL_DOMAIN,
 } from "@/constants/Constants";
 import { RootState } from "@/context/store";
+import { DEFAULT_TAB_CONFIG } from "@/types/remoteConfig.types";
+import { useTabVisibilityRules } from "@/hooks/useRemoteConfig";
 import { useRestoreLastTab } from "@/hooks/useRestoreLastTab";
+import { shouldShowTab } from "@/utils/tabVisibility";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { Platform } from "react-native";
@@ -92,18 +94,13 @@ const tabs: TabType[] = [
 ];
 
 export default function TabLayout() {
-  // Load last active tab and navigate to it
   useRestoreLastTab();
 
-  const isSignedIn = useSelector(
-    (state: RootState) => !!state.auth.accessToken,
-  );
+  const user = useSelector((state: RootState) => state.userInfo.userInfo);
+  const authState = useSelector((state: RootState) => state.auth.accessToken);
+  const isAuthenticated = Boolean(authState);
 
-  const userEmail = useSelector(
-    (state: RootState) => state.userInfo.userInfo?.workEmail ?? "",
-  );
-
-  const isWso2User = userEmail.endsWith(WSO2_EMAIL_DOMAIN);
+  const { loading, rules } = useTabVisibilityRules();
 
   return (
     <Tabs
@@ -119,32 +116,31 @@ export default function TabLayout() {
         }),
       }}
     >
-      {tabs.map((tab, index) => (
-        <Tabs.Screen
-          key={`tab-${index}`}
-          name={tab.name}
-          options={{
-            tabBarAccessibilityLabel: `tab_${tab.name}`,
-            headerShown: tab.options.headerShown,
-            title: tab.options.title,
-            headerTitleAllowFontScaling: false,
-            // Hide tabs requiring auth if the user isn't signed in or isn't a WSO2 employee
-            href:
-              tab.requiresAuth && !isSignedIn
-                ? null
-                : tab.name === "chat" && !isWso2User
-                  ? null
-                  : undefined,
-            tabBarIcon: ({ focused, color }) => (
-              <Ionicons
-                name={focused ? tab.options.iconFocused : tab.options.icon}
-                size={28}
-                color={color}
-              />
-            ),
-          }}
-        />
-      ))}
+      {tabs.map((tab, index) => {
+        const effectiveRules = loading ? DEFAULT_TAB_CONFIG : rules;
+        const showTab = shouldShowTab(tab.name, user, isAuthenticated, effectiveRules);
+
+        return (
+          <Tabs.Screen
+            key={`tab-${index}`}
+            name={tab.name}
+            options={{
+              tabBarAccessibilityLabel: `tab_${tab.name}`,
+              headerShown: tab.options.headerShown,
+              title: tab.options.title,
+              headerTitleAllowFontScaling: false,
+              href: showTab ? undefined : null,
+              tabBarIcon: ({ focused, color }) => (
+                <Ionicons
+                  name={focused ? tab.options.iconFocused : tab.options.icon}
+                  size={28}
+                  color={color}
+                />
+              ),
+            }}
+          />
+        );
+      })}
     </Tabs>
   );
 }
