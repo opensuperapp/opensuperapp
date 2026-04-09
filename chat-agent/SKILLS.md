@@ -23,14 +23,17 @@ This document describes how the OpenSuperApp chat agent implements skill-based A
 
 ## Current Skills
 
-| # | Skill | Trigger Examples | Backend | Auth |
-|---|-------|-----------------|---------|------|
-| 1 | **Meals & Menu** | "What's for lunch?", "Show today's menu" | Meals API — `GET /menu` (Ballerina) | Token exchange (RFC 8693) |
-| 2 | **Lunch Feedback** | "The lunch was great", "I want to give feedback" | Meals API — `POST /feedback` (Ballerina) | Token exchange (RFC 8693) |
-| 3 | **Create Guest Wi-Fi** | "Create a guest wifi account", "Set up wifi for my guest" | Guest Wi-Fi API — `POST /guest-wifi-accounts` | Token exchange (RFC 8693) |
-| 4 | **Get Guest Wi-Fi Accounts** | "Show my guest wifi accounts", "What wifi accounts do I have?" | Guest Wi-Fi API — `GET /guest-wifi-accounts` | Token exchange (RFC 8693) |
-| 5 | **Delete Guest Wi-Fi Account** | "Delete guest wifi account guest_xy12", "Remove wifi access for guest" | Guest Wi-Fi API — `DELETE /guest-wifi-accounts/{username}` | Token exchange (RFC 8693) |
-| 6 | **Micro-App Guidance** | "How do I apply for leave?", "Book a room" | *None (prompt-only)* | N/A |
+| # | Skill | Trigger Examples | Tool File | Backend | Auth |
+|---|-------|-----------------|-----------|---------|------|
+| 1 | **Meals & Menu** | "What's for lunch?", "Show today's menu" | `tools/meals/meals_tools.py` | Meals API — `GET /menu` | Token exchange (RFC 8693) |
+| 2 | **Lunch Feedback** | "The lunch was great", "I want to give feedback" | `tools/meals/meals_tools.py` | Meals API — `POST /feedback` | Token exchange (RFC 8693) |
+| 3 | **Create Guest Wi-Fi** | "Create a guest wifi account" | `tools/guest_wifi/wifi_tools.py` | Wi-Fi API — `POST /guest-wifi-accounts` | Token exchange (RFC 8693) |
+| 4 | **Get Guest Wi-Fi Accounts** | "Show my guest wifi accounts" | `tools/guest_wifi/wifi_tools.py` | Wi-Fi API — `GET /guest-wifi-accounts` | Token exchange (RFC 8693) |
+| 5 | **Delete Guest Wi-Fi Account** | "Delete guest wifi account guest_xy12" | `tools/guest_wifi/wifi_tools.py` | Wi-Fi API — `DELETE /guest-wifi-accounts/{username}` | Token exchange (RFC 8693) |
+| 6 | **Apply Leave** | "Apply for casual leave on 24 Apr" | `tools/leave/leave_tools.py` | Leave API — `POST /leaves` | Token exchange (RFC 8693) |
+| 7 | **Cancel Leave** | "Cancel my leave on 24 Apr" | `tools/leave/leave_tools.py` | Leave API — `DELETE /leaves/{id}` | Token exchange (RFC 8693) |
+| 8 | **List Leaves** | "Show my upcoming leaves" | `tools/leave/leave_tools.py` | Leave API — `GET /leaves` | Token exchange (RFC 8693) |
+| 9 | **Micro-App Guidance** | "How do I apply for sabbatical?", "Book a room" | *None (prompt-only)* | N/A | N/A |
 
 ---
 
@@ -38,37 +41,27 @@ This document describes how the OpenSuperApp chat agent implements skill-based A
 
 > *"Each skill should be a self-contained module with clear boundaries."*
 
-Every backend capability is isolated into its own LangChain `@tool` function in `app/tools.py`. A tool encapsulates:
+Every backend capability is isolated into its own `@tool` function inside a dedicated skill folder under `tools/`. Each skill folder contains:
 
-- **What** it does (docstring — read by the LLM to decide when to call it)
-- **How** it talks to the backend (HTTP client, headers, endpoint)
-- **What** it returns (structured `dict`)
+| File | Purpose |
+|------|---------|
+| `<skill>_tools.py` | LangChain `@tool` functions — HTTP logic, error handling, structured return |
+| `prompt.md` | System prompt section — when to trigger this skill and how to behave |
 
-```python
-# app/tools.py — each skill = one @tool function
-@tool
-async def get_todays_menu(access_token: str) -> dict:
-    """Get today's menu including breakfast, juice, lunch, dessert, and snack.
-    Use this when the user asks about meals, food, what's for lunch/breakfast,
-    today's menu, or anything related to cafeteria food.
-
-    Args:
-        access_token: The exchanged access token for authentication (injected by the agent).
-    """
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        response = await client.get(
-            f"{MEALS_BACKEND_URL}/menu",
-            headers={
-                "x-jwt-assertion": access_token,
-                "Authorization": f"Bearer {access_token}",
-            },
-        )
-        if response.status_code != 200:
-            return {"error": f"Menu API returned {response.status_code}: {response.text}"}
-        return response.json()
+```text
+tools/
+├── meals/
+│   ├── meals_tools.py          ← get_todays_menu, submit_lunch_feedback
+│   └── prompt.md               ← "Use get_todays_menu when user asks about food…"
+├── guest_wifi/
+│   ├── wifi_tools.py           ← create/get/delete_guest_wifi_account
+│   └── prompt.md
+└── leave/
+    ├── leave_tools.py          ← validate/submit/cancel/list leave + configs
+    └── prompt.md
 ```
 
-**Why this matters:** Adding a new backend skill never requires modifying existing tool code. You simply create a new `@tool` function — the LLM discovers it via the tool definition automatically.
+**Why this matters:** Adding a new backend skill never requires touching existing skill code. Create a new folder, write the tool and prompt, wire it in `agent/agent.py` — done.
 
 ---
 
@@ -76,38 +69,19 @@ async def get_todays_menu(access_token: str) -> dict:
 
 > *"Present information incrementally. Don't overwhelm the user with everything at once."*
 
-The system prompt in `app/agent.py` is structured for progressive disclosure at two levels:
+The system prompt is composed from modular files in `PROMPT_ORDER` inside `agent/prompt_manager.py`. Each section activates only when relevant:
 
-### Level 1 — Capability Enumeration (concise)
+### Level 1 — Capability Overview (`agent/prompts/base.md`)
 
-The agent tells the user *what it can do* only when relevant:
+Concise listing of what the agent can do — shown once at the top of every conversation.
 
-```text
-You can help employees with company-related queries. Currently you can:
+### Level 2 — Skill-Specific Instructions (`tools/*/prompt.md`)
 
-1. **Meals & Menu**: Fetch today's cafeteria menu ...
-```
+Detailed flow logic (leave application steps, Wi-Fi deletion confirmation, etc.) — only active when the user triggers that skill.
 
-### Level 2 — Detailed Formatting (on demand)
+### Level 3 — Guided Fallback (`agent/prompts/fallback.md`)
 
-Formatting instructions are embedded but only activated when a tool returns data:
-
-```text
-When presenting menu information:
-- Format it in a clean, readable way using markdown
-- Group items by meal type (Breakfast, Juice, Lunch, Dessert, Snack)
-- Be conversational and friendly
-```
-
-### Level 3 — Guided Fallback
-
-For features outside the agent's capabilities, the prompt provides *navigation hints* rather than generic refusals:
-
-```text
-- **Leave requests or balances** → "You can manage your leaves in the **Leave App** ..."
-```
-
-This mirrors the Anthropic framework's recommendation: "Skills should reveal complexity only when the user needs it."
+For unsupported features, routes the user to the correct micro-app instead of a generic refusal.
 
 ---
 
@@ -115,25 +89,26 @@ This mirrors the Anthropic framework's recommendation: "Skills should reveal com
 
 > *"Tools should have well-defined input/output schemas so the model can invoke them reliably."*
 
-LangChain's `@tool` decorator auto-generates an OpenAI-compatible function schema from the Python type hints and docstring. Our approach:
+LangChain's `@tool` decorator auto-generates an OpenAI-compatible function schema from Python type hints and docstrings:
 
 | Aspect | Implementation |
 |--------|---------------|
-| **Input schema** | Type-annotated args: `access_token: str` |
-| **Description** | Docstring — *"Get today's menu including breakfast, juice, lunch, dessert, and snack."* |
-| **Trigger phrases** | Embedded in the docstring — *"Use this when the user asks about meals, food..."* |
-| **Output** | Typed return `-> dict` — structured JSON from the backend |
+| **Input schema** | Type-annotated args (`access_token: str`, `leave_id: int`, …) |
+| **Description** | Docstring — read by the LLM to decide when to call the tool |
+| **Trigger phrases** | Embedded in docstring — *"Use this when the user asks about…"* |
+| **Output** | Typed `-> dict` — structured JSON from the backend |
 
-The agent binds tools explicitly in `app/agent.py`:
+Tools are registered in `agent/agent.py`:
 
 ```python
-llm_with_tools = llm.bind_tools([
+tools = [
     get_todays_menu, submit_lunch_feedback,
     create_guest_wifi_account, get_guest_wifi_accounts, delete_guest_wifi_account,
-])
+    validate_additional_recipient_emails, validate_leave_request,
+    submit_leave_request, cancel_leave_request, list_my_leaves, get_leave_app_configs,
+]
+llm_with_tools = llm.bind_tools(tools)
 ```
-
-This binding step is where skills are *registered*. The LLM receives the full JSON Schema for each tool and decides autonomously when to invoke them — the core of the Anthropic Skills pattern.
 
 ---
 
@@ -141,43 +116,37 @@ This binding step is where skills are *registered*. The LLM receives the full JS
 
 > *"When a skill fails, the agent should degrade gracefully rather than crash."*
 
-Our implementation handles failures at three layers:
+Three layers of protection:
 
-### Layer 1 — HTTP-level errors (tools.py)
+### Layer 1 — HTTP errors (`tools/*/`)
 
 ```python
 if response.status_code != 200:
-    return {"error": f"Menu API returned {response.status_code}: {response.text}"}
+    return {"error": f"API returned {response.status_code}: {response.text}"}
 ```
 
-The tool returns an error *as data*, not as an exception. This lets the LLM compose a human-friendly explanation.
+Tools return errors *as data*, not exceptions — the LLM composes a human-friendly explanation.
 
-### Layer 2 — Tool execution errors (agent.py)
+### Layer 2 — Tool execution errors (`agent/agent.py`)
 
 ```python
 try:
-    meals_token = await exchange_token_for_meals(access_token)
-    result = await get_todays_menu.ainvoke({"access_token": meals_token})
+    token = await exchange_token_for_meals(access_token)
+    result = await get_todays_menu.ainvoke({"access_token": token})
 except Exception as e:
-    logger.error("Tool execution failed: %s", e)
-    result = {"error": str(e)}
+    result = {"error": "Failed to fetch data. Please try again later."}
 ```
 
-Even if token exchange or the tool itself throws, the error is wrapped as a `ToolMessage` and passed back to the LLM, which then explains the issue conversationally.
+Even if token exchange or the tool throws, the error is passed back to the LLM as a `ToolMessage`.
 
-### Layer 3 — Endpoint-level errors (main.py)
+### Layer 3 — Endpoint errors (`main.py`)
 
 ```python
-try:
-    reply = await run_agent(request.message, access_token)
-    return ChatResponse(reply=reply)
 except Exception as e:
-    raise HTTPException(status_code=500, detail=f"Agent error: {str(e)}")
+    raise HTTPException(status_code=500, detail="An internal error occurred.")
 ```
 
-If the entire agent pipeline fails, the FastAPI endpoint returns a structured error to the frontend, which displays it in the chat UI.
-
-**Result:** At no point does the user see a raw stack trace. Errors flow through three catch-and-explain layers before reaching the user.
+The user never sees a raw stack trace.
 
 ---
 
@@ -185,43 +154,15 @@ If the entire agent pipeline fails, the FastAPI endpoint returns a structured er
 
 > *"Skills should operate with the minimum required permissions."*
 
-This is where our architecture goes beyond the standard Skills framework. Each micro-app backend has its **own OAuth2 client registration** in Asgardeo, and the agent exchanges the super app's access token for a micro-app-scoped token before invoking any tool.
-
-### Token Exchange Flow (RFC 8693)
+Each micro-app has its **own OAuth2 client** in Asgardeo. `agent/token_exchange.py` exchanges the super app token for a micro-app–scoped token via RFC 8693 before invoking any tool.
 
 ```text
-┌────────────────┐         ┌────────────┐         ┌──────────────┐
-│  Mobile App    │         │  Chat Agent │         │   Asgardeo   │
-│  (Super App    │ Bearer  │  (FastAPI)  │  Token  │   (IdP)      │
-│   token)       │────────▶│             │─Exchange─▶│              │
-│                │         │             │◀─Scoped──│              │
-│                │         │   meals_    │  Token   │              │
-│                │         │   token ────┼─────────▶│ Meals Backend│
-└────────────────┘         └────────────┘         └──────────────┘
+Mobile App token  →  exchange_token_for_meals()   →  meals-scoped token  →  Meals Backend
+Mobile App token  →  exchange_token_for_leave()   →  leave-scoped token  →  Leave Backend
+Mobile App token  →  exchange_token_for_guest_wifi() → wifi-scoped token  →  Wi-Fi Backend
 ```
 
-```python
-# app/token_exchange.py
-async def exchange_token(access_token: str, client_id: str, scope: str = DEFAULT_SCOPE) -> str:
-    payload = {
-        "grant_type": GRANT_TYPE_TOKEN_EXCHANGE,       # RFC 8693
-        "subject_token": access_token,                  # super app token
-        "subject_token_type": SUBJECT_TOKEN_TYPE,       # jwt
-        "requested_token_type": REQUESTED_TOKEN_TYPE,   # access_token
-        "client_id": client_id,                         # per-app scoped
-        "scope": scope,                                 # openid email groups profile [+ extras]
-    }
-    # ... POST to Asgardeo token endpoint
-
-# Thin wrappers per micro-app:
-async def exchange_token_for_meals(access_token: str) -> str:
-    return await exchange_token(access_token, MEALS_APP_CLIENT_ID, _build_scope(MEALS_EXTRA_SCOPES))
-
-async def exchange_token_for_guest_wifi(access_token: str) -> str:
-    return await exchange_token(access_token, GUEST_WIFI_APP_CLIENT_ID, _build_scope(GUEST_WIFI_EXTRA_SCOPES))
-```
-
-**Key design decision:** All exchange logic lives in a single `exchange_token()` function. Each micro-app gets a thin wrapper with its own `CLIENT_ID` and optional extra scopes (via `*_EXTRA_SCOPES` env vars). Adding a new backend only requires a one-liner wrapper. This mirrors the existing micro-app pattern in the React Native frontend's `authService.ts` and ensures least-privilege token scoping.
+Adding a new backend only requires a one-liner wrapper in `agent/token_exchange.py`.
 
 ---
 
@@ -229,23 +170,13 @@ async def exchange_token_for_guest_wifi(access_token: str) -> str:
 
 > *"Not every skill needs a tool. Prompt-based skills provide guidance without backend calls."*
 
-Our "Micro-App Guidance" skill is implemented entirely in the system prompt — no tool, no backend call. This follows the Anthropic pattern of *knowledge skills* vs *action skills*:
+| Skill Type | Example | Location |
+|-----------|---------|---------|
+| **Action skill** | Meals & Menu | `tools/meals/meals_tools.py` + `prompt.md` |
+| **Knowledge skill** | Micro-App Guidance | `agent/prompts/fallback.md` only |
 
-| Skill Type | Example | Implementation |
-|-----------|---------|---------------|
-| **Action skill** | Meals & Menu | `@tool` function + backend call |
-| **Knowledge skill** | Micro-App Guidance | System prompt rules only |
-
-The guidance skill in the system prompt:
-
-```text
-For features you **cannot** handle directly, guide the user to the right micro app:
-- **Leave requests or balances** → "You can manage your leaves in the **Leave App**
-  available in the Apps tab."
-- **Facility or room bookings** → "Head over to the **Facilities App** in the Apps tab ..."
-```
-
-This is a deliberate design: rather than returning "I can't help with that", the agent acts as a concierge, routing users to the appropriate part of the super app. As each micro-app gains a backend API, its guidance entry can be *upgraded* from a knowledge skill to an action skill with a `@tool`.
+The fallback prompt routes users to the right micro-app instead of saying "I can't help with that."
+As each micro-app gains a backend API, its knowledge skill can be upgraded to an action skill by adding a tools file.
 
 ---
 
@@ -253,131 +184,125 @@ This is a deliberate design: rather than returning "I can't help with that", the
 
 > *"The skill architecture should make it easy to add new capabilities without modifying existing ones."*
 
-Our file structure maps directly to the Skills framework's module boundaries:
-
 ```text
 chat-agent/
-├── app/
-│   ├── agent.py           # Orchestrator — system prompt + tool loop
-│   ├── tools.py           # Skill implementations (one @tool per skill)
-│   ├── token_exchange.py  # Per-skill auth scoping
-│   ├── config.py          # Skill configuration (env vars)
-│   └── main.py            # HTTP interface (skill-agnostic)
-├── SKILLS.md              # This file — skill catalog & extension guide
-└── .env                   # Per-environment skill configuration
+├── main.py               # HTTP interface — never changes for new skills
+├── config.py             # Env vars — add new vars only
+├── agent/
+│   ├── agent.py          # Import + register new tool; add handler in loop
+│   ├── prompt_manager.py # Add new prompt path to PROMPT_ORDER
+│   └── token_exchange.py # Add one-liner exchange wrapper (if needed)
+└── tools/
+    └── <new_skill>/      # Create folder, add tools + prompt.md
 ```
 
-### Separation of Concerns
+| File | Changes when adding a skill? |
+|------|------------------------------|
+| `tools/<skill>/` | ✅ Create new folder |
+| `agent/token_exchange.py` | ✅ Add wrapper (if new micro-app) |
+| `agent/agent.py` | ✅ Import + bind + handle |
+| `agent/prompt_manager.py` | ✅ Add to PROMPT_ORDER |
+| `config.py` | ✅ Add env vars |
+| `main.py` | ❌ No changes needed |
 
-| File | Responsibility | Changes when adding a skill? |
-|------|---------------|------------------------------|
-| `tools.py` | Tool/skill implementation | ✅ Add new `@tool` function |
-| `token_exchange.py` | Authentication scoping | ✅ Add new exchange function (if needed) |
-| `agent.py` | Orchestration & prompt | ✅ Import tool, bind, add prompt section |
-| `config.py` | Environment config | ✅ Add new env vars |
-| `main.py` | HTTP API | ❌ No changes needed |
-
-No existing code is modified when adding a skill — only *new* code is added to existing files, following the Open/Closed Principle.
+No existing skill code is modified when adding a new skill — only *new* code is added.
 
 ---
 
 ## Adding a New Skill — Step by Step
 
-### Step 1: Define the Tool
+### Step 1: Create the Tool Folder
 
-Create a new `@tool` function in `app/tools.py`:
+```bash
+mkdir tools/<skill_name>
+touch tools/<skill_name>/__init__.py
+touch tools/<skill_name>/<skill_name>_tools.py
+touch tools/<skill_name>/prompt.md
+```
+
+### Step 2: Implement the Tool
 
 ```python
-from app.config import LEAVE_BACKEND_URL
+# tools/<skill_name>/<skill_name>_tools.py
+from langchain_core.tools import tool
+from config import YOUR_BACKEND_URL
 
 @tool
-async def get_leave_balance(access_token: str) -> dict:
-    """Get the user's remaining leave balance for the current year.
-    Use this when the user asks about leave balance, remaining days off,
-    vacation days, or how much leave they have left.
+async def your_tool(access_token: str) -> dict:
+    """Describe what this tool does and when to use it.
 
     Args:
-        access_token: The exchanged access token for authentication.
+        access_token: The exchanged access token (injected by the agent).
     """
     async with httpx.AsyncClient(timeout=15.0) as client:
-        response = await client.get(
-            f"{LEAVE_BACKEND_URL}/balance",
-            headers={
-                "x-jwt-assertion": access_token,
-                "Authorization": f"Bearer {access_token}",
-            },
-        )
+        response = await client.get(f"{YOUR_BACKEND_URL}/endpoint",
+                                    headers={"Authorization": f"Bearer {access_token}"})
         if response.status_code != 200:
-            return {"error": f"Leave API returned {response.status_code}: {response.text}"}
+            return {"error": f"API returned {response.status_code}"}
         return response.json()
 ```
 
-### Step 2: Add Token Exchange
+### Step 3: Write the Skill Prompt
 
-In `app/token_exchange.py`, add a one-liner wrapper using the shared `exchange_token()` function:
-
-```python
-from app.config import LEAVE_APP_CLIENT_ID
-
-async def exchange_token_for_leave(access_token: str) -> str:
-    """Exchange super app token for a leave-app-scoped token."""
-    payload = {
-        "grant_type": GRANT_TYPE_TOKEN_EXCHANGE,
-        "subject_token": access_token,
-        "subject_token_type": SUBJECT_TOKEN_TYPE,
-        "requested_token_type": REQUESTED_TOKEN_TYPE,
-        "client_id": LEAVE_APP_CLIENT_ID,
-        "scope": SCOPE,
-    }
-    # ... same HTTP call pattern as exchange_token_for_meals
+```markdown
+# tools/<skill_name>/prompt.md
+N. **Your Skill Name**: Brief description of what it does.
+Use `your_tool` when the user asks about X, Y, or Z.
 ```
 
-### Step 3: Register with the Agent
-
-In `app/agent.py`:
+### Step 4: Add Token Exchange
 
 ```python
-from app.tools import get_todays_menu, get_leave_balance
-from app.token_exchange import exchange_token_for_meals, exchange_token_for_leave
-
-# Bind all tools
-llm_with_tools = llm.bind_tools([get_todays_menu, get_leave_balance])
-
-# Add execution handler
-if tool_name == "get_leave_balance":
-    leave_token = await exchange_token_for_leave(access_token)
-    result = await get_leave_balance.ainvoke({"access_token": leave_token})
+# agent/token_exchange.py
+async def exchange_token_for_your_app(access_token: str) -> str:
+    return await exchange_token(access_token, YOUR_APP_CLIENT_ID)
 ```
 
-### Step 4: Update the System Prompt
-
-Add the new capability and upgrade the guidance entry:
+### Step 5: Register in the Agent
 
 ```python
-SYSTEM_PROMPT = """...
-2. **Leave Balance**: Check your remaining leave days for the current year. \
-Use the get_leave_balance tool when users ask about leave balance or vacation days.
-...
-"""
+# agent/agent.py
+from tools.<skill_name>.<skill_name>_tools import your_tool
+from agent.token_exchange import exchange_token_for_your_app
+
+# In tools list:
+tools = [..., your_tool]
+
+# In tool-call loop:
+elif tool_name == "your_tool":
+    try:
+        token = await exchange_token_for_your_app(access_token)
+        result = await your_tool.ainvoke({"access_token": token})
+    except Exception as e:
+        result = {"error": "Failed. Please try again later."}
 ```
 
-### Step 5: Add Configuration
-
-In `app/config.py`:
+### Step 6: Add to Prompt Order
 
 ```python
-LEAVE_BACKEND_URL = os.getenv("LEAVE_BACKEND_URL", "")
-LEAVE_APP_CLIENT_ID = os.getenv("LEAVE_APP_CLIENT_ID", "")
+# agent/prompt_manager.py
+PROMPT_ORDER = [
+    ...
+    "tools/<skill_name>/prompt.md",
+    ...
+]
 ```
 
-In `.env`:
+### Step 7: Add Configuration
+
+```python
+# config.py
+YOUR_BACKEND_URL = os.getenv("YOUR_BACKEND_URL", "")
+YOUR_APP_CLIENT_ID = os.getenv("YOUR_APP_CLIENT_ID", "")
+```
 
 ```bash
-LEAVE_BACKEND_URL=https://leave-api.example.com
-LEAVE_APP_CLIENT_ID=<client-id-from-asgardeo>
+# .env.example
+YOUR_BACKEND_URL=https://your-api-gateway.com/your-app/v1.0
+YOUR_APP_CLIENT_ID=your-app-client-id
 ```
 
-### Step 6: Update This Document
+### Step 8: Update This Document
 
 Add the new skill to the [Current Skills](#current-skills) table above.
 
@@ -387,10 +312,10 @@ Add the new skill to the [Current Skills](#current-skills) table above.
 
 | Anthropic Skills Principle | Our Implementation |
 |---------------------------|-------------------|
-| **Modular skill definitions** | Each backend = one `@tool` function in `tools.py` |
-| **Progressive disclosure** | System prompt reveals capabilities incrementally; formatting rules activate on demand |
-| **Structured tool schemas** | LangChain `@tool` generates OpenAI-compatible function schemas from type hints + docstrings |
-| **Graceful degradation** | Three-layer error handling: HTTP → tool execution → endpoint; errors become conversational messages |
-| **Scoped permissions** | RFC 8693 token exchange gives each skill its own least-privilege token |
-| **Knowledge vs action skills** | Micro-App Guidance (prompt-only) vs Meals & Menu (tool-backed) |
-| **Open/Closed extensibility** | Adding a skill = adding code, never modifying existing skill implementations |
+| **Modular skill definitions** | Each skill = `tools/<name>/` folder with `_tools.py` + `prompt.md` |
+| **Progressive disclosure** | `PROMPT_ORDER` reveals sections incrementally; fallback activates only when needed |
+| **Structured tool schemas** | LangChain `@tool` generates OpenAI-compatible schemas from type hints + docstrings |
+| **Graceful degradation** | Three-layer error handling: HTTP → tool execution → FastAPI endpoint |
+| **Scoped permissions** | RFC 8693 token exchange in `agent/token_exchange.py` — one scoped token per micro-app |
+| **Knowledge vs action skills** | Micro-App Guidance (prompt-only in `fallback.md`) vs Meals/Wi-Fi/Leave (tool-backed) |
+| **Open/Closed extensibility** | Adding a skill = new folder + wiring; existing skill code is never modified |

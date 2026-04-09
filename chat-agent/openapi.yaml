@@ -23,23 +23,24 @@ paths:
       description: |
         Process a chat message from the user.
 
-        The Authorization header must contain the user's access token as:
-        Bearer <access_token>
-
-        The access token is forwarded to micro-app backends for authentication.
+        Both headers are required:
+          - x-jwt-assertion: <access_token>
+          - x-user-assertion: <access_token> (used for micro-app token exchange)
       operationId: chat_chat_post
-
       parameters:
-        - name: Authorization
+        - name: x-jwt-assertion
           in: header
-          required: false
-          description: Bearer <access_token>
+          required: true
+          description: User's JWT assertion token
           schema:
-            title: Authorization
-            description: Bearer <access_token>
-            anyOf:
-              - type: string
-              - type: "null"
+            type: string
+
+        - name: x-user-assertion
+          in: header
+          required: true
+          description: User's assertion token (used for micro-app token exchange)
+          schema:
+            type: string
 
       requestBody:
         required: true
@@ -56,6 +57,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/ChatResponse"
 
+        "401":
+          description: Missing required auth headers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
         "422":
           description: Validation Error
           content:
@@ -63,9 +71,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/HTTPValidationError"
 
+        "500":
+          description: Internal agent error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
-
     ChatRequest:
       title: ChatRequest
       type: object
@@ -75,9 +89,11 @@ components:
         message:
           type: string
           title: Message
+          description: The user's chat message
 
         history:
           title: History
+          description: Prior conversation turns for multi-turn context
           anyOf:
             - type: array
               items:
@@ -93,6 +109,7 @@ components:
         reply:
           type: string
           title: Reply
+          description: The agent's response message
 
     HistoryMessage:
       title: HistoryMessage
@@ -104,9 +121,25 @@ components:
         role:
           type: string
           title: Role
+          description: "Message author: 'user' or 'assistant'"
+          enum:
+            - user
+            - assistant
         content:
           type: string
           title: Content
+          description: Message text content
+
+    ErrorResponse:
+      title: ErrorResponse
+      type: object
+      required:
+        - detail
+      properties:
+        detail:
+          type: string
+          title: Detail
+          description: Human-readable error description
 
     HTTPValidationError:
       title: HTTPValidationError
@@ -139,4 +172,3 @@ components:
         type:
           type: string
           title: Error Type
-          

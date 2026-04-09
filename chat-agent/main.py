@@ -24,17 +24,19 @@ the agent's response.
 
 import logging
 from typing import List, Optional
+
 import uvicorn
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
+
 from fastapi import FastAPI, HTTPException, Header, Request
 from pydantic import BaseModel
 
-from app.agent import run_agent
-from app.config import DEBUG
+from agent.agent import run_agent
+from config import DEBUG
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +97,6 @@ async def chat(
 
     access_token = x_user_assertion
 
-    # Convert history to list of dicts for the agent
     history = (
         [{"role": m.role, "content": m.content} for m in request.history]
         if request.history
@@ -106,11 +107,12 @@ async def chat(
         reply = await run_agent(request.message, access_token, history)
         return ChatResponse(reply=reply)
     except Exception as e:
-        logger.error("Agent error: %s", e)
+        logger.error("Agent error: %s", e, exc_info=True)
         raise HTTPException(
             status_code=500,
             detail="An internal error occurred. Please try again later.",
-        )
-        
+        ) from e
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, h11_max_incomplete_event_size=16384)

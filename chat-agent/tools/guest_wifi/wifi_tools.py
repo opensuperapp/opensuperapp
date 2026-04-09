@@ -15,79 +15,25 @@
 # under the License.
 
 """
-Backend tools for the chat agent.
+Guest Wi-Fi tools.
 
-Each tool corresponds to a micro-app backend endpoint.
-The exchanged access token (from Asgardeo token exchange) is forwarded
-as x-jwt-assertion header for authentication.
+Covers:
+  - create_guest_wifi_account : Create a new guest Wi-Fi account (auto-generated credentials).
+  - get_guest_wifi_accounts   : List all guest Wi-Fi accounts for the current user.
+  - delete_guest_wifi_account : Delete a guest Wi-Fi account by username.
 """
 
+import logging
 import secrets
 import string
+from urllib.parse import quote
 
 import httpx
 from langchain_core.tools import tool
 
-from app.config import DEBUG, MEALS_BACKEND_URL, GUEST_WIFI_BACKEND_URL
+from config import DEBUG, GUEST_WIFI_BACKEND_URL
 
-
-@tool
-async def get_todays_menu(access_token: str) -> dict:
-    """Get today's menu including breakfast, juice, lunch, dessert, and snack.
-    Use this when the user asks about meals, food, what's for lunch/breakfast,
-    today's menu, or anything related to cafeteria food.
-
-    Args:
-        access_token: The exchanged access token for authentication (injected by the agent).
-    """
-    headers = {"Authorization": f"Bearer {access_token}"}
-    if DEBUG:
-        headers["x-jwt-assertion"] = access_token
-
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        response = await client.get(
-            f"{MEALS_BACKEND_URL}/menu",
-            headers=headers,
-        )
-        if response.status_code != 200:
-            return {"error": f"Menu API returned {response.status_code}: {response.text}"}
-        return response.json()
-
-
-@tool
-async def submit_lunch_feedback(access_token: str, message: str) -> dict:
-    """Submit feedback for today's lunch.
-    Use this when the user wants to give feedback, a review, or share their opinion
-    about today's lunch or meal. The feedback can only be submitted between 12:00 and 16:15.
-
-    Args:
-        access_token: The exchanged access token for authentication (injected by the agent).
-        message: The user's feedback message about today's lunch.
-    """
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/json",
-    }
-    if DEBUG:
-        headers["x-jwt-assertion"] = access_token
-
-    payload = {
-        "message": message,
-        "meal": "Lunch",
-    }
-
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        response = await client.post(
-            f"{MEALS_BACKEND_URL}/feedback",
-            json=payload,
-            headers=headers,
-        )
-        if response.status_code == 201:
-            return {"success": True, "message": "Feedback submitted successfully"}
-        if response.status_code == 400:
-            error_body = response.json() if response.text else {}
-            return {"error": error_body.get("message", "Feedback submission failed. It may be outside the feedback window (12:00–16:15).")}
-        return {"error": f"Feedback API returned {response.status_code}: {response.text}"}
+logger = logging.getLogger(__name__)
 
 
 def _generate_wifi_credentials() -> tuple[str, str]:
@@ -111,26 +57,21 @@ async def create_guest_wifi_account(access_token: str) -> dict:
 
     headers = {
         "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
     if DEBUG:
         headers["x-jwt-assertion"] = access_token
         headers["User-Agent"] = "Mozilla/5.0 (compatible; OpenSuperApp/1.0; DEBUG)"
 
-    payload = {
-        "username": username,
-        "password": password,
-    }
+    payload = {"username": username, "password": password}
 
     async with httpx.AsyncClient(timeout=15.0) as client:
-        response = await client.post(
-            f"{GUEST_WIFI_BACKEND_URL}/guest-wifi-accounts",
-            json=payload,
-            headers=headers,
-        )
+        url = f"{GUEST_WIFI_BACKEND_URL}/guest-wifi-accounts"
+        response = await client.post(url, json=payload, headers=headers)
         if response.status_code in (200, 201):
             return {"success": True, "username": username, "password": password}
-        return {"error": f"Guest Wi-Fi API returned {response.status_code}: {response.text}"}
+        logger.error("Guest Wi-Fi create failed: %s - %s", response.status_code, response.text)
+        return {"error": "Unable to reach Guest Wi-Fi service; please try again later."}
 
 
 @tool
@@ -141,20 +82,17 @@ async def get_guest_wifi_accounts(access_token: str) -> dict:
     Args:
         access_token: The exchanged access token for authentication (injected by the agent).
     """
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-    }
+    headers = {"Authorization": f"Bearer {access_token}"}
     if DEBUG:
         headers["x-jwt-assertion"] = access_token
         headers["User-Agent"] = "Mozilla/5.0 (compatible; OpenSuperApp/1.0; DEBUG)"
 
     async with httpx.AsyncClient(timeout=15.0) as client:
-        response = await client.get(
-            f"{GUEST_WIFI_BACKEND_URL}/guest-wifi-accounts",
-            headers=headers,
-        )
+        url = f"{GUEST_WIFI_BACKEND_URL}/guest-wifi-accounts"
+        response = await client.get(url, headers=headers)
         if response.status_code != 200:
-            return {"error": f"Guest Wi-Fi API returned {response.status_code}: {response.text}"}
+            logger.error("Guest Wi-Fi list failed: %s - %s", response.status_code, response.text)
+            return {"error": "Unable to reach Guest Wi-Fi service; please try again later."}
         return response.json()
 
 
@@ -177,10 +115,10 @@ async def delete_guest_wifi_account(access_token: str, username: str) -> dict:
         headers["User-Agent"] = "Mozilla/5.0 (compatible; OpenSuperApp/1.0; DEBUG)"
 
     async with httpx.AsyncClient(timeout=15.0) as client:
-        response = await client.delete(
-            f"{GUEST_WIFI_BACKEND_URL}/guest-wifi-accounts/{username}",
-            headers=headers,
-        )
+        encoded_username = quote(username, safe="")
+        url = f"{GUEST_WIFI_BACKEND_URL}/guest-wifi-accounts/{encoded_username}"
+        response = await client.delete(url, headers=headers)
         if response.status_code in (200, 204):
             return {"success": True, "message": f"Guest Wi-Fi account '{username}' deleted successfully."}
-        return {"error": f"Guest Wi-Fi API returned {response.status_code}: {response.text}"}
+        logger.error("Guest Wi-Fi delete failed: %s - %s", response.status_code, response.text)
+        return {"error": "Unable to reach Guest Wi-Fi service; please try again later."}

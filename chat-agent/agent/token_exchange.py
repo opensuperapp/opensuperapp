@@ -26,7 +26,14 @@ import logging
 
 import httpx
 
-from app.config import ASGARDEO_TOKEN_URL, MEALS_APP_CLIENT_ID, GUEST_WIFI_APP_CLIENT_ID, MEALS_EXTRA_SCOPES, GUEST_WIFI_EXTRA_SCOPES
+from config import (
+    ASGARDEO_TOKEN_URL,
+    GUEST_WIFI_APP_CLIENT_ID,
+    GUEST_WIFI_EXTRA_SCOPES,
+    LEAVE_APP_CLIENT_ID,
+    MEALS_APP_CLIENT_ID,
+    MEALS_EXTRA_SCOPES,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +96,6 @@ async def exchange_token(access_token: str, client_id: str, scope: str = DEFAULT
             logger.error("Token exchange response missing access_token: %s", data)
             raise Exception("Token exchange response does not contain access_token")
 
-        logger.debug("Token exchange successful for client_id: %s", client_id)
         return exchanged_token
 
 
@@ -108,3 +114,8 @@ async def exchange_token_for_meals(access_token: str) -> str:
 async def exchange_token_for_guest_wifi(access_token: str) -> str:
     """Exchange the super app access token for a guest-wifi-app-scoped access token."""
     return await exchange_token(access_token, GUEST_WIFI_APP_CLIENT_ID, _build_scope(GUEST_WIFI_EXTRA_SCOPES))
+
+
+async def exchange_token_for_leave(access_token: str) -> str:
+    """Exchange the super app access token for a leave-app-scoped access token."""
+    return await exchange_token(access_token, LEAVE_APP_CLIENT_ID)
