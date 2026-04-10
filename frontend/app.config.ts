@@ -87,7 +87,7 @@ let config: ExpoConfig = {
       "aps-environment": profile === PRODUCTION ? PRODUCTION : DEVELOPMENT,
     },
     icon: {
-      dark: "./assets/images/ios-light.png",
+      dark: "./assets/images/ios-dark.png",
       light: "./assets/images/ios-light.png",
       tinted: "./assets/images/ios-tinted.png",
     },
