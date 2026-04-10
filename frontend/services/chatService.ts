@@ -16,10 +16,10 @@
 
 import { CHAT_AGENT_URL } from "@/constants/Constants";
 import {
-  loadAuthData,
-  refreshAccessToken,
-  logout,
   isTokenExpired,
+  loadAuthData,
+  logout,
+  refreshAccessToken,
 } from "@/services/authService";
 
 /**
@@ -58,7 +58,7 @@ export interface ChatMessage {
  */
 export const sendChatMessage = async (
   message: string,
-  history?: ChatMessage[],
+  history?: ChatMessage[]
 ): Promise<string> => {
   if (!CHAT_AGENT_URL) {
     throw new Error("Chat agent URL is not configured");
@@ -79,6 +79,7 @@ export const sendChatMessage = async (
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
+        "x-user-assertion": token,
       },
       body: JSON.stringify({
         message,
