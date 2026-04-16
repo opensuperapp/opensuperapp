@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, ReactNode } from "react";
 import {
   View,
   Text,
@@ -26,6 +26,7 @@ import {
   useColorScheme,
   ActivityIndicator,
   Keyboard,
+  Animated,
 } from "react-native";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
@@ -34,6 +35,7 @@ import { Colors } from "@/constants/Colors";
 import { isIos } from "@/constants/Constants";
 import { sendChatMessage, ChatMessage } from "@/services/chatService";
 import { Image } from "expo-image";
+import * as Clipboard from "expo-clipboard";
 
 export default function ChatScreen() {
   const colorScheme = useColorScheme();
@@ -44,7 +46,35 @@ export default function ChatScreen() {
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarText, setSnackbarText] = useState("Copied!");
+  const snackbarOpacity = useRef(new Animated.Value(0)).current;
   const flatListRef = useRef<FlatList>(null);
+
+  const showSnackbar = useCallback(
+    (label: string) => {
+      setSnackbarText(`${label} copied!`);
+      setSnackbarVisible(true);
+      snackbarOpacity.setValue(1);
+      Animated.sequence([
+        Animated.delay(1500),
+        Animated.timing(snackbarOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => setSnackbarVisible(false));
+    },
+    [snackbarOpacity],
+  );
+
+  const handleCopy = useCallback(
+    async (value: string, label: string) => {
+      await Clipboard.setStringAsync(value);
+      showSnackbar(label);
+    },
+    [showSnackbar],
+  );
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener(
@@ -160,6 +190,85 @@ export default function ChatScreen() {
     },
   };
 
+  // Renders assistant content, replacing #(value) patterns with inline copy chips
+  const renderAssistantContent = (content: string) => {
+    const COPYABLE_PATTERN = /#\(([^)]+)\)/g;
+    const parts: ReactNode[] = [];
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+    let partKey = 0;
+
+    while ((match = COPYABLE_PATTERN.exec(content)) !== null) {
+      const precedingRaw = content.slice(lastIndex, match.index);
+      const preceding = precedingRaw.toLowerCase();
+      if (match.index > lastIndex) {
+        const stripped = precedingRaw.replace(/\n-[^\n]*$/, "").trimEnd();
+        if (stripped) {
+          parts.push(
+            <Markdown key={partKey++} style={markdownStyles}>
+              {stripped}
+            </Markdown>,
+          );
+        }
+      }
+      const value = match[1];
+      const label = preceding.includes("password")
+        ? "Password"
+        : preceding.includes("username") || preceding.includes("user")
+          ? "Username"
+          : "Value";
+      parts.push(
+        <View key={partKey++} style={styles.copyChipWrapper}>
+          <Text
+            style={[styles.copyChipLabel, { color: isDark ? "#fff" : "#000" }]}
+          >
+            {label}
+          </Text>
+          <View
+            style={[
+              styles.copyChip,
+              {
+                backgroundColor: isDark ? "#3a3a3c" : "#f2f2f7",
+                borderColor: isDark ? "#48484a" : "#ccc",
+              },
+            ]}
+          >
+            <Text
+              style={[styles.copyChipText, { color: isDark ? "#fff" : "#000" }]}
+              numberOfLines={1}
+            >
+              {value}
+            </Text>
+            <View
+              style={
+                (styles.copyChipDivider,
+                { backgroundColor: isDark ? "#fff" : "#000" })
+              }
+            />
+            <TouchableOpacity
+              style={styles.copyChipButton}
+              onPress={() => handleCopy(value, label)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="copy-outline" size={16} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </View>,
+      );
+      lastIndex = match.index + match[0].length;
+    }
+
+    if (lastIndex < content.length) {
+      parts.push(
+        <Markdown key={partKey++} style={markdownStyles}>
+          {content.slice(lastIndex)}
+        </Markdown>,
+      );
+    }
+
+    return parts;
+  };
+
   const renderMessage = ({ item }: { item: ChatMessage }) => {
     const isUser = item.role === "user";
     return (
@@ -179,7 +288,7 @@ export default function ChatScreen() {
             {item.content}
           </Text>
         ) : (
-          <Markdown style={markdownStyles}>{item.content}</Markdown>
+          <>{renderAssistantContent(item.content)}</>
         )}
       </View>
     );
@@ -297,6 +406,12 @@ export default function ChatScreen() {
           />
         </TouchableOpacity>
       </View>
+
+      {snackbarVisible && (
+        <Animated.View style={[styles.snackbar, { opacity: snackbarOpacity }]}>
+          <Text style={styles.snackbarText}>{snackbarText}</Text>
+        </Animated.View>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -386,5 +501,57 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+  copyChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "stretch",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    overflow: "hidden",
+    backgroundColor: "#f2f2f7",
+  },
+  copyChipText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: "monospace",
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+  },
+  copyChipWrapper: {
+    alignSelf: "stretch",
+    marginVertical: 4,
+  },
+  copyChipLabel: {
+    fontSize: 14,
+    lineHeight: 29,
+    marginBottom: 4,
+    marginLeft: 2,
+  },
+  copyChipDivider: {
+    width: 1,
+    alignSelf: "stretch",
+  },
+  copyChipButton: {
+    backgroundColor: "#858181",
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  snackbar: {
+    position: "absolute",
+    bottom: 100,
+    alignSelf: "center",
+    backgroundColor: "#333",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 24,
+    elevation: 4,
+  },
+  snackbarText: {
+    color: "#fff",
+    fontSize: 14,
   },
 });
