@@ -70,8 +70,13 @@ export default function ChatScreen() {
 
   const handleCopy = useCallback(
     async (value: string, label: string) => {
-      await Clipboard.setStringAsync(value);
-      showSnackbar(label);
+      try {
+        await Clipboard.setStringAsync(value);
+        showSnackbar(label);
+      } catch (error) {
+        console.error("Failed to copy to clipboard:", error);
+        showSnackbar("Failed to copy");
+      }
     },
     [showSnackbar],
   );
@@ -240,10 +245,10 @@ export default function ChatScreen() {
               {value}
             </Text>
             <View
-              style={
-                (styles.copyChipDivider,
-                { backgroundColor: isDark ? "#fff" : "#000" })
-              }
+              style={[
+                styles.copyChipDivider,
+                { backgroundColor: isDark ? "transparent" : "#000" },
+              ]}
             />
             <TouchableOpacity
               style={styles.copyChipButton}
@@ -408,8 +413,15 @@ export default function ChatScreen() {
       </View>
 
       {snackbarVisible && (
-        <Animated.View style={[styles.snackbar, { opacity: snackbarOpacity }]}>
-          <Text style={styles.snackbarText}>{snackbarText}</Text>
+        <Animated.View
+          style={[styles.snackbar, { opacity: snackbarOpacity }]}
+          accessible={true}
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+        >
+          <Text style={styles.snackbarText} accessibilityLabel={snackbarText}>
+            {snackbarText}
+          </Text>
         </Animated.View>
       )}
     </KeyboardAvoidingView>
