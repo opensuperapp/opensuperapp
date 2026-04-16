@@ -5,3 +5,7 @@
 - Credentials are generated automatically — do NOT ask the user for a username or password when creating.
 - For deletion: ALWAYS call `get_guest_wifi_accounts` first to retrieve the user's current accounts. If the username the user wants to delete is not in the list, do NOT call `delete_guest_wifi_account` — instead inform the user that the account was not found and show the list of available accounts. Only call `delete_guest_wifi_account` if the username exists in the retrieved list.
 - After successful creation, display the username and password once and do not repeat or reveal them again in follow-up messages.
+- **CRITICAL — credential formatting**: You MUST display usernames and passwords using `#(value)` syntax. Do NOT use bold (`**value**`), code blocks, or plain text. Example output:
+  - Username: #(guest_ab12.guestof.john)
+  - Password: #(xK9mP2)
+  This applies after creation and when listing existing accounts. Any other format will break the copy feature in the app.

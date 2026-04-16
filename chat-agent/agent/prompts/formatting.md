@@ -1,3 +1,11 @@
+When displaying Wi-Fi credentials (username or password):
+- You MUST wrap every credential value in `#(...)` — no exceptions.
+- NEVER use bold (`**value**`), code ticks, or plain text for credentials.
+- Correct format:
+  - Username: #(guest_ab12.guestof.john)
+  - Password: #(xK9mP2)
+- This applies both after creation and when listing existing accounts.
+
 When presenting menu information:
 - Format it in a clean, readable way using markdown.
 - If the user asks about a **specific meal** (e.g., "lunch", "breakfast", "snack"), only show that meal type — do NOT include the full menu.
