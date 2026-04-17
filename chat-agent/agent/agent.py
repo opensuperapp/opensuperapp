@@ -501,6 +501,7 @@ async def run_agent(
     user_message: str,
     access_token: str,
     history: list[dict] | None = None,
+    metrics: any = None,
 ) -> str:
     """
     Run the LangChain agent with the user's message and conversation history.
@@ -510,6 +511,7 @@ async def run_agent(
         access_token: The user's super app access token (for tool auth).
         history: Optional list of prior messages
                  [{"role": "user"|"assistant", "content": "..."}].
+        metrics: Optional MetricsTracker instance for logging tool calls.
 
     Returns:
         The agent's text response.
@@ -609,6 +611,10 @@ async def run_agent(
 
         for tool_call in ai_message.tool_calls:
             tool_name = tool_call["name"]
+
+            if metrics:
+                metrics.increment_tool_call()
+            logger.debug("Tool call: %s", tool_name)
 
             if tool_name == "get_todays_menu":
                 try:
@@ -804,7 +810,8 @@ async def run_agent(
             else:
                 result = {"error": f"Unknown tool: {tool_name}"}
 
-            messages.append(ToolMessage(content=str(result), tool_call_id=tool_call["id"]))
+            sanitized_result = sanitize_tool_result(result)
+            messages.append(ToolMessage(content=sanitized_result, tool_call_id=tool_call["id"]))
 
     logger.warning("Max tool iterations (%d) reached, forcing text reply", MAX_TOOL_ITERATIONS)
     final = await llm.ainvoke(messages)
