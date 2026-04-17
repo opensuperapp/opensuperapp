@@ -28,6 +28,7 @@ import logging
 import re
 import uuid
 from datetime import datetime, timezone, timedelta
+from typing import Any
 
 import httpx
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
@@ -79,7 +80,7 @@ _ALL_LEAVE_TYPES = ["Annual", "Casual", "Sick", "Maternity", "Paternity", "Lieu"
 # ---------------------------------------------------------------------------
 
 
-def sanitize_tool_result(result: any) -> str:
+def sanitize_tool_result(result: Any) -> str:
     """Sanitize tool result by redacting sensitive information.
 
     Redacts:
@@ -94,7 +95,6 @@ def sanitize_tool_result(result: any) -> str:
     Returns:
         Sanitized string representation of the result
     """
-    import re
 
     def sanitize_dict(data: dict) -> dict:
         """Recursively sanitize dictionary values."""
@@ -135,9 +135,9 @@ def sanitize_tool_result(result: any) -> str:
             flags=re.IGNORECASE
         )
 
-        # Redact SQL keywords
+        # Redact SQL keywords with required context
         sanitized = re.sub(
-            r'\b(SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE)\b',
+            r'\bSELECT\s+\S+\s+FROM\b|\bINSERT\s+INTO\b|\bUPDATE\s+\S+\s+SET\b|\bDELETE\s+FROM\b|\bDROP\s+TABLE\b|\bALTER\s+TABLE\b|\bCREATE\s+TABLE\b|\bTRUNCATE\s+TABLE\b',
             '[SQL_REDACTED]',
             sanitized,
             flags=re.IGNORECASE
@@ -599,7 +599,7 @@ async def run_agent(
     user_message: str,
     access_token: str,
     history: list[dict] | None = None,
-    metrics: any = None,
+    metrics: Any | None = None,
 ) -> str:
     """
     Run the LangChain agent with the user's message and conversation history.
@@ -705,7 +705,7 @@ async def run_agent(
         messages.append(ai_message)
 
         if not ai_message.tool_calls:
-            return ai_message.content or ""
+            return sanitize_tool_result(ai_message.content) or ""
 
         for tool_call in ai_message.tool_calls:
             tool_name = tool_call["name"]
@@ -908,9 +908,8 @@ async def run_agent(
             else:
                 result = {"error": f"Unknown tool: {tool_name}"}
 
-            sanitized_result = sanitize_tool_result(result)
-            messages.append(ToolMessage(content=sanitized_result, tool_call_id=tool_call["id"]))
+            messages.append(ToolMessage(content=str(result), tool_call_id=tool_call["id"]))
 
     logger.warning("Max tool iterations (%d) reached, forcing text reply", MAX_TOOL_ITERATIONS)
     final = await llm.ainvoke(messages)
-    return final.content or ""
+    return sanitize_tool_result(final.content) or ""
