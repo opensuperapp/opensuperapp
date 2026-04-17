@@ -75,6 +75,104 @@ _ALL_LEAVE_TYPES = ["Annual", "Casual", "Sick", "Maternity", "Paternity", "Lieu"
 
 
 # ---------------------------------------------------------------------------
+# Response sanitization
+# ---------------------------------------------------------------------------
+
+
+def sanitize_tool_result(result: any) -> str:
+    """Sanitize tool result by redacting sensitive information.
+
+    Redacts:
+    - URLs (http/https patterns)
+    - SQL queries (SELECT, INSERT, UPDATE, DELETE)
+    - Passwords (common password fields)
+    - Tokens (JWT tokens, API keys)
+
+    Args:
+        result: Tool result (dict, list, str, or other types)
+
+    Returns:
+        Sanitized string representation of the result
+    """
+    import re
+
+    def sanitize_dict(data: dict) -> dict:
+        """Recursively sanitize dictionary values."""
+        sanitized = {}
+        for key, value in data.items():
+            key_lower = str(key).lower() if isinstance(key, str) else ""
+            if key_lower and any(sensitive in key_lower for sensitive in ["password", "passwd", "secret", "token", "api_key", "apikey"]):
+                sanitized[key] = "[REDACTED]"
+            elif isinstance(value, dict):
+                sanitized[key] = sanitize_dict(value)
+            elif isinstance(value, list):
+                sanitized[key] = sanitize_list(value)
+            elif isinstance(value, str):
+                sanitized[key] = sanitize_string(value)
+            else:
+                sanitized[key] = value
+        return sanitized
+
+    def sanitize_list(data: list) -> list:
+        """Recursively sanitize list values."""
+        return [sanitize_dict(item) if isinstance(item, dict) else
+                sanitize_list(item) if isinstance(item, list) else
+                sanitize_string(item) if isinstance(item, str) else
+                item for item in data]
+
+    def sanitize_string(text: str) -> str:
+        """Redact sensitive patterns from strings."""
+        if not isinstance(text, str):
+            return str(text)
+
+        sanitized = text
+
+        # Redact URLs (http/https)
+        sanitized = re.sub(
+            r'https?://[^\s<>"{}|\\^`\[\]]+',
+            '[URL_REDACTED]',
+            sanitized,
+            flags=re.IGNORECASE
+        )
+
+        # Redact SQL keywords
+        sanitized = re.sub(
+            r'\b(SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE)\b',
+            '[SQL_REDACTED]',
+            sanitized,
+            flags=re.IGNORECASE
+        )
+
+        # Redact JWT tokens (base64 with dots)
+        sanitized = re.sub(
+            r'[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}',
+            '[TOKEN_REDACTED]',
+            sanitized
+        )
+
+        # Redact API keys (common patterns)
+        sanitized = re.sub(
+            r'(api[_-]?key|apikey|secret[_-]?key)\s*[:=]\s*[\'"]?[A-Za-z0-9_\-]{16,}[\'"]?',
+            '[API_KEY_REDACTED]',
+            sanitized,
+            flags=re.IGNORECASE
+        )
+
+        return sanitized
+
+    if isinstance(result, dict):
+        sanitized_result = sanitize_dict(result)
+    elif isinstance(result, list):
+        sanitized_result = sanitize_list(result)
+    elif isinstance(result, str):
+        sanitized_result = sanitize_string(result)
+    else:
+        sanitized_result = str(result)
+
+    return str(sanitized_result)
+
+
+# ---------------------------------------------------------------------------
 # JWT helpers
 # ---------------------------------------------------------------------------
 
