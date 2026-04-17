@@ -27,8 +27,9 @@ from unittest.mock import AsyncMock, MagicMock, ANY, patch
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient, Response, ASGITransport
+from unittest.mock import patch
 
-from main import app, metrics
+from main import app, MetricsTracker
 
 
 @pytest.fixture
@@ -37,6 +38,20 @@ def sample_jwt_token() -> str:
     return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." \
            "eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWQiOiIxMjM0NTY3ODkwIiwidXNlcmlkIjoiMTIzNDU2Nzg5MCJ9." \
            "SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+
+
+@pytest.fixture(autouse=True)
+def reset_metrics_singleton():
+    """
+    Reset the module-level metrics singleton before each test.
+    
+    This fixture patches main.metrics with a fresh MetricsTracker instance
+    to ensure test isolation, especially when running tests in parallel
+    with pytest-xdist.
+    """
+    fresh_metrics = MetricsTracker()
+    with patch("main.metrics", fresh_metrics):
+        yield fresh_metrics
 
 
 @pytest_asyncio.fixture
@@ -368,9 +383,9 @@ class TestRequestSizeLimitIntegration:
 class TestMetricsTrackingIntegration:
     """Integration tests for metrics tracking in real flow."""
 
-    async def test_request_count_incremented(self, client: AsyncClient, sample_jwt_token: str):
+    async def test_request_count_incremented(self, client: AsyncClient, sample_jwt_token: str, reset_metrics_singleton: MetricsTracker):
         """Test that request count is incremented in metrics."""
-        initial_count = metrics.get_metrics()["request_count"]
+        initial_count = reset_metrics_singleton.get_metrics()["request_count"]
 
         mock_moderation_response = _create_mock_moderation_response(flagged=False)
         mock_openai_response = _create_mock_openai_response("Hello!", tool_calls=None)
@@ -398,12 +413,12 @@ class TestMetricsTrackingIntegration:
                     }
                 )
 
-                new_count = metrics.get_metrics()["request_count"]
+                new_count = reset_metrics_singleton.get_metrics()["request_count"]
                 assert new_count == initial_count + 1
 
-    async def test_error_count_incremented_on_error(self, client: AsyncClient, sample_jwt_token: str):
+    async def test_error_count_incremented_on_error(self, client: AsyncClient, sample_jwt_token: str, reset_metrics_singleton: MetricsTracker):
         """Test that error count is incremented when agent error occurs."""
-        initial_count = metrics.get_metrics()["error_count"]
+        initial_count = reset_metrics_singleton.get_metrics()["error_count"]
 
         mock_moderation_response = _create_mock_moderation_response(flagged=False)
 
@@ -431,10 +446,10 @@ class TestMetricsTrackingIntegration:
                 )
 
                 assert response.status_code == 500
-                new_count = metrics.get_metrics()["error_count"]
+                new_count = reset_metrics_singleton.get_metrics()["error_count"]
                 assert new_count == initial_count + 1
 
-    async def test_user_requests_tracked(self, client: AsyncClient, sample_jwt_token: str):
+    async def test_user_requests_tracked(self, client: AsyncClient, sample_jwt_token: str, reset_metrics_singleton: MetricsTracker):
         """Test that user requests are tracked per user."""
         mock_moderation_response = _create_mock_moderation_response(flagged=False)
         mock_openai_response = _create_mock_openai_response("Hello!", tool_calls=None)
@@ -462,7 +477,7 @@ class TestMetricsTrackingIntegration:
                     }
                 )
 
-                user_metrics = metrics.get_metrics()["user_requests"]
+                user_metrics = reset_metrics_singleton.get_metrics()["user_requests"]
                 assert "1234567890" in user_metrics
                 assert user_metrics["1234567890"] >= 1
 
