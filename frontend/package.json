@@ -68,7 +68,7 @@
     "expo-system-ui": "~4.0.8",
     "expo-web-browser": "~14.0.2",
     "fast-xml-parser": "^5.2.3",
-    "expo-clipboard": "~7.0.2",
+    "expo-clipboard": "~6.0.3",
     "jszip": "^3.10.1",
     "jwt-decode": "^4.0.0",
     "lottie-react-native": "^7.2.2",
