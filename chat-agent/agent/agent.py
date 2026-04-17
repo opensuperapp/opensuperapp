@@ -28,6 +28,7 @@ import logging
 import re
 import uuid
 from datetime import datetime, timezone, timedelta
+from typing import Any
 
 import httpx
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
@@ -72,6 +73,103 @@ _LOCATION_LEAVE_TYPES: dict[str, list[str]] = {
     "spain":     ["Annual", "Casual", "Sick", "Maternity", "Paternity", "Lieu"],
 }
 _ALL_LEAVE_TYPES = ["Annual", "Casual", "Sick", "Maternity", "Paternity", "Lieu"]
+
+
+# ---------------------------------------------------------------------------
+# Response sanitization
+# ---------------------------------------------------------------------------
+
+
+def sanitize_tool_result(result: Any) -> str:
+    """Sanitize tool result by redacting sensitive information.
+
+    Redacts:
+    - URLs (http/https patterns)
+    - SQL queries (SELECT, INSERT, UPDATE, DELETE)
+    - Passwords (common password fields)
+    - Tokens (JWT tokens, API keys)
+
+    Args:
+        result: Tool result (dict, list, str, or other types)
+
+    Returns:
+        Sanitized string representation of the result
+    """
+
+    def sanitize_dict(data: dict) -> dict:
+        """Recursively sanitize dictionary values."""
+        sanitized = {}
+        for key, value in data.items():
+            key_lower = str(key).lower() if isinstance(key, str) else ""
+            if key_lower and any(sensitive in key_lower for sensitive in ["password", "passwd", "secret", "token", "api_key", "apikey"]):
+                sanitized[key] = "[REDACTED]"
+            elif isinstance(value, dict):
+                sanitized[key] = sanitize_dict(value)
+            elif isinstance(value, list):
+                sanitized[key] = sanitize_list(value)
+            elif isinstance(value, str):
+                sanitized[key] = sanitize_string(value)
+            else:
+                sanitized[key] = value
+        return sanitized
+
+    def sanitize_list(data: list) -> list:
+        """Recursively sanitize list values."""
+        return [sanitize_dict(item) if isinstance(item, dict) else
+                sanitize_list(item) if isinstance(item, list) else
+                sanitize_string(item) if isinstance(item, str) else
+                item for item in data]
+
+    def sanitize_string(text: str) -> str:
+        """Redact sensitive patterns from strings."""
+        if not isinstance(text, str):
+            return str(text)
+
+        sanitized = text
+
+        # Redact URLs (http/https)
+        sanitized = re.sub(
+            r'https?://[^\s<>"{}|\\^`\[\]]+',
+            '[URL_REDACTED]',
+            sanitized,
+            flags=re.IGNORECASE
+        )
+
+        # Redact SQL keywords with required context
+        sanitized = re.sub(
+            r'\bSELECT\s+\S+\s+FROM\b|\bINSERT\s+INTO\b|\bUPDATE\s+\S+\s+SET\b|\bDELETE\s+FROM\b|\bDROP\s+TABLE\b|\bALTER\s+TABLE\b|\bCREATE\s+TABLE\b|\bTRUNCATE\s+TABLE\b',
+            '[SQL_REDACTED]',
+            sanitized,
+            flags=re.IGNORECASE
+        )
+
+        # Redact JWT tokens (base64 with dots)
+        sanitized = re.sub(
+            r'[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}',
+            '[TOKEN_REDACTED]',
+            sanitized
+        )
+
+        # Redact API keys (common patterns)
+        sanitized = re.sub(
+            r'(api[_-]?key|apikey|secret[_-]?key)\s*[:=]\s*[\'"]?[A-Za-z0-9_\-]{16,}[\'"]?',
+            '[API_KEY_REDACTED]',
+            sanitized,
+            flags=re.IGNORECASE
+        )
+
+        return sanitized
+
+    if isinstance(result, dict):
+        sanitized_result = sanitize_dict(result)
+    elif isinstance(result, list):
+        sanitized_result = sanitize_list(result)
+    elif isinstance(result, str):
+        sanitized_result = sanitize_string(result)
+    else:
+        sanitized_result = str(result)
+
+    return str(sanitized_result)
 
 
 # ---------------------------------------------------------------------------
@@ -501,6 +599,7 @@ async def run_agent(
     user_message: str,
     access_token: str,
     history: list[dict] | None = None,
+    metrics: Any | None = None,
 ) -> str:
     """
     Run the LangChain agent with the user's message and conversation history.
@@ -510,6 +609,7 @@ async def run_agent(
         access_token: The user's super app access token (for tool auth).
         history: Optional list of prior messages
                  [{"role": "user"|"assistant", "content": "..."}].
+        metrics: Optional MetricsTracker instance for logging tool calls.
 
     Returns:
         The agent's text response.
@@ -605,10 +705,14 @@ async def run_agent(
         messages.append(ai_message)
 
         if not ai_message.tool_calls:
-            return ai_message.content or ""
+            return sanitize_tool_result(ai_message.content) or ""
 
         for tool_call in ai_message.tool_calls:
             tool_name = tool_call["name"]
+
+            if metrics:
+                metrics.increment_tool_call()
+            logger.debug("Tool call: %s", tool_name)
 
             if tool_name == "get_todays_menu":
                 try:
@@ -808,4 +912,4 @@ async def run_agent(
 
     logger.warning("Max tool iterations (%d) reached, forcing text reply", MAX_TOOL_ITERATIONS)
     final = await llm.ainvoke(messages)
-    return final.content or ""
+    return sanitize_tool_result(final.content) or ""
