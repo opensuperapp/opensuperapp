@@ -93,6 +93,41 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 # Swagger docs at http://localhost:8000/docs
 ```
 
+## Testing
+
+The project includes a comprehensive test suite covering all security guardrails and functionality.
+
+### Test Statistics
+
+- **Total Tests**: 259 tests
+- **Coverage**: 82% code coverage
+- **Test Categories**:
+  - Request Limits (22 tests)
+  - Suspicious Intent Detection (54 tests)
+  - Response Sanitization (49 tests)
+  - Content Moderation (84 tests)
+  - Metrics Tracking (50 tests)
+
+### Running Tests
+
+```bash
+# Run all tests
+python3 -m pytest tests/ -v
+
+# Run with coverage
+python3 -m pytest tests/ --cov=. --cov-report=html
+
+# Run specific test file
+python3 -m pytest tests/test_sanitization.py -v
+
+# Run tests in parallel (requires pytest-xdist)
+python3 -m pytest tests/ -n auto
+```
+
+### Test Documentation
+
+See [tests/README.md](./tests/README.md) for detailed test documentation and test categories.
+
 ## API Reference
 
 ### `GET /health`
