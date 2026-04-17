@@ -679,6 +679,45 @@ class TestResponseSanitizationIntegration:
         assert "[REDACTED]" in result
         assert "secret123" not in result
 
+    async def test_final_response_sanitized(self, client: AsyncClient, sample_jwt_token: str):
+        """Test that final response is sanitized before returning to user."""
+        mock_moderation_response = _create_mock_moderation_response(flagged=False)
+        mock_openai_response = _create_mock_openai_response(
+            "Here is the API: https://api.example.com/v1 and the query: SELECT * FROM users",
+            tool_calls=None
+        )
+
+        with patch("main.moderation_client") as mock_client:
+            mock_client.moderations.create = AsyncMock(return_value=mock_moderation_response)
+
+            with patch("agent.agent.ChatOpenAI") as mock_llm:
+                mock_llm_instance = MagicMock()
+                mock_llm_instance.bind_tools.return_value = mock_llm_instance
+                mock_llm_instance.ainvoke = AsyncMock(return_value=mock_openai_response)
+                mock_llm.return_value = mock_llm_instance
+
+                request_data = {
+                    "message": "Test",
+                    "history": []
+                }
+
+                response = await client.post(
+                    "/chat",
+                    json=request_data,
+                    headers={
+                        "x-jwt-assertion": sample_jwt_token,
+                        "x-user-assertion": sample_jwt_token
+                    }
+                )
+
+                assert response.status_code == 200
+                data = response.json()
+                assert "reply" in data
+                assert "https://api.example.com" not in data["reply"]
+                assert "SELECT" not in data["reply"]
+                assert "[URL_REDACTED]" in data["reply"]
+                assert "[SQL_REDACTED]" in data["reply"]
+
 
 @pytest.mark.integration
 @pytest.mark.security
