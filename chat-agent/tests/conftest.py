@@ -33,26 +33,49 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 @pytest.fixture
 def mock_env_vars():
     """Set up mock environment variables for testing."""
-    os.environ.setdefault("DEBUG", "false")
-    os.environ.setdefault("OPENAI_API_KEY", "test-api-key")
-    os.environ.setdefault("OPENAI_MODEL", "gpt-4o")
-    os.environ.setdefault("OPENAI_TEMPERATURE", "0.3")
-    os.environ.setdefault("PORT", "8000")
-    os.environ.setdefault("ASGARDEO_TOKEN_URL", "https://test.example.com/token")
-    os.environ.setdefault("MEALS_BACKEND_URL", "https://test.example.com/meals")
-    os.environ.setdefault("GUEST_WIFI_BACKEND_URL", "https://test.example.com/wifi")
-    os.environ.setdefault("LEAVE_BACKEND_URL", "https://test.example.com/leave")
-    os.environ.setdefault("MEALS_APP_CLIENT_ID", "test-meals-client")
-    os.environ.setdefault("GUEST_WIFI_APP_CLIENT_ID", "test-wifi-client")
-    os.environ.setdefault("LEAVE_APP_CLIENT_ID", "test-leave-client")
+    keys_to_mock = [
+        "DEBUG",
+        "OPENAI_API_KEY",
+        "OPENAI_MODEL",
+        "OPENAI_TEMPERATURE",
+        "PORT",
+        "ASGARDEO_TOKEN_URL",
+        "MEALS_BACKEND_URL",
+        "GUEST_WIFI_BACKEND_URL",
+        "LEAVE_BACKEND_URL",
+        "MEALS_APP_CLIENT_ID",
+        "GUEST_WIFI_APP_CLIENT_ID",
+        "LEAVE_APP_CLIENT_ID",
+    ]
+
+    mock_values = {
+        "DEBUG": "false",
+        "OPENAI_API_KEY": "test-api-key",
+        "OPENAI_MODEL": "gpt-4o",
+        "OPENAI_TEMPERATURE": "0.3",
+        "PORT": "8000",
+        "ASGARDEO_TOKEN_URL": "https://test.example.com/token",
+        "MEALS_BACKEND_URL": "https://test.example.com/meals",
+        "GUEST_WIFI_BACKEND_URL": "https://test.example.com/wifi",
+        "LEAVE_BACKEND_URL": "https://test.example.com/leave",
+        "MEALS_APP_CLIENT_ID": "test-meals-client",
+        "GUEST_WIFI_APP_CLIENT_ID": "test-wifi-client",
+        "LEAVE_APP_CLIENT_ID": "test-leave-client",
+    }
+
+    saved_values = {key: os.environ.get(key) for key in keys_to_mock}
+
+    for key in keys_to_mock:
+        os.environ[key] = mock_values[key]
 
     yield
 
-    for key in list(os.environ.keys()):
-        if key.startswith("MEALS_") or key.startswith("GUEST_WIFI_") or key.startswith("LEAVE_") or key in [
-            "DEBUG", "OPENAI_API_KEY", "OPENAI_MODEL", "OPENAI_TEMPERATURE", "PORT", "ASGARDEO_TOKEN_URL"
-        ]:
+    for key in keys_to_mock:
+        saved_value = saved_values[key]
+        if saved_value is None:
             os.environ.pop(key, None)
+        else:
+            os.environ[key] = saved_value
 
 
 @pytest.fixture
@@ -116,12 +139,3 @@ def metrics_tracker():
     """Import and return MetricsTracker instance."""
     from main import MetricsTracker
     return MetricsTracker()
-
-
-@pytest.fixture
-def mock_async_openai(mocker: MockerFixture):
-    """Mock AsyncOpenAI client for testing."""
-    with patch("openai.AsyncOpenAI") as mock:
-        mock_client = AsyncMock()
-        mock.return_value = mock_client
-        yield mock_client
