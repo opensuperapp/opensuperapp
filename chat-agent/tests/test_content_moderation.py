@@ -356,77 +356,71 @@ class TestAPIErrorHandling:
     """Test API error handling."""
 
     async def test_network_error_handling(self, mock_openai_client, mocker: MockerFixture):
-        """Test that network errors are handled gracefully."""
+        """Test that network errors propagate (fail-closed)."""
         mock_openai_client.moderations.create = mocker.AsyncMock(
             side_effect=Exception("Network error")
         )
-        
+
         mocker.patch("main.moderation_client", mock_openai_client)
-        
-        is_flagged, category = await check_moderation("Test message")
-        assert is_flagged is False
-        assert category == ""
+
+        with pytest.raises(Exception, match="Network error"):
+            await check_moderation("Test message")
 
     async def test_timeout_error_handling(self, mock_openai_client, mocker: MockerFixture):
-        """Test that timeout errors are handled gracefully."""
+        """Test that timeout errors propagate (fail-closed)."""
         import asyncio
         mock_openai_client.moderations.create = mocker.AsyncMock(
             side_effect=asyncio.TimeoutError("Request timed out")
         )
-        
+
         mocker.patch("main.moderation_client", mock_openai_client)
-        
-        is_flagged, category = await check_moderation("Test message")
-        assert is_flagged is False
-        assert category == ""
+
+        with pytest.raises(asyncio.TimeoutError, match="Request timed out"):
+            await check_moderation("Test message")
 
     async def test_api_error_handling(self, mock_openai_client, mocker: MockerFixture):
-        """Test that API errors are handled gracefully."""
+        """Test that API errors propagate (fail-closed)."""
         mock_openai_client.moderations.create = mocker.AsyncMock(
             side_effect=Exception("API error occurred")
         )
-        
+
         mocker.patch("main.moderation_client", mock_openai_client)
-        
-        is_flagged, category = await check_moderation("Test message")
-        assert is_flagged is False
-        assert category == ""
+
+        with pytest.raises(Exception, match="API error occurred"):
+            await check_moderation("Test message")
 
     async def test_authentication_error_handling(self, mock_openai_client, mocker: MockerFixture):
-        """Test that authentication errors are handled gracefully."""
+        """Test that authentication errors propagate (fail-closed)."""
         mock_openai_client.moderations.create = mocker.AsyncMock(
             side_effect=Exception("Authentication error")
         )
-        
+
         mocker.patch("main.moderation_client", mock_openai_client)
-        
-        is_flagged, category = await check_moderation("Test message")
-        assert is_flagged is False
-        assert category == ""
+
+        with pytest.raises(Exception, match="Authentication error"):
+            await check_moderation("Test message")
 
     async def test_rate_limit_error_handling(self, mock_openai_client, mocker: MockerFixture):
-        """Test that rate limit errors are handled gracefully."""
+        """Test that rate limit errors propagate (fail-closed)."""
         mock_openai_client.moderations.create = mocker.AsyncMock(
             side_effect=Exception("Rate limit exceeded")
         )
-        
+
         mocker.patch("main.moderation_client", mock_openai_client)
-        
-        is_flagged, category = await check_moderation("Test message")
-        assert is_flagged is False
-        assert category == ""
+
+        with pytest.raises(Exception, match="Rate limit exceeded"):
+            await check_moderation("Test message")
 
     async def test_service_unavailable_error_handling(self, mock_openai_client, mocker: MockerFixture):
-        """Test that service unavailable errors are handled gracefully."""
+        """Test that service unavailable errors propagate (fail-closed)."""
         mock_openai_client.moderations.create = mocker.AsyncMock(
             side_effect=Exception("Service unavailable")
         )
-        
+
         mocker.patch("main.moderation_client", mock_openai_client)
-        
-        is_flagged, category = await check_moderation("Test message")
-        assert is_flagged is False
-        assert category == ""
+
+        with pytest.raises(Exception, match="Service unavailable"):
+            await check_moderation("Test message")
 
 
 @pytest.mark.unit
@@ -622,17 +616,16 @@ class TestEdgeCases:
 class TestRateLimitHandling:
     """Test rate limit handling."""
 
-    async def test_rate_limit_error_returns_safe(self, mock_openai_client, mocker: MockerFixture):
-        """Test that rate limit errors return safe (fail open)."""
+    async def test_rate_limit_error_propagates(self, mock_openai_client, mocker: MockerFixture):
+        """Test that rate limit errors propagate (fail-closed)."""
         mock_openai_client.moderations.create = mocker.AsyncMock(
             side_effect=Exception("Rate limit exceeded")
         )
-        
+
         mocker.patch("main.moderation_client", mock_openai_client)
-        
-        is_flagged, category = await check_moderation("Test message")
-        assert is_flagged is False
-        assert category == ""
+
+        with pytest.raises(Exception, match="Rate limit exceeded"):
+            await check_moderation("Test message")
 
     async def test_rate_limit_then_success(self, mock_openai_client, mocker: MockerFixture):
         """Test that after rate limit, subsequent calls succeed."""
@@ -651,27 +644,26 @@ class TestRateLimitHandling:
             "self_harm_instructions": False,
             "self_harm_intent": False
         }
-        
+
         mock_response = mocker.MagicMock()
         mock_response.results = [mock_result]
-        
+
         call_count = 0
-        
+
         async def side_effect(*args, **kwargs):
             nonlocal call_count
             call_count += 1
             if call_count == 1:
                 raise Exception("Rate limit exceeded")
             return mock_response
-        
+
         mock_openai_client.moderations.create = mocker.AsyncMock(side_effect=side_effect)
-        
+
         mocker.patch("main.moderation_client", mock_openai_client)
-        
-        is_flagged1, category1 = await check_moderation("Test message 1")
-        assert is_flagged1 is False
-        assert category1 == ""
-        
+
+        with pytest.raises(Exception, match="Rate limit exceeded"):
+            await check_moderation("Test message 1")
+
         is_flagged2, category2 = await check_moderation("Test message 2")
         assert is_flagged2 is False
         assert category2 == ""
