@@ -20,6 +20,8 @@ Unit tests for content moderation using OpenAI Moderation API.
 
 import pytest
 
+from pytest_mock import MockerFixture
+
 from main import check_moderation
 
 
