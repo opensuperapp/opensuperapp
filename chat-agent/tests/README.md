@@ -8,12 +8,16 @@ This test suite validates all security guardrails implemented to prevent misuse 
 
 ### Test Statistics
 
-- **Total Tests**: 125 tests
+- **Total Tests**: 259 tests
   - Request Limits Tests: 22 tests
   - Suspicious Intent Tests: 54 tests
   - Response Sanitization Tests: 49 tests
-- **Test Categories**: Unit, Security
-- **Coverage Target**: >90%
+  - Content Moderation Tests: 32 tests
+  - System Prompt Security Tests: 39 tests
+  - Metrics Tests: 38 tests
+  - Integration Tests: 25 tests
+- **Test Categories**: Unit, Security, Integration
+- **Coverage Target**: >80%
 
 ## Security Guardrails Covered
 
@@ -62,7 +66,7 @@ Automatically redacts sensitive information from tool responses:
 ### Prerequisites
 
 Ensure dependencies are installed:
-```bash
+```text
 pip install -r requirements.txt
 pip install -e .  # Register agent/ and tools/ as importable packages
 ```
@@ -70,30 +74,28 @@ pip install -e .  # Register agent/ and tools/ as importable packages
 ### Basic Test Execution
 
 Run all tests:
-```bash
+```text
 pytest
 ```
 
 Run tests with verbose output:
-```bash
+```text
 pytest -v
 ```
 
-### Parallel Execution
-
 Run tests in parallel (recommended for faster execution):
-```bash
+```text
 pytest -n auto
 ```
 
 Use a specific number of workers:
-```bash
+```text
 pytest -n 4
 ```
 
 ### Running Individual Test Files
 
-```bash
+```text
 # Test request limits
 pytest tests/test_request_limits.py
 
@@ -102,11 +104,23 @@ pytest tests/test_suspicious_intent.py
 
 # Test response sanitization
 pytest tests/test_sanitization.py
+
+# Test content moderation
+pytest tests/test_content_moderation.py
+
+# Test system prompt security
+pytest tests/test_system_prompt_security.py
+
+# Test metrics tracking
+pytest tests/test_metrics.py
+
+# Test integration
+pytest tests/test_integration.py
 ```
 
 ### Running Specific Test Classes or Tests
 
-```bash
+```text
 # Run a specific test class
 pytest tests/test_request_limits.py::TestMessageLengthValidator
 
@@ -119,7 +133,7 @@ pytest -k "test_message_exceeds"
 
 ### Running Tests with Coverage
 
-```bash
+```text
 # Generate coverage report
 pytest --cov
 
@@ -137,7 +151,7 @@ pytest --cov --cov-report=xml
 
 ### Running Tests by Marker
 
-```bash
+```text
 # Run only security tests
 pytest -m security
 
@@ -163,7 +177,7 @@ pytest -m "security and unit"
 ### Marker Usage
 
 Apply markers to test classes or individual tests:
-```python
+```text
 @pytest.mark.unit
 @pytest.mark.security
 class TestMessageLengthValidator:
@@ -189,7 +203,7 @@ Sets up mock environment variables for testing. Automatically configures:
 - LEAVE_BACKEND_URL, LEAVE_APP_CLIENT_ID
 
 **Usage:**
-```python
+```text
 def test_something(mock_env_vars):
     # Environment variables are available
     assert os.environ.get("OPENAI_API_KEY") == "test-api-key"
@@ -199,7 +213,7 @@ def test_something(mock_env_vars):
 Provides a mock OpenAI client for testing OpenAI API interactions.
 
 **Usage:**
-```python
+```text
 def test_openai_integration(mock_openai_client):
     mock_openai_client.chat.completions.create.return_value = ...
 ```
@@ -208,7 +222,7 @@ def test_openai_integration(mock_openai_client):
 Provides a mock httpx.AsyncClient for testing HTTP client interactions.
 
 **Usage:**
-```python
+```text
 def test_http_request(mock_httpx_client):
     mock_httpx_client.get.return_value = AsyncMock(status_code=200)
 ```
@@ -217,7 +231,7 @@ def test_http_request(mock_httpx_client):
 Returns a sample JWT token for testing token validation and redaction.
 
 **Usage:**
-```python
+```text
 def test_token_redaction(sample_jwt_token):
     sanitized = sanitize_tool_result(sample_jwt_token)
     assert "[TOKEN_REDACTED]" in sanitized
@@ -227,7 +241,7 @@ def test_token_redaction(sample_jwt_token):
 Returns a sample chat request for testing.
 
 **Usage:**
-```python
+```text
 def test_chat_validation(sample_chat_request):
     request = ChatRequest(**sample_chat_request)
     assert request.message == "What's for lunch today?"
@@ -237,7 +251,7 @@ def test_chat_validation(sample_chat_request):
 Returns sample conversation history for testing.
 
 **Usage:**
-```python
+```text
 def test_history_validation(sample_history):
     history = [HistoryMessage(**item) for item in sample_history]
     assert len(history) == 2
@@ -247,7 +261,7 @@ def test_history_validation(sample_history):
 Returns a sample tool result for testing sanitization.
 
 **Usage:**
-```python
+```text
 def test_result_sanitization(sample_tool_result):
     sanitized = sanitize_tool_result(sample_tool_result)
     # Verify sanitization
@@ -257,7 +271,7 @@ def test_result_sanitization(sample_tool_result):
 Provides a MetricsTracker instance for testing metrics tracking.
 
 **Usage:**
-```python
+```text
 def test_metrics_tracking(metrics_tracker):
     metrics_tracker.increment_request()
     metrics = metrics_tracker.get_metrics()
@@ -268,7 +282,7 @@ def test_metrics_tracking(metrics_tracker):
 Mocks the AsyncOpenAI client for testing async OpenAI operations.
 
 **Usage:**
-```python
+```text
 def test_async_openai(mock_async_openai):
     mock_async_openai.chat.completions.create.return_value = ...
 ```
@@ -276,7 +290,7 @@ def test_async_openai(mock_async_openai):
 ### Creating Custom Fixtures
 
 Add new fixtures to `tests/conftest.py`:
-```python
+```text
 @pytest.fixture
 def my_custom_fixture():
     """Fixture description."""
@@ -289,19 +303,23 @@ def my_custom_fixture():
 
 ### Test File Organization
 
-```
+```text
 tests/
 ├── __init__.py
-├── conftest.py           # Shared fixtures and configuration
-├── test_request_limits.py   # Request size limit tests
-├── test_suspicious_intent.py  # Suspicious intent detection tests
-└── test_sanitization.py   # Response sanitization tests
+├── conftest.py                         # Shared fixtures and configuration
+├── test_request_limits.py              # Request size limit tests
+├── test_suspicious_intent.py           # Suspicious intent detection tests
+├── test_sanitization.py                # Response sanitization tests
+├── test_content_moderation.py          # OpenAI Moderation API tests
+├── test_integration.py                 # Integration tests
+├── test_metrics.py                     # Metrics tracking tests
+└── test_system_prompt_security.py     # System prompt security tests
 ```
 
 ### Test Class Organization
 
 Tests are organized into logical classes:
-```python
+```text
 @pytest.mark.unit
 @pytest.mark.security
 class TestFeatureName:
@@ -326,7 +344,7 @@ Each test should have a docstring describing:
 - What the expected behavior is
 - Any special conditions or edge cases
 
-```python
+```text
 def test_message_exceeds_limit(self):
     """Test that message exceeding limit raises ValidationError."""
     message = "A" * (MAX_MESSAGE_LENGTH + 1)
@@ -339,13 +357,13 @@ def test_message_exceeds_limit(self):
 
 ### Current Coverage
 
-- **Target**: >90% code coverage
+- **Target**: >80% code coverage
 - **Measurement**: Use pytest-cov for coverage reports
 - **Exclusions**: Test files themselves, configuration files
 
 ### Generating Coverage Reports
 
-```bash
+```text
 # Terminal coverage report
 pytest --cov
 
@@ -368,7 +386,7 @@ Coverage excludes:
 ### CI Pipeline Configuration
 
 Example for GitHub Actions:
-```yaml
+```text
 name: Tests
 
 on: [push, pull_request]
@@ -392,7 +410,7 @@ jobs:
 ### Pre-commit Hooks
 
 Add to `.pre-commit-config.yaml`:
-```yaml
+```text
 repos:
   - repo: local
     hooks:
@@ -413,7 +431,7 @@ repos:
 **Problem**: `ModuleNotFoundError` or `ImportError`
 
 **Solution**:
-```bash
+```text
 # Install the project in editable mode
 pip install -e .
 ```
@@ -435,12 +453,12 @@ pip install -e .
 **Problem**: Coverage report shows 0% coverage
 
 **Solution**:
-```bash
+```text
 # Ensure pytest-cov is installed
 pip install pytest-cov
 
 # Run tests from project root
-cd /Users/administrator/Documents/FOSS/opensuperapp/chat-agent
+cd ..
 pytest --cov=.
 ```
 
@@ -449,7 +467,7 @@ pytest --cov=.
 **Problem**: Mocked functions don't behave as expected
 
 **Solution**: Ensure you're using `pytest-mock` correctly:
-```python
+```text
 def test_with_mocker(mocker):
     mock_func = mocker.patch('module.function')
     mock_func.return_value = "test"
@@ -458,27 +476,27 @@ def test_with_mocker(mocker):
 ### Debugging Failed Tests
 
 #### Run Tests with Detailed Output
-```bash
+```text
 pytest -vvs  # Very verbose with print statements
 ```
 
 #### Run Tests with Debugger
-```bash
+```text
 pytest --pdb
 ```
 
 #### Run Only Failed Tests
-```bash
+```text
 pytest --lf  # Last failed
 ```
 
 #### Run Tests Until First Failure
-```bash
+```text
 pytest -x
 ```
 
 #### Run Tests in Specific Order
-```bash
+```text
 pytest --tb=short  # Shorter traceback
 pytest --tb=line   # One line per error
 ```
@@ -488,14 +506,14 @@ pytest --tb=line   # One line per error
 #### Slow Test Execution
 
 **Solution**: Use parallel execution:
-```bash
+```text
 pytest -n auto
 ```
 
 #### Memory Issues During Tests
 
 **Solution**: Run tests in smaller batches:
-```bash
+```text
 pytest tests/test_request_limits.py
 pytest tests/test_suspicious_intent.py
 pytest tests/test_sanitization.py
@@ -515,7 +533,7 @@ pytest tests/test_sanitization.py
 
 ### Test Template
 
-```python
+```text
 """
 Unit tests for [feature name].
 """
@@ -559,7 +577,7 @@ class TestFeatureName:
 6. **Keep tests focused** on a single behavior
 7. **Use fixtures** for shared setup code
 8. **Run tests before committing** changes
-9. **Maintain >90% coverage** for security-related code
+9. **Maintain >80% coverage** for security-related code
 10. **Update documentation** when adding new test categories
 
 ### Test Categories
@@ -587,7 +605,7 @@ When adding new tests, choose appropriate categories:
 
 The test suite uses `pytest.ini` for configuration:
 
-```ini
+```text
 [pytest]
 minversion = 8.0
 testpaths = tests
@@ -622,32 +640,32 @@ Key testing dependencies:
 ## Test Execution Examples
 
 ### Complete Test Suite with Coverage
-```bash
+```text
 pytest -n auto --cov --cov-report=html
 ```
 
 ### Security Tests Only
-```bash
+```text
 pytest -m security -v
 ```
 
 ### Specific Test File with Detailed Output
-```bash
+```text
 pytest tests/test_sanitization.py -vvs
 ```
 
 ### Run Tests by Pattern
-```bash
+```text
 pytest -k "redaction"
 ```
 
 ### Run Tests Until First Failure
-```bash
+```text
 pytest -x -n auto
 ```
 
 ### Run Only Previously Failed Tests
-```bash
+```text
 pytest --lf
 ```
 
