@@ -24,6 +24,7 @@ the agent's response.
 
 import logging
 import os
+from collections import OrderedDict
 from typing import List, Optional
 
 import uvicorn
@@ -61,17 +62,25 @@ SUSPICIOUS_PATTERNS = [
 ]
 
 # Metrics tracking
+_MAX_TRACKED_USERS = 10000
+
 class MetricsTracker:
     def __init__(self):
         self.request_count = 0
         self.error_count = 0
         self.tool_call_count = 0
-        self.user_requests: dict[str, int] = {}
+        self.user_requests: OrderedDict[str, int] = OrderedDict()
 
     def increment_request(self, user_id: str | None = None):
         self.request_count += 1
         if user_id:
-            self.user_requests[user_id] = self.user_requests.get(user_id, 0) + 1
+            if user_id in self.user_requests:
+                self.user_requests[user_id] += 1
+                self.user_requests.move_to_end(user_id)
+            else:
+                self.user_requests[user_id] = 1
+                if len(self.user_requests) > _MAX_TRACKED_USERS:
+                    self.user_requests.popitem(last=False)
 
     def increment_error(self):
         self.error_count += 1
@@ -84,7 +93,7 @@ class MetricsTracker:
             "request_count": self.request_count,
             "error_count": self.error_count,
             "tool_call_count": self.tool_call_count,
-            "user_requests": self.user_requests.copy(),
+            "user_requests": dict(self.user_requests),
         }
 
 metrics = MetricsTracker()
@@ -151,17 +160,13 @@ async def check_moderation(text: str) -> tuple[bool, str]:
         - is_flagged: True if content violates policies
         - category: The moderation category flagging the content (e.g., "hate", "sexual", "violence")
     """
-    try:
-        response = await moderation_client.moderations.create(input=text)
-        result = response.results[0]
-        if result.flagged:
-            for category, flagged in result.categories.model_dump().items():
-                if flagged:
-                    return True, category
-        return False, ""
-    except Exception as e:
-        logger.error("Moderation check failed: %s", e)
-        return False, ""
+    response = await moderation_client.moderations.create(input=text)
+    result = response.results[0]
+    if result.flagged:
+        for category, flagged in result.categories.model_dump().items():
+            if flagged:
+                return True, category
+    return False, ""
 
 
 def check_suspicious_intent(text: str) -> tuple[bool, str]:
@@ -183,7 +188,13 @@ def check_suspicious_intent(text: str) -> tuple[bool, str]:
 
 
 def extract_user_id(token: str) -> str | None:
-    """Extract user ID from JWT token for metrics tracking."""
+    """
+    Extract user ID from JWT token for metrics tracking.
+
+    WARNING: This does not verify the JWT signature. The extracted user_id
+    is untrusted and should only be used for observability/metrics purposes,
+    never for authorization decisions.
+    """
     try:
         payload_b64 = token.split(".")[1]
         padding = 4 - len(payload_b64) % 4
@@ -247,13 +258,23 @@ async def chat(
             detail="Your request appears to be attempting to engage in suspicious or harmful activities. This behavior is not permitted.",
         )
 
-    is_flagged, category = await check_moderation(request.message)
-    if is_flagged:
-        logger.warning("Content moderation flagged message: category=%s", category)
+    try:
+        is_flagged, category = await check_moderation(request.message)
+        if is_flagged:
+            logger.warning("Content moderation flagged message: category=%s", category)
+            raise HTTPException(
+                status_code=400,
+                detail="Your message contains inappropriate content that violates our content policy. Please revise your request.",
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        metrics.increment_error()
+        logger.error("Moderation service error: %s", e)
         raise HTTPException(
-            status_code=400,
-            detail="Your message contains inappropriate content that violates our content policy. Please revise your request.",
-        )
+            status_code=503,
+            detail="Moderation service unavailable. Please try again.",
+        ) from e
 
     try:
         reply = await run_agent(request.message, access_token, history, metrics)
