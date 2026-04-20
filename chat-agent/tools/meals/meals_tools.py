@@ -15,17 +15,21 @@
 # under the License.
 
 """
-Meals backend tools for the chat agent.
+Meals & Lunch Feedback tools.
 
-Each tool corresponds to a Meals micro-app backend endpoint.
-The exchanged access token (from Asgardeo token exchange) is forwarded
-as x-jwt-assertion header for authentication.
+Covers:
+  - get_todays_menu   : Fetch today's cafeteria menu.
+  - submit_lunch_feedback : Submit feedback for today's lunch (12:00–16:15 window).
 """
+
+import logging
 
 import httpx
 from langchain_core.tools import tool
 
-from app.config import DEBUG, MEALS_BACKEND_URL
+from config import DEBUG, MEALS_BACKEND_URL
+
+logger = logging.getLogger(__name__)
 
 
 @tool
@@ -42,12 +46,11 @@ async def get_todays_menu(access_token: str) -> dict:
         headers["x-jwt-assertion"] = access_token
 
     async with httpx.AsyncClient(timeout=15.0) as client:
-        response = await client.get(
-            f"{MEALS_BACKEND_URL}/menu",
-            headers=headers,
-        )
+        url = f"{MEALS_BACKEND_URL}/menu"
+        response = await client.get(url, headers=headers)
         if response.status_code != 200:
-            return {"error": f"Menu API returned {response.status_code}: {response.text}"}
+            logger.error("Menu API error: %s - %s", response.status_code, response.text)
+            return {"error": f"Menu API returned {response.status_code}"}
         return response.json()
 
 
@@ -68,20 +71,23 @@ async def submit_lunch_feedback(access_token: str, message: str) -> dict:
     if DEBUG:
         headers["x-jwt-assertion"] = access_token
 
-    payload = {
-        "message": message,
-        "meal": "Lunch",
-    }
+    payload = {"message": message, "meal": "Lunch"}
 
     async with httpx.AsyncClient(timeout=15.0) as client:
-        response = await client.post(
-            f"{MEALS_BACKEND_URL}/feedback",
-            json=payload,
-            headers=headers,
-        )
+        url = f"{MEALS_BACKEND_URL}/feedback"
+        response = await client.post(url, json=payload, headers=headers)
         if response.status_code == 201:
             return {"success": True, "message": "Feedback submitted successfully"}
         if response.status_code == 400:
-            error_body = response.json() if response.text else {}
-            return {"error": error_body.get("message", "Feedback submission failed. It may be outside the feedback window (12:00–16:15).")}
-        return {"error": f"Feedback API returned {response.status_code}: {response.text}"}
+            try:
+                error_body = response.json() if response.text else {}
+            except Exception:
+                error_body = {}
+            return {
+                "error": error_body.get(
+                    "message",
+                    "Feedback submission failed. It may be outside the feedback window (12:00–16:15).",
+                )
+            }
+        logger.error("Feedback API error: %s - %s", response.status_code, response.text)
+        return {"error": f"Feedback API returned {response.status_code}"}

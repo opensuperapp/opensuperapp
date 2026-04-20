@@ -59,6 +59,7 @@ import { injectedJavaScript, TOPIC } from "@/utils/bridge";
 import { qrScannerEmitter } from "@/utils/eventEmitter";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Google from "expo-auth-session/providers/google";
+import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
 import { documentDirectory } from "expo-file-system";
 import * as MailComposer from "expo-mail-composer";
@@ -70,7 +71,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Keyboard,
-  KeyboardAvoidingView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -82,7 +82,6 @@ import prompt from "react-native-prompt-android";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 import { useDispatch, useSelector } from "react-redux";
-import * as DocumentPicker from "expo-document-picker";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -643,6 +642,7 @@ const MicroApp = () => {
     const targetApp = apps.find((app) => app.appId === targetAppId);
 
     if (targetApp?.status === DOWNLOADED) {
+      router.dismissAll();
       router.push({
         pathname: ScreenPaths.MICRO_APP,
         params: {
@@ -699,14 +699,14 @@ const MicroApp = () => {
 
   // Function to pick a document from device storage
   const handlePickDocument = async (
-    config?: DocumentPicker.DocumentPickerOptions,
+    config?: DocumentPicker.DocumentPickerOptions
   ) => {
     try {
       if (!config) {
         console.error("Missing Required DocumentPicker configuration.");
         sendResponseToWeb(
           "rejectPickDocument",
-          "Document picker configuration is missing.",
+          "Document picker configuration is missing."
         );
         return;
       }
@@ -715,7 +715,7 @@ const MicroApp = () => {
       if (result.canceled) {
         sendResponseToWeb(
           "rejectPickDocument",
-          "Document pick canceled by user.",
+          "Document pick canceled by user."
         );
         return;
       }

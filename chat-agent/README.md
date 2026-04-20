@@ -11,12 +11,12 @@ AI-powered chat agent for the OpenSuperApp. Built with **FastAPI**, **LangChain*
 │              │    { reply }      │   LangChain)     │   Exchanged Token   │            │
 └─────────────┘                   └──────┬───────────┘                     └────────────┘
                                          │
-                                         │ GET /menu (x-jwt-assertion)
+                                         │ Tool calls (per micro-app scoped token)
                                          ▼
-                                  ┌──────────────────┐
-                                  │  Meals Backend   │
-                                  │  (Ballerina)     │
-                                  └──────────────────┘
+                              ┌──────────────────────┐
+                              │  Micro-App Backends  │
+                              │  Meals / Wi-Fi / Leave│
+                              └──────────────────────┘
 ```
 
 ### How It Works
@@ -24,13 +24,15 @@ AI-powered chat agent for the OpenSuperApp. Built with **FastAPI**, **LangChain*
 1. **User sends a message** from the Super App chat screen
 2. **Frontend sends** the message + access token to `POST /chat`
 3. **LangChain agent** processes the message using GPT-4o
-4. If the agent decides to call a tool (e.g., `get_todays_menu`):
-   - The super app access token is **exchanged** via Asgardeo (RFC 8693) for a meals-app-scoped token
-   - The tool calls the meals backend with the exchanged token
+4. If the agent decides to call a tool:
+   - The super app access token is **exchanged** via Asgardeo (RFC 8693) for a **micro-app–scoped** token
+   - The tool calls the backend with the exchanged token
    - The agent formats the tool response into a friendly message
 5. **Response is returned** to the frontend
 
 ## Getting Started
+
+**Run locally, Postman, headers, and tokens:** see [CHAT_AGENT_RUNBOOK.md](./CHAT_AGENT_RUNBOOK.md).
 
 ### Prerequisites
 
@@ -51,6 +53,9 @@ source .venv/bin/activate
 # Install dependencies
 pip install -r requirements.txt
 
+# Register agent/ and tools/ as importable packages (one-time)
+pip install -e .
+
 # Copy and configure environment variables
 cp .env.example .env
 # Edit .env with your actual values
@@ -65,16 +70,63 @@ cp .env.example .env
 | `MEALS_BACKEND_URL` | URL of the meals backend API | Yes |
 | `ASGARDEO_TOKEN_URL` | Asgardeo OAuth2 token endpoint | Yes |
 | `MEALS_APP_CLIENT_ID` | Client ID for the meals micro-app in Asgardeo | Yes |
+| `GUEST_WIFI_BACKEND_URL` | Guest Wi‑Fi API base URL | Yes (for Wi‑Fi tools) |
+| `GUEST_WIFI_APP_CLIENT_ID` | Asgardeo client ID for the guest Wi‑Fi app | Yes (for Wi‑Fi tools) |
+| `LEAVE_BACKEND_URL` | Leave API base URL | Yes (for leave tools) |
+| `LEAVE_APP_CLIENT_ID` | Asgardeo client ID for the Leave app | Yes (for leave tools) |
+| `MEALS_EXTRA_SCOPES` | Optional extra OAuth scopes for Meals token exchange | No |
+| `GUEST_WIFI_EXTRA_SCOPES` | Optional extra OAuth scopes for Guest Wi-Fi token exchange | No |
+| `DEBUG` | Enable debug headers and curl logging (`true`/`false`) | No |
+
+**Leave API details** (endpoints, payloads, auth): see [LEAVE_APP_API.md](./LEAVE_APP_API.md).
 
 ### Running
 
 ```bash
+# Install the project in editable mode (one-time, after pip install -r requirements.txt)
+pip install -e .
+
 # Start the server
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 # The API will be available at http://localhost:8000
 # Swagger docs at http://localhost:8000/docs
 ```
+
+## Testing
+
+The project includes a comprehensive test suite covering all security guardrails and functionality.
+
+### Test Statistics
+
+- **Total Tests**: 259 tests
+- **Coverage**: 82% code coverage
+- **Test Categories**:
+  - Request Limits (22 tests)
+  - Suspicious Intent Detection (54 tests)
+  - Response Sanitization (49 tests)
+  - Content Moderation (84 tests)
+  - Metrics Tracking (50 tests)
+
+### Running Tests
+
+```bash
+# Run all tests
+python3 -m pytest tests/ -v
+
+# Run with coverage
+python3 -m pytest tests/ --cov=. --cov-report=html
+
+# Run specific test file
+python3 -m pytest tests/test_sanitization.py -v
+
+# Run tests in parallel (requires pytest-xdist)
+python3 -m pytest tests/ -n auto
+```
+
+### Test Documentation
+
+See [tests/README.md](./tests/README.md) for detailed test documentation and test categories.
 
 ## API Reference
 
@@ -93,13 +145,18 @@ Send a message to the AI chat agent.
 
 **Headers:**
 ```
-Authorization: Bearer <access_token>
+x-jwt-assertion: <access_token>
+x-user-assertion: <access_token>
 ```
 
 **Request Body:**
 ```json
 {
-  "message": "What's for lunch today?"
+  "message": "What's for lunch today?",
+  "history": [
+    { "role": "user", "content": "..." },
+    { "role": "assistant", "content": "..." }
+  ]
 }
 ```
 
@@ -114,19 +171,47 @@ Authorization: Bearer <access_token>
 
 ```
 chat-agent/
-├── .env.example          # Environment variables template
-├── .gitignore            # Git ignore rules
-├── requirements.txt      # Python dependencies
-├── README.md             # This file
-├── SKILLS.md             # Agent skills documentation
-└── app/
-    ├── __init__.py       # Package init
-    ├── config.py         # Environment configuration
-    ├── main.py           # FastAPI entry point
-    ├── agent.py          # LangChain agent logic
-    ├── tools.py          # Backend API tools
-    └── token_exchange.py # Asgardeo token exchange
+├── main.py                        # FastAPI entry point
+├── config.py                      # Environment configuration
+├── requirements.txt               # Python dependencies
+├── .env.example                   # Environment variables template
+├── .gitignore
+├── README.md                      # This file
+├── SKILLS.md                      # Agent skills architecture documentation
+├── CHAT_AGENT_RUNBOOK.md          # Local run, Postman, tokens, headers
+├── LEAVE_APP_API.md               # Leave backend integration reference
+├── openapi.yaml                   # OpenAPI 3.1 specification
+│
+├── agent/                         # Agent core
+│   ├── agent.py                   # LangChain orchestration & tool-call loop
+│   ├── prompt_manager.py          # Modular prompt loader & composer
+│   ├── token_exchange.py          # Asgardeo RFC 8693 token exchange
+│   └── prompts/                   # Shared system prompt sections
+│       ├── base.md                # Identity, date/time, leave-type map
+│       ├── formatting.md          # Output formatting rules
+│       └── fallback.md            # Guidance for unsupported features
+│
+└── tools/                         # Per-skill tool implementations
+    ├── meals/
+    │   ├── meals_tools.py         # get_todays_menu, submit_lunch_feedback
+    │   ├── prompt.md              # Meals skill system prompt section
+    │   └── lunch_feedback_prompt.md  # Feedback skill system prompt section
+    ├── guest_wifi/
+    │   ├── wifi_tools.py          # create/get/delete guest Wi-Fi account
+    │   └── prompt.md              # Wi-Fi skill system prompt section
+    └── leave/
+        ├── leave_tools.py         # validate/submit/cancel/list leave + configs
+        └── prompt.md              # Leave skill system prompt section
 ```
+
+### Adding a New Skill
+
+1. Create `tools/<skill_name>/` with `<skill>_tools.py` and `prompt.md`
+2. Add the token exchange wrapper in `agent/token_exchange.py`
+3. Add the env vars in `config.py` and `.env.example`
+4. Import the tools in `agent/agent.py`, add to the `tools` list, and add a handler in the tool-call loop
+5. Add `tools/<skill_name>/prompt.md` to `PROMPT_ORDER` in `agent/prompt_manager.py`
+6. Update the [Current Skills](SKILLS.md#current-skills) table in `SKILLS.md`
 
 ## License
 
