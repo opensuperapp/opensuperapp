@@ -217,3 +217,11 @@ public type NotificationResponse record {|
     # Items per page
     int itemsPerPage;
 |};
+
+# Request type for FCM token search queries.
+public type FcmTokenRequest record {|
+    # Optional: Array of user UUIDs
+    string[] userIds?;
+    # Required: Pagination offset
+    int startIndex;
+|};

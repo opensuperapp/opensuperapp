@@ -403,6 +403,47 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
         return <http:Ok>{body: {message: result}};
     }
 
+    # Search for FCM tokens using user UUIDs.
+    #
+    # + ctx - Request context
+    # + request - Request containing userIds and startIndex
+    # + return - Paginated FCM tokens response or an error
+    resource function post users/fcm\-tokens/search(http:RequestContext ctx, database:FcmTokenRequest request)
+        returns database:FcmTokenResponse|http:InternalServerError|http:NotFound|http:BadRequest {
+
+        authorization:CustomJwtPayload|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
+        if userInfo is error {
+            return <http:InternalServerError>{
+                body: {message: ERR_MSG_USER_HEADER_NOT_FOUND}
+            };
+        }
+
+        string[]? userIds = request.userIds;
+
+        if userIds is string[] {
+            if userIds.length() == 0 {
+                return <http:BadRequest>{
+                    body: {message: "userIds array cannot be empty"}
+                };
+            }
+
+            database:FcmTokenResponse|error fcmTokensResponse = database:getFcmTokens(userIds, request.startIndex);
+            if fcmTokensResponse is error {
+                string customError = "Error occurred while retrieving FCM tokens";
+                log:printError(customError, fcmTokensResponse);
+                return <http:InternalServerError>{
+                    body: {info: customError, message: fcmTokensResponse.message()}
+                };
+            }
+            
+            return fcmTokensResponse;
+        } else {
+            return <http:BadRequest>{
+                body: {message: "'userIds' must be provided"}
+            };
+        }
+    }
+
     # Deletes the specified FCM token.
     #
     # + ctx - Request context
