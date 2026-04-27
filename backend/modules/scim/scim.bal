@@ -44,7 +44,6 @@ public isolated function searchUsers(string group) returns User[]|error {
 # + return - An array of User records, or an error if the operation fails
 public isolated function getInternalUserIdByEmail(string email) returns User[]|error {
     User[] users = [];
-
     UserSearchResult usersResult = check scimClient->/organizations/internal/users/search.post({
         domain: "DEFAULT",
         attributes: ["userName", "id"],
@@ -60,9 +59,7 @@ public isolated function getInternalUserIdByEmail(string email) returns User[]|e
 # + email - Email of the user to search for
 # + return - An array of User records, or an error if the operation fails
 public isolated function getExternalUserIdByEmail(string email) returns User[]|error {
-
     User[] users = [];
-
     UserSearchResult usersResult = check scimClient->/organizations/'external/users/search.post({
         domain: "DEFAULT",
         attributes: ["userName", "id"],

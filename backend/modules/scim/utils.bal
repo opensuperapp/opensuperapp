@@ -46,7 +46,12 @@ public isolated function getUserIdsByEmails(string[] emails) returns string[]|er
 # + email - Email of the user to check
 # + return - `true` if the user is an internal user, `false` otherwise
 public isolated function isInternalUser(string email) returns boolean {
-    return email.includes(internalUserDomain);
+    int? atIndex = email.lastIndexOf("@");
+    if atIndex is () {
+        return false;
+    }
+    string domain = email.substring(atIndex + 1);
+    return domain.equalsIgnoreCaseAscii(internalUserDomain);
 }
 
 # Gets the user id of a user by their email from the SCIM operations service.
