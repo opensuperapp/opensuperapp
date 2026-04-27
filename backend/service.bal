@@ -429,13 +429,13 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
 
             database:FcmTokenResponse|error fcmTokensResponse = database:getFcmTokens(userIds, request.startIndex);
             if fcmTokensResponse is error {
-                string customError = "Error occurred while retrieving FCM tokens";
-                log:printError(customError, fcmTokensResponse);
-                return <http:InternalServerError>{
-                    body: {info: customError, message: fcmTokensResponse.message()}
+                return {
+                    fcmTokens: [],
+                    totalResults: 0,
+                    startIndex: request.startIndex,
+                    itemsPerPage: 0
                 };
             }
-            
             return fcmTokensResponse;
         } else {
             return <http:BadRequest>{
