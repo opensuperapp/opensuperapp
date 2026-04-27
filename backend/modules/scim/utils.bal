@@ -23,3 +23,40 @@ public isolated function getGroupMemberIds(string group) returns string[]|error 
     return from User user in users
         select user.id;
 }
+
+# Gets the user ids of users by their emails from the SCIM operations service.
+#
+# + emails - Array of emails of the users to search for
+# + return - An array of user ids, or an error if the operation fails
+public isolated function getUserIdsByEmails(string[] emails) returns string[]|error {
+    string[] userIds = [];
+    foreach string email in emails {
+        string? userId = check getUserIdByDomain(email);
+        if userId is () {
+            continue;
+        }
+        userIds.push(userId);
+    }
+
+    return userIds;
+}
+
+# Checks if a user is an internal user.
+#
+# + email - Email of the user to check
+# + return - `true` if the user is an internal user, `false` otherwise
+public isolated function isInternalUser(string email) returns boolean {
+    return email.includes(internalUserDomain);
+}
+
+# Gets the user id of a user by their email from the SCIM operations service.
+#
+# + email - Email of the user to search for
+# + return - The user id of the user, or an error if the operation fails
+isolated function getUserIdByDomain(string email) returns string?|error {
+    User[] users = isInternalUser(email) ? check getInternalUserIdByEmail(email) : check getExternalUserIdByEmail(email);
+    if users.length() == 0 {
+        return ();
+    }
+    return users[0].id;
+}

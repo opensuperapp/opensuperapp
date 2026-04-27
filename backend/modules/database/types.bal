@@ -220,8 +220,8 @@ public type NotificationResponse record {|
 
 # Request type for FCM token search queries.
 public type FcmTokenRequest record {|
-    # Array of user UUIDs
-    string[] userIds;
+    # Array of user emails
+    string[] emails;
     # Required: Pagination offset
     int startIndex;
 |};

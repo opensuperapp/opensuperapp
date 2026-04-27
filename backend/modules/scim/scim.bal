@@ -37,3 +37,38 @@ public isolated function searchUsers(string group) returns User[]|error {
     }
     return users;
 }
+
+# Searches for Internal users by email from the SCIM operations service.
+#
+# + email - Email of the user to search for
+# + return - An array of User records, or an error if the operation fails
+public isolated function getInternalUserIdByEmail(string email) returns User[]|error {
+    User[] users = [];
+
+    UserSearchResult usersResult = check scimClient->/organizations/internal/users/search.post({
+        domain: "DEFAULT",
+        attributes: ["userName", "id"],
+        filter: string `userName eq ${email}`
+    });
+
+    users.push(...usersResult.Resources);
+    return users;
+}
+
+# Searches for External users by email from the SCIM operations service.
+#
+# + email - Email of the user to search for
+# + return - An array of User records, or an error if the operation fails
+public isolated function getExternalUserIdByEmail(string email) returns User[]|error {
+
+    User[] users = [];
+
+    UserSearchResult usersResult = check scimClient->/organizations/'external/users/search.post({
+        domain: "DEFAULT",
+        attributes: ["userName", "id"],
+        filter: string `userName eq ${email}`
+    });
+
+    users.push(...usersResult.Resources);
+    return users;
+}
