@@ -222,6 +222,6 @@ public type NotificationResponse record {|
 public type FcmTokenRequest record {|
     # Array of user emails
     string[] emails;
-    # Required: Pagination offset
+    # Start index of the response
     int startIndex;
 |};
