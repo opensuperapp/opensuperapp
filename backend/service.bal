@@ -409,7 +409,7 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
     # + request - Request containing userIds and startIndex
     # + return - Paginated FCM tokens response or an error
     resource function post users/fcm\-tokens/search(http:RequestContext ctx, database:FcmTokenRequest request)
-        returns database:FcmTokenResponse|http:InternalServerError|http:BadRequest {
+        returns database:FcmTokenResponse|http:InternalServerError|http:BadRequest|http:Ok {
 
         authorization:CustomJwtPayload|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
         if userInfo is error {
@@ -436,15 +436,20 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
 
         database:FcmTokenResponse|error fcmTokensResponse = database:getFcmTokens(userIds, request.startIndex);
         if fcmTokensResponse is error {
-            return {
-                fcmTokens: [],
-                totalResults: 0,
-                startIndex: request.startIndex,
-                itemsPerPage: 0
+            string customError = "Error occurred while retrieving FCM tokens";
+            return <http:InternalServerError> {
+                body: {message: customError}
             };
         }
-        
-        return fcmTokensResponse;
+
+        return <http:Ok> {
+            body: {
+                fcmTokens: fcmTokensResponse.fcmTokens,
+                totalResults: fcmTokensResponse.totalResults,
+                startIndex: fcmTokensResponse.startIndex,
+                itemsPerPage: fcmTokensResponse.itemsPerPage
+            }
+        };
     }
 
     # Deletes the specified FCM token.
