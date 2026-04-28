@@ -13,7 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import ballerina/log;
+configurable string internalUserDomain = "wso2";
 
 # Gets the user ids of users belonging to a specific group from the SCIM operations service.
 #
@@ -54,7 +54,6 @@ public isolated function isInternalUser(string email) returns boolean =>
 # + email - Email of the user to search for
 # + return - The user id of the user, or an error if the operation fails
 isolated function getUserIdByDomain(string email) returns string?|error {
-    log:printInfo(string `isInternalUser(email): ${isInternalUser(email)}`);
     User? user = isInternalUser(email) ? check searchInternalUsers(email) : check searchExternalUsers(email);
     if user is () {
         return ();
