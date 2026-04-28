@@ -418,6 +418,12 @@ service http:InterceptableService / on new http:Listener(9099, config = {request
             };
         }
 
+        if request.startIndex < 0 || request.itemsPerPage <= 0 {
+            return <http:BadRequest>{
+                body: {message: "'startIndex' must be >= 0 and 'itemsPerPage' must be > 0"}
+            };
+        }
+
         string[] emails = request.emails;
         if emails.length() == 0 {
             return <http:BadRequest>{
@@ -433,10 +439,21 @@ service http:InterceptableService / on new http:Listener(9099, config = {request
                 body: {message: customError}
             };
         }
+        if userIds.length() == 0 {
+            return <http:Ok>{
+                body: {
+                    fcmTokens: [],
+                    totalResults: 0,
+                    startIndex: request.startIndex,
+                    itemsPerPage: 0
+                }
+            };
+        }
 
         database:FcmTokenResponse|error fcmTokensResponse = database:getFcmTokens(userIds, request.startIndex, request.itemsPerPage);
         if fcmTokensResponse is error {
             string customError = "Error occurred while retrieving FCM tokens";
+            log:printError(customError, fcmTokensResponse);
             return <http:InternalServerError> {
                 body: {message: customError}
             };
