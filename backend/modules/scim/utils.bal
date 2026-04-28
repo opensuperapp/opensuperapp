@@ -12,7 +12,8 @@
 // "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
-// under the License. 
+// under the License.
+import ballerina/log;
 
 # Gets the user ids of users belonging to a specific group from the SCIM operations service.
 #
@@ -45,23 +46,18 @@ public isolated function getUserIdsByEmails(string[] emails) returns string[]|er
 #
 # + email - Email of the user to check
 # + return - `true` if the user is an internal user, `false` otherwise
-public isolated function isInternalUser(string email) returns boolean {
-    int? atIndex = email.lastIndexOf("@");
-    if atIndex is () {
-        return false;
-    }
-    string domain = email.substring(atIndex + 1);
-    return domain.equalsIgnoreCaseAscii(internalUserDomain);
-}
+public isolated function isInternalUser(string email) returns boolean =>
+    re `^[a-zA-Z][a-zA-Z0-9_\-\.]+@${internalUserDomain}\.com$`.isFullMatch(email.toLowerAscii());
 
 # Gets the user id of a user by their email from the SCIM operations service.
 #
 # + email - Email of the user to search for
 # + return - The user id of the user, or an error if the operation fails
 isolated function getUserIdByDomain(string email) returns string?|error {
-    User[] users = isInternalUser(email) ? check getInternalUserByEmail(email) : check getExternalUserByEmail(email);
-    if users.length() == 0 {
+    log:printInfo(string `isInternalUser(email): ${isInternalUser(email)}`);
+    User? user = isInternalUser(email) ? check searchInternalUsers(email) : check searchExternalUsers(email);
+    if user is () {
         return ();
     }
-    return users[0].id;
+    return user.id;
 }

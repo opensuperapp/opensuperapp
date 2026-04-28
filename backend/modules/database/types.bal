@@ -223,5 +223,7 @@ public type FcmTokenRequest record {|
     # Array of user emails
     string[] emails;
     # Start index of the response
-    int startIndex;
+    int startIndex = 1;
+    # Limit of items to return
+    int itemsPerPage = 'limit;
 |};

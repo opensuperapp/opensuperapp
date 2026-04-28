@@ -17,7 +17,7 @@ import ballerina/http;
 
 configurable string scimUrl = ?;
 configurable Oauth2Config oauth2Config = ?;
-configurable string internalUserDomain = ?;
+configurable string internalUserDomain = "wso2";
 
 public final http:Client scimClient = check new (scimUrl, {
     auth: {

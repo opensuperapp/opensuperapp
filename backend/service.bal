@@ -49,7 +49,7 @@ service class ErrorInterceptor {
     }
 }
 
-service http:InterceptableService / on new http:Listener(9090, config = {requestLimits: {maxHeaderSize}}) {
+service http:InterceptableService / on new http:Listener(9099, config = {requestLimits: {maxHeaderSize}}) {
 
     # + return - authorization:JwtInterceptor, ErrorInterceptor
     public function createInterceptors() returns http:Interceptor[] =>
@@ -409,7 +409,7 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
     # + request - Request containing userIds and startIndex
     # + return - Paginated FCM tokens response or an error
     resource function post users/fcm\-tokens/search(http:RequestContext ctx, database:FcmTokenRequest request)
-        returns database:FcmTokenResponse|http:InternalServerError|http:BadRequest|http:Ok {
+        returns http:InternalServerError|http:BadRequest|http:Ok {
 
         authorization:CustomJwtPayload|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
         if userInfo is error {
@@ -434,7 +434,7 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        database:FcmTokenResponse|error fcmTokensResponse = database:getFcmTokens(userIds, request.startIndex);
+        database:FcmTokenResponse|error fcmTokensResponse = database:getFcmTokens(userIds, request.startIndex, request.itemsPerPage);
         if fcmTokensResponse is error {
             string customError = "Error occurred while retrieving FCM tokens";
             return <http:InternalServerError> {
