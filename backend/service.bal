@@ -28,6 +28,8 @@ configurable string userRegionFilter = ?; // Region to bypass region restricted 
 configurable string mobileAppReviewerEmail = ?; // App store reviewer email
 configurable MicroAppScope[] appScopes = []; // Additional scopes required for micro-apps
 
+const int MAX_ITEMS_PER_PAGE = 1000;
+
 @display {
     label: "SuperApp Mobile Service",
     id: "wso2-open-operations/superapp-mobile-service"
@@ -418,9 +420,9 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        if request.startIndex < 0 || request.itemsPerPage <= 0 {
+        if request.startIndex < 1 || request.itemsPerPage <= 0 || request.itemsPerPage > MAX_ITEMS_PER_PAGE {
             return <http:BadRequest>{
-                body: {message: "'startIndex' must be >= 0 and 'itemsPerPage' must be > 0"}
+                body: {message: string`'startIndex' must be >= 1 and 'itemsPerPage' must be > 0 and <= ${MAX_ITEMS_PER_PAGE}`}
             };
         }
 
@@ -451,7 +453,7 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
         }
 
         database:FcmTokenResponse|error fcmTokensResponse = 
-            database:getFcmTokens(userIds, request.startIndex, request.itemsPerPage);
+            database:getFcmTokens(userIds, request.startIndex - 1, request.itemsPerPage);
         if fcmTokensResponse is error {
             string customError = "Error occurred while retrieving FCM tokens";
             log:printError(customError, fcmTokensResponse);
