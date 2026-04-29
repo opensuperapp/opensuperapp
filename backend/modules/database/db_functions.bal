@@ -155,6 +155,14 @@ public isolated function updateUserConfigs(string uuid, UserConfig userConfig)
 public isolated function getFcmTokens(string[] uuids, int startIndex, int itemsPerPage = 'limit) 
     returns FcmTokenResponse|error {
     FcmTokenCount countRecord = check databaseClient->queryRow(countFcmTokensQuery(uuids));
+    if countRecord.count == 0 {
+        return {
+            fcmTokens: [],
+            totalResults: 0,
+            startIndex,
+            itemsPerPage: 0
+        };
+    }
 
     if startIndex < 0 || startIndex >= countRecord.count {
         return error(string `Invalid start index: ${startIndex}. Total results: ${countRecord.count}`);
