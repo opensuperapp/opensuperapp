@@ -42,7 +42,7 @@ public isolated function searchUsers(string group) returns User[]|error {
 #
 # + email - Email of the user to search for
 # + return - An array of User records, or an error if the operation fails
-public isolated function searchInternalUsers(string email) returns User?|error {
+public isolated function searchInternalUsers(string email) returns User|error? {
     UserSearchResult usersResult = check scimClient->/organizations/internal/users/search.post({
         domain: "DEFAULT",
         attributes: ["userName", "id"],
@@ -60,7 +60,7 @@ public isolated function searchInternalUsers(string email) returns User?|error {
 #
 # + email - Email of the user to search for
 # + return - An array of User records, or an error if the operation fails
-public isolated function searchExternalUsers(string email) returns User?|error {
+public isolated function searchExternalUsers(string email) returns User|error? {
     UserSearchResult usersResult = check scimClient->/organizations/'external/users/search.post({
         domain: "DEFAULT",
         attributes: ["userName", "id"],

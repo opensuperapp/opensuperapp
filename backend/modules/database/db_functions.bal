@@ -152,7 +152,8 @@ public isolated function updateUserConfigs(string uuid, UserConfig userConfig)
 # + startIndex - Start index for pagination
 # + itemsPerPage - Items per page
 # + return - FCMTokenResponse with tokens and pagination info, or an error.
-public isolated function getFcmTokens(string[] uuids, int startIndex, int itemsPerPage = 'limit) returns FcmTokenResponse|error {
+public isolated function getFcmTokens(string[] uuids, int startIndex, int itemsPerPage = 'limit) 
+    returns FcmTokenResponse|error {
     FcmTokenCount countRecord = check databaseClient->queryRow(countFcmTokensQuery(uuids));
 
     if startIndex < 0 || startIndex >= countRecord.count {

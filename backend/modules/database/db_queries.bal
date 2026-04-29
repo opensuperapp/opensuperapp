@@ -170,7 +170,8 @@ isolated function updateUserConfigsQuery(string uuid, string configKey, string c
 # + startIndex - Start index for pagination
 # + itemsPerPage - Items per page
 # + return - Generated query to get FCM tokens from the `device_token` table
-public isolated function getFcmTokensQuery(string[] uuids, int startIndex, int itemsPerPage = 'limit) returns sql:ParameterizedQuery =>
+public isolated function getFcmTokensQuery(string[] uuids, int startIndex, int itemsPerPage = 'limit)
+    returns sql:ParameterizedQuery =>
     sql:queryConcat(`
         SELECT
             t.fcm_token
