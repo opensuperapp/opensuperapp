@@ -55,8 +55,5 @@ public isolated function isInternalUser(string email) returns boolean =>
 # + return - The user id of the user, or an error if the operation fails
 isolated function getUserIdByDomain(string email) returns string?|error {
     User? user = isInternalUser(email) ? check searchInternalUsers(email) : check searchExternalUsers(email);
-    if user is () {
-        return ();
-    }
-    return user.id;
+    return user is () ? () : user.id;
 }
