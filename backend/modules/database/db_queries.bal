@@ -168,8 +168,10 @@ isolated function updateUserConfigsQuery(string uuid, string configKey, string c
 #
 # + uuids - Array of user UUIDs to retrieve tokens for
 # + startIndex - Start index for pagination
+# + itemsPerPage - Items per page
 # + return - Generated query to get FCM tokens from the `device_token` table
-public isolated function getFcmTokensQuery(string[] uuids, int startIndex) returns sql:ParameterizedQuery =>
+public isolated function getFcmTokensQuery(string[] uuids, int startIndex, int itemsPerPage = 'limit)
+    returns sql:ParameterizedQuery =>
     sql:queryConcat(`
         SELECT
             t.fcm_token
@@ -178,7 +180,7 @@ public isolated function getFcmTokensQuery(string[] uuids, int startIndex) retur
         INNER JOIN
             user_config uc ON t.user_id = uc.id
         WHERE
-            uc.uuid IN (`, sql:arrayFlattenQuery(uuids), `) LIMIT ${'limit} OFFSET ${startIndex}
+            uc.uuid IN (`, sql:arrayFlattenQuery(uuids), `) LIMIT ${itemsPerPage} OFFSET ${startIndex}
     `);
 
 # Query to count FCM tokens for a given list of UUIDs.

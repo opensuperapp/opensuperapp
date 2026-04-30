@@ -217,3 +217,13 @@ public type NotificationResponse record {|
     # Items per page
     int itemsPerPage;
 |};
+
+# Request type for FCM token search queries.
+public type FcmTokenRequest record {|
+    # Array of user emails
+    string[] emails;
+    # Start index of the response
+    int startIndex = 1;
+    # Limit of items to return
+    int itemsPerPage = 'limit;
+|};

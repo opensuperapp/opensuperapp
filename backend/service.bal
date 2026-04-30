@@ -28,6 +28,8 @@ configurable string userRegionFilter = ?; // Region to bypass region restricted 
 configurable string mobileAppReviewerEmail = ?; // App store reviewer email
 configurable MicroAppScope[] appScopes = []; // Additional scopes required for micro-apps
 
+const int MAX_ITEMS_PER_PAGE = 1000;
+
 @display {
     label: "SuperApp Mobile Service",
     id: "wso2-open-operations/superapp-mobile-service"
@@ -401,6 +403,73 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
         }
 
         return <http:Ok>{body: {message: result}};
+    }
+
+    # Search for FCM tokens using user UUIDs.
+    #
+    # + ctx - Request context
+    # + request - Request containing userIds and startIndex
+    # + return - Paginated FCM tokens response or an error
+    resource function post fcm\-tokens/search(http:RequestContext ctx, database:FcmTokenRequest request)
+        returns http:InternalServerError|http:BadRequest|http:Ok {
+
+        authorization:CustomJwtPayload|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
+        if userInfo is error {
+            return <http:InternalServerError>{
+                body: {message: ERR_MSG_USER_HEADER_NOT_FOUND}
+            };
+        }
+
+        if request.startIndex < 1 || request.itemsPerPage <= 0 || request.itemsPerPage > MAX_ITEMS_PER_PAGE {
+            return <http:BadRequest>{
+                body: {message: string`'startIndex' must be >= 1 and 'itemsPerPage' must be > 0 and <= ${MAX_ITEMS_PER_PAGE}`}
+            };
+        }
+
+        string[] emails = request.emails;
+        if emails.length() == 0 {
+            return <http:BadRequest>{
+                body: {message: "emails array cannot be empty"}
+            };
+        }
+
+        string[]|error userIds = scim:getUserIdsByEmails(emails);
+        if userIds is error {
+            string customError = "Error occurred while calling SCIM operations service";
+            log:printError(customError, userIds);
+            return <http:InternalServerError>{
+                body: {message: customError}
+            };
+        }
+        if userIds.length() == 0 {
+            return <http:Ok>{
+                body: {
+                    fcmTokens: [],
+                    totalResults: 0,
+                    startIndex: request.startIndex,
+                    itemsPerPage: 0
+                }
+            };
+        }
+
+        database:FcmTokenResponse|error fcmTokensResponse = 
+            database:getFcmTokens(userIds, request.startIndex - 1, request.itemsPerPage);
+        if fcmTokensResponse is error {
+            string customError = "Error occurred while retrieving FCM tokens";
+            log:printError(customError, fcmTokensResponse);
+            return <http:InternalServerError> {
+                body: {message: customError}
+            };
+        }
+
+        return <http:Ok> {
+            body: {
+                fcmTokens: fcmTokensResponse.fcmTokens,
+                totalResults: fcmTokensResponse.totalResults,
+                startIndex: fcmTokensResponse.startIndex,
+                itemsPerPage: fcmTokensResponse.itemsPerPage
+            }
+        };
     }
 
     # Deletes the specified FCM token.

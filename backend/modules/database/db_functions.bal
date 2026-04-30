@@ -150,15 +150,25 @@ public isolated function updateUserConfigs(string uuid, UserConfig userConfig)
 #
 # + uuids - Array of user UUIDs to retrieve tokens for
 # + startIndex - Start index for pagination
+# + itemsPerPage - Items per page
 # + return - FCMTokenResponse with tokens and pagination info, or an error.
-public isolated function getFcmTokens(string[] uuids, int startIndex) returns FcmTokenResponse|error {
+public isolated function getFcmTokens(string[] uuids, int startIndex, int itemsPerPage = 'limit) 
+    returns FcmTokenResponse|error {
     FcmTokenCount countRecord = check databaseClient->queryRow(countFcmTokensQuery(uuids));
+    if countRecord.count == 0 {
+        return {
+            fcmTokens: [],
+            totalResults: 0,
+            startIndex,
+            itemsPerPage: 0
+        };
+    }
 
     if startIndex < 0 || startIndex >= countRecord.count {
         return error(string `Invalid start index: ${startIndex}. Total results: ${countRecord.count}`);
     }
 
-    stream<FcmToken, sql:Error?> tokenStream = databaseClient->query(getFcmTokensQuery(uuids, startIndex));
+    stream<FcmToken, sql:Error?> tokenStream = databaseClient->query(getFcmTokensQuery(uuids, startIndex, itemsPerPage));
     string[] tokens = check from FcmToken tokenRecord in tokenStream
         where tokenRecord.fcmToken != ""
         select tokenRecord.fcmToken;
@@ -167,7 +177,7 @@ public isolated function getFcmTokens(string[] uuids, int startIndex) returns Fc
         fcmTokens: tokens,
         totalResults: countRecord.count,
         startIndex,
-        itemsPerPage: countRecord.count > 'limit ? 'limit : countRecord.count
+        itemsPerPage: countRecord.count > itemsPerPage ? itemsPerPage : countRecord.count
     };
 }
 
