@@ -20,7 +20,7 @@ Unit tests for response sanitization.
 
 import pytest
 
-from agent.agent import sanitize_tool_result
+from application.chat_service import sanitize_tool_result
 
 
 @pytest.mark.unit
@@ -178,7 +178,7 @@ class TestPasswordRedaction:
     def test_password_in_list(self):
         """Test that passwords in lists are redacted."""
         result = [{"username": "user1", "password": "pass1"},
-                   {"username": "user2", "password": "pass2"}]
+                  {"username": "user2", "password": "pass2"}]
         sanitized = sanitize_tool_result(result)
         assert "pass1" not in sanitized
         assert "pass2" not in sanitized

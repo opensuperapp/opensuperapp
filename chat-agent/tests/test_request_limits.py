@@ -21,7 +21,7 @@ Unit tests for request size limit validators.
 import pytest
 from pydantic import ValidationError
 
-from main import ChatRequest, HistoryMessage, MAX_MESSAGE_LENGTH, MAX_HISTORY_LENGTH, MAX_HISTORY_ITEM_LENGTH
+from api.http import ChatRequest, HistoryMessage, MAX_MESSAGE_LENGTH, MAX_HISTORY_LENGTH, MAX_HISTORY_ITEM_LENGTH
 
 
 @pytest.mark.unit
@@ -168,19 +168,14 @@ class TestCombinedValidators:
 
     def test_message_valid_history_invalid(self):
         """Test that valid message fails with invalid history item (fails at HistoryMessage creation)."""
-        message = "Hello"
         with pytest.raises(ValidationError):
-            history = [
-                HistoryMessage(role="user", content="A" * (MAX_HISTORY_ITEM_LENGTH + 1))
-            ]
+            HistoryMessage(role="user", content="A" * (MAX_HISTORY_ITEM_LENGTH + 1))
 
     def test_both_invalid(self):
         """Test that both invalid message and history raise ValidationError."""
         message = "A" * (MAX_MESSAGE_LENGTH + 1)
         with pytest.raises(ValidationError):
-            history = [
-                HistoryMessage(role="user", content="A" * (MAX_HISTORY_ITEM_LENGTH + 1))
-            ]
+            HistoryMessage(role="user", content="A" * (MAX_HISTORY_ITEM_LENGTH + 1))
 
     def test_history_with_invalid_item_in_middle(self):
         """Test that history with one invalid item fails validation (at HistoryMessage creation)."""
