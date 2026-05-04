@@ -149,6 +149,19 @@ _LOCATION_LEAVE_TYPES: dict[str, list[str]] = {
 }
 _ALL_LEAVE_TYPES = ["Annual", "Casual", "Sick", "Maternity", "Paternity", "Lieu"]
 
+_LEAVE_KEYWORDS: frozenset[str] = frozenset({
+    "leave", "vacation", "holiday", "time off", "pto",
+    "sick", "maternity", "paternity", "lieu", "casual",
+    "annual", "cancel leave", "apply leave", "submit leave",
+})
+
+
+def _is_likely_leave_query(message: str) -> bool:
+    """Return True if the message is likely about leave management."""
+    text = message.lower()
+    return any(kw in text for kw in _LEAVE_KEYWORDS)
+
+
 _MCP_TOOL_TO_APP: dict[str, str] = {
     "get_todays_menu": "meals",
     "submit_lunch_feedback": "meals",
@@ -625,7 +638,11 @@ async def run_agent(
         The agent's text response.
     """
     mcp_client = _build_mcp_client()
-    employee_location = await get_employee_location(access_token, mcp_client)
+    employee_location = (
+        await get_employee_location(access_token, mcp_client)
+        if _is_likely_leave_query(user_message)
+        else None
+    )
 
     llm = ChatOpenAI(
         model=OPENAI_MODEL,
