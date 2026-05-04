@@ -14,6 +14,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import dataclasses
 import unittest
 from unittest.mock import patch
 
@@ -34,10 +35,12 @@ class TestAgentMcpDispatch(unittest.IsolatedAsyncioTestCase):
             return {"validation_success": True, "hasOverlap": False}
 
         client = _build_mcp_client()
-        with patch("infrastructure.mcp.server.exchange_token", side_effect=fake_exchange_token), patch(
-            "application.chat_service.validate_leave_request.ainvoke",
-            side_effect=fake_validate_leave,
-        ):
+        old_reg = client._server._tool_registry["validate_leave_request"]
+        client._server._tool_registry["validate_leave_request"] = dataclasses.replace(
+            old_reg, func=fake_validate_leave
+        )
+
+        with patch("infrastructure.mcp.server.exchange_token", side_effect=fake_exchange_token):
             result = await client.invoke(
                 "validate_leave_request",
                 {
@@ -64,10 +67,12 @@ class TestAgentMcpDispatch(unittest.IsolatedAsyncioTestCase):
             return {"success": True, "username": "guest_test", "password": "abc123"}
 
         client = _build_mcp_client()
-        with patch("infrastructure.mcp.server.exchange_token", side_effect=fake_exchange_token), patch(
-            "application.chat_service.create_guest_wifi_account.ainvoke",
-            side_effect=fake_create_wifi,
-        ):
+        old_reg = client._server._tool_registry["create_guest_wifi_account"]
+        client._server._tool_registry["create_guest_wifi_account"] = dataclasses.replace(
+            old_reg, func=fake_create_wifi
+        )
+
+        with patch("infrastructure.mcp.server.exchange_token", side_effect=fake_exchange_token):
             result = await client.invoke("create_guest_wifi_account", {}, "super-token")
 
         self.assertTrue(result["success"])
