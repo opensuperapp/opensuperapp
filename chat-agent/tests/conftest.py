@@ -21,10 +21,17 @@ Pytest configuration and shared fixtures for chat-agent tests.
 import os
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from pytest_mock import MockerFixture
+
+# Set default env vars before any module-level imports in test files.
+# This ensures moderation_client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+# in api/http.py is initialized with a non-empty key.
+os.environ.setdefault("OPENAI_API_KEY", "test-api-key")
+os.environ.setdefault("OPENAI_MODEL", "gpt-4o")
+os.environ.setdefault("OPENAI_TEMPERATURE", "0.3")
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -99,9 +106,11 @@ def mock_httpx_client(mocker: MockerFixture):
 @pytest.fixture
 def sample_jwt_token():
     """Return a sample JWT token for testing."""
-    return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." \
-           "eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWQiOiIxMjM0NTY3ODkwIiwidXNlcmlkIjoiMTIzNDU2Nzg5MCJ9." \
-           "SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+    return (
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+        "eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWQiOiIxMjM0NTY3ODkwIiwidXNlcmlkIjoiMTIzNDU2Nzg5MCJ9."
+        "SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+    )
 
 
 @pytest.fixture
@@ -137,5 +146,5 @@ def sample_tool_result():
 @pytest.fixture
 def metrics_tracker():
     """Import and return MetricsTracker instance."""
-    from main import MetricsTracker
+    from api.http import MetricsTracker
     return MetricsTracker()
