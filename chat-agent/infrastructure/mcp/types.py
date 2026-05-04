@@ -15,15 +15,29 @@
 # under the License.
 
 """
-Compatibility entrypoint.
+Shared types for in-process MCP server/client.
 """
 
-import os
+from dataclasses import dataclass
+from typing import Any, Awaitable, Callable
 
-import uvicorn
 
-from api.http import app
+ToolCallable = Callable[[dict[str, Any]], Awaitable[dict]]
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port, h11_max_incomplete_event_size=16384)
+
+@dataclass(frozen=True)
+class McpAppConfig:
+    """App-specific token exchange details."""
+
+    app_key: str
+    client_id: str
+    scope: str
+
+
+@dataclass(frozen=True)
+class ToolRegistration:
+    """Mapping between a tool and its owning app."""
+
+    tool_name: str
+    app_key: str
+    func: ToolCallable
