@@ -18,6 +18,8 @@ import os
 
 from dotenv import load_dotenv
 
+from infrastructure.mcp.types import McpAppConfig
+
 load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
@@ -33,3 +35,31 @@ LEAVE_APP_CLIENT_ID = os.getenv("LEAVE_APP_CLIENT_ID", "")
 MEALS_EXTRA_SCOPES = os.getenv("MEALS_EXTRA_SCOPES", "")
 GUEST_WIFI_EXTRA_SCOPES = os.getenv("GUEST_WIFI_EXTRA_SCOPES", "")
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
+
+DEFAULT_TOKEN_SCOPE = "openid email groups profile"
+
+
+def _build_scope(extra_scopes: str) -> str:
+    """Append extra scopes to the default scope if provided."""
+    if extra_scopes:
+        return f"{DEFAULT_TOKEN_SCOPE} {extra_scopes.strip()}"
+    return DEFAULT_TOKEN_SCOPE
+
+
+MCP_APP_CONFIGS: dict[str, McpAppConfig] = {
+    "meals": McpAppConfig(
+        app_key="meals",
+        client_id=MEALS_APP_CLIENT_ID,
+        scope=_build_scope(MEALS_EXTRA_SCOPES),
+    ),
+    "guest_wifi": McpAppConfig(
+        app_key="guest_wifi",
+        client_id=GUEST_WIFI_APP_CLIENT_ID,
+        scope=_build_scope(GUEST_WIFI_EXTRA_SCOPES),
+    ),
+    "leave": McpAppConfig(
+        app_key="leave",
+        client_id=LEAVE_APP_CLIENT_ID,
+        scope=DEFAULT_TOKEN_SCOPE,
+    ),
+}
