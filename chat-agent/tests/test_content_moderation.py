@@ -21,7 +21,7 @@ Unit tests for content moderation using OpenAI Moderation API.
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from api.http import check_moderation
+from api.app import check_moderation
 
 
 def _make_moderation_response(flagged: bool, categories: dict | None = None) -> MagicMock:
@@ -52,7 +52,7 @@ class TestHateContentModeration:
             flagged=True,
             categories={"hate": True, "harassment": False, "violence": False}
         )
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(return_value=mock_response)
             is_flagged, category = await check_moderation("I hate all [group]")
             assert is_flagged is True
@@ -64,7 +64,7 @@ class TestHateContentModeration:
             flagged=True,
             categories={"hate": False, "hate/threatening": True, "violence": False}
         )
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(return_value=mock_response)
             is_flagged, category = await check_moderation("Threatening hate speech")
             assert is_flagged is True
@@ -82,7 +82,7 @@ class TestSexualContentModeration:
             flagged=True,
             categories={"sexual": True, "hate": False, "violence": False}
         )
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(return_value=mock_response)
             is_flagged, category = await check_moderation("Explicit sexual content")
             assert is_flagged is True
@@ -94,7 +94,7 @@ class TestSexualContentModeration:
             flagged=True,
             categories={"sexual": False, "sexual/minors": True}
         )
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(return_value=mock_response)
             is_flagged, category = await check_moderation("Inappropriate content involving minors")
             assert is_flagged is True
@@ -112,7 +112,7 @@ class TestViolenceContentModeration:
             flagged=True,
             categories={"violence": True, "hate": False, "sexual": False}
         )
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(return_value=mock_response)
             is_flagged, category = await check_moderation("Violent content here")
             assert is_flagged is True
@@ -124,7 +124,7 @@ class TestViolenceContentModeration:
             flagged=True,
             categories={"violence": False, "violence/graphic": True}
         )
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(return_value=mock_response)
             is_flagged, category = await check_moderation("Graphic violent content")
             assert is_flagged is True
@@ -142,7 +142,7 @@ class TestSelfHarmContentModeration:
             flagged=True,
             categories={"self-harm": True, "hate": False}
         )
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(return_value=mock_response)
             is_flagged, category = await check_moderation("Self-harm content")
             assert is_flagged is True
@@ -154,7 +154,7 @@ class TestSelfHarmContentModeration:
             flagged=True,
             categories={"self-harm": False, "self-harm/intent": True}
         )
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(return_value=mock_response)
             is_flagged, category = await check_moderation("Intent to self-harm")
             assert is_flagged is True
@@ -172,7 +172,7 @@ class TestSafeContentModeration:
             flagged=False,
             categories={"hate": False, "sexual": False, "violence": False}
         )
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(return_value=mock_response)
             is_flagged, category = await check_moderation("What's on the menu today?")
             assert is_flagged is False
@@ -184,7 +184,7 @@ class TestSafeContentModeration:
             flagged=False,
             categories={"hate": False, "sexual": False, "violence": False}
         )
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(return_value=mock_response)
             is_flagged, category = await check_moderation("I need to apply for annual leave next week")
             assert is_flagged is False
@@ -196,7 +196,7 @@ class TestSafeContentModeration:
             flagged=False,
             categories={"hate": False, "sexual": False, "violence": False}
         )
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(return_value=mock_response)
             is_flagged, category = await check_moderation("Can you create a guest WiFi account for my visitor?")
             assert is_flagged is False
@@ -208,7 +208,7 @@ class TestSafeContentModeration:
             flagged=False,
             categories={"hate": False, "sexual": False}
         )
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(return_value=mock_response)
             is_flagged, category = await check_moderation("")
             assert is_flagged is False
@@ -220,7 +220,7 @@ class TestSafeContentModeration:
             flagged=False,
             categories={"hate": False, "violence": False}
         )
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(return_value=mock_response)
             is_flagged, category = await check_moderation("Hello, world!")
             assert category == ""
@@ -233,14 +233,14 @@ class TestAPIErrorHandling:
 
     async def test_api_exception_propagates(self):
         """Test that API exceptions propagate to caller."""
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(side_effect=Exception("API error"))
             with pytest.raises(Exception, match="API error"):
                 await check_moderation("Some message")
 
     async def test_connection_error_propagates(self):
         """Test that connection errors propagate to caller."""
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(side_effect=ConnectionError("Connection refused"))
             with pytest.raises(ConnectionError):
                 await check_moderation("Some message")
@@ -248,7 +248,7 @@ class TestAPIErrorHandling:
     async def test_timeout_error_propagates(self):
         """Test that timeout errors propagate to caller."""
         import asyncio
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(side_effect=asyncio.TimeoutError())
             with pytest.raises(asyncio.TimeoutError):
                 await check_moderation("Some message")
@@ -262,7 +262,7 @@ class TestEdgeCases:
     async def test_moderation_called_with_correct_text(self):
         """Test that moderation API is called with the exact text provided."""
         mock_response = _make_moderation_response(flagged=False, categories={})
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(return_value=mock_response)
             await check_moderation("exact test message")
             mock_client.moderations.create.assert_called_once_with(input="exact test message")
@@ -273,7 +273,7 @@ class TestEdgeCases:
             flagged=True,
             categories={"hate": False, "violence": True, "sexual": True}
         )
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(return_value=mock_response)
             is_flagged, category = await check_moderation("Some flagged content")
             assert is_flagged is True
@@ -282,7 +282,7 @@ class TestEdgeCases:
     async def test_returns_tuple(self):
         """Test that check_moderation returns a tuple."""
         mock_response = _make_moderation_response(flagged=False, categories={})
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(return_value=mock_response)
             result = await check_moderation("test")
             assert isinstance(result, tuple)
@@ -294,7 +294,7 @@ class TestEdgeCases:
             flagged=True,
             categories={"hate": True}
         )
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(return_value=mock_response)
             is_flagged, _ = await check_moderation("hate content")
             assert is_flagged is True
@@ -303,7 +303,7 @@ class TestEdgeCases:
     async def test_unicode_content_moderation(self):
         """Test that unicode content is passed to moderation API."""
         mock_response = _make_moderation_response(flagged=False, categories={})
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(return_value=mock_response)
             is_flagged, category = await check_moderation("こんにちは、今日のメニューは何ですか?")
             assert is_flagged is False
@@ -313,7 +313,7 @@ class TestEdgeCases:
         """Test that long messages are passed to moderation API."""
         long_message = "This is a safe message. " * 100
         mock_response = _make_moderation_response(flagged=False, categories={})
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(return_value=mock_response)
             is_flagged, _ = await check_moderation(long_message)
             assert is_flagged is False
@@ -332,7 +332,7 @@ class TestRateLimitHandling:
         mock_response.status_code = 429
         mock_response.headers = {"retry-after": "1"}
         error = RateLimitError("Rate limit exceeded", response=mock_response, body={})
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(side_effect=error)
             with pytest.raises(RateLimitError):
                 await check_moderation("Some message")
@@ -349,7 +349,7 @@ class TestMultipleCategoriesFlagged:
             flagged=True,
             categories={"hate": True, "violence": True, "sexual": False}
         )
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(return_value=mock_response)
             is_flagged, category = await check_moderation("Hate and violent content")
             assert is_flagged is True
@@ -366,7 +366,7 @@ class TestMultipleCategoriesFlagged:
             flagged=True,
             categories={"hate": False, "violence": False, "sexual": False}
         )
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(return_value=mock_response)
             is_flagged, category = await check_moderation("Some content")
             assert category == ""
@@ -381,7 +381,7 @@ class TestRealWorldScenarios:
     async def test_work_query_passes_moderation(self):
         """Test that a typical work query passes moderation."""
         mock_response = _make_moderation_response(flagged=False, categories={})
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(return_value=mock_response)
             is_flagged, _ = await check_moderation("I need to check my leave balance for this month")
             assert is_flagged is False
@@ -392,7 +392,7 @@ class TestRealWorldScenarios:
             flagged=True,
             categories={"harassment": True}
         )
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(return_value=mock_response)
             is_flagged, category = await check_moderation("Harassing content about a colleague")
             assert is_flagged is True
@@ -401,7 +401,7 @@ class TestRealWorldScenarios:
     async def test_moderation_api_called_once_per_check(self):
         """Test that moderation API is called exactly once per check."""
         mock_response = _make_moderation_response(flagged=False, categories={})
-        with patch("api.http.moderation_client") as mock_client:
+        with patch("api.app.moderation_client") as mock_client:
             mock_client.moderations.create = AsyncMock(return_value=mock_response)
             await check_moderation("Test message")
             assert mock_client.moderations.create.call_count == 1

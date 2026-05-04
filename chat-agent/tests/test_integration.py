@@ -24,7 +24,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
 from httpx import AsyncClient, ASGITransport
 
-from api.http import app, MetricsTracker
+from api.app import app, MetricsTracker
 
 # A minimal valid JWT whose payload decodes to {"userid": "test-user"}
 _SAMPLE_TOKEN = (
@@ -56,7 +56,7 @@ def _make_safe_moderation_response() -> MagicMock:
 def reset_metrics_singleton():
     """Reset the shared metrics singleton before each test."""
     fresh_metrics = MetricsTracker()
-    with patch("api.http.metrics", fresh_metrics):
+    with patch("api.app.metrics", fresh_metrics):
         yield fresh_metrics
 
 
@@ -112,8 +112,8 @@ class TestAuthHeaderValidation:
         mock_response = _make_safe_moderation_response()
 
         with (
-            patch("api.http.moderation_client") as mock_mod,
-            patch("api.http.run_agent", new_callable=AsyncMock, return_value="Hello!"),
+            patch("api.app.moderation_client") as mock_mod,
+            patch("api.app.run_agent", new_callable=AsyncMock, return_value="Hello!"),
         ):
             mock_mod.moderations.create = AsyncMock(return_value=mock_response)
             with TestClient(app) as client:
@@ -173,7 +173,7 @@ class TestSuspiciousIntentRejection:
     def test_suspicious_request_does_not_call_moderation_api(self):
         """Test that suspicious requests are rejected before calling moderation API."""
         with (
-            patch("api.http.moderation_client") as mock_mod,
+            patch("api.app.moderation_client") as mock_mod,
         ):
             mock_mod.moderations.create = AsyncMock()
             with TestClient(app) as client:
@@ -199,7 +199,7 @@ class TestContentModerationRejection:
         flagged_response = MagicMock()
         flagged_response.results = [flagged_result]
 
-        with patch("api.http.moderation_client") as mock_mod:
+        with patch("api.app.moderation_client") as mock_mod:
             mock_mod.moderations.create = AsyncMock(return_value=flagged_response)
             with TestClient(app) as client:
                 response = client.post(
@@ -212,7 +212,7 @@ class TestContentModerationRejection:
 
     def test_moderation_service_error_returns_503(self):
         """Test that moderation service failures return 503."""
-        with patch("api.http.moderation_client") as mock_mod:
+        with patch("api.app.moderation_client") as mock_mod:
             mock_mod.moderations.create = AsyncMock(side_effect=Exception("Service down"))
             with TestClient(app) as client:
                 response = client.post(
@@ -233,8 +233,8 @@ class TestSuccessfulChatFlow:
         mock_response = _make_safe_moderation_response()
 
         with (
-            patch("api.http.moderation_client") as mock_mod,
-            patch("api.http.run_agent", new_callable=AsyncMock, return_value="Today's menu includes rice and curry."),
+            patch("api.app.moderation_client") as mock_mod,
+            patch("api.app.run_agent", new_callable=AsyncMock, return_value="Today's menu includes rice and curry."),
         ):
             mock_mod.moderations.create = AsyncMock(return_value=mock_response)
             with TestClient(app) as client:
@@ -258,8 +258,8 @@ class TestSuccessfulChatFlow:
         ]
 
         with (
-            patch("api.http.moderation_client") as mock_mod,
-            patch("api.http.run_agent", new_callable=AsyncMock, return_value="I can help with that."),
+            patch("api.app.moderation_client") as mock_mod,
+            patch("api.app.run_agent", new_callable=AsyncMock, return_value="I can help with that."),
         ):
             mock_mod.moderations.create = AsyncMock(return_value=mock_response)
             with TestClient(app) as client:
@@ -277,8 +277,8 @@ class TestSuccessfulChatFlow:
         mock_response = _make_safe_moderation_response()
 
         with (
-            patch("api.http.moderation_client") as mock_mod,
-            patch("api.http.run_agent", new_callable=AsyncMock, return_value="No problem!"),
+            patch("api.app.moderation_client") as mock_mod,
+            patch("api.app.run_agent", new_callable=AsyncMock, return_value="No problem!"),
         ):
             mock_mod.moderations.create = AsyncMock(return_value=mock_response)
             with TestClient(app) as client:
@@ -297,7 +297,7 @@ class TestRequestValidation:
 
     def test_message_exceeding_limit_returns_422(self):
         """Test that a message exceeding the length limit returns 422."""
-        from api.http import MAX_MESSAGE_LENGTH
+        from api.app import MAX_MESSAGE_LENGTH
         long_message = "A" * (MAX_MESSAGE_LENGTH + 1)
         with TestClient(app) as client:
             response = client.post(
@@ -309,7 +309,7 @@ class TestRequestValidation:
 
     def test_history_exceeding_limit_returns_422(self):
         """Test that history exceeding the length limit returns 422."""
-        from api.http import MAX_HISTORY_LENGTH
+        from api.app import MAX_HISTORY_LENGTH
         history = [{"role": "user", "content": f"msg {i}"} for i in range(MAX_HISTORY_LENGTH + 1)]
         with TestClient(app) as client:
             response = client.post(
@@ -321,7 +321,7 @@ class TestRequestValidation:
 
     def test_history_item_exceeding_limit_returns_422(self):
         """Test that a history item exceeding content limit returns 422."""
-        from api.http import MAX_HISTORY_ITEM_LENGTH
+        from api.app import MAX_HISTORY_ITEM_LENGTH
         long_content = "A" * (MAX_HISTORY_ITEM_LENGTH + 1)
         with TestClient(app) as client:
             response = client.post(
@@ -341,8 +341,8 @@ class TestAgentErrorHandling:
         mock_response = _make_safe_moderation_response()
 
         with (
-            patch("api.http.moderation_client") as mock_mod,
-            patch("api.http.run_agent", new_callable=AsyncMock, side_effect=ValueError("Invalid input")),
+            patch("api.app.moderation_client") as mock_mod,
+            patch("api.app.run_agent", new_callable=AsyncMock, side_effect=ValueError("Invalid input")),
         ):
             mock_mod.moderations.create = AsyncMock(return_value=mock_response)
             with TestClient(app) as client:
@@ -359,8 +359,8 @@ class TestAgentErrorHandling:
         mock_response = _make_safe_moderation_response()
 
         with (
-            patch("api.http.moderation_client") as mock_mod,
-            patch("api.http.run_agent", new_callable=AsyncMock, side_effect=RuntimeError("Unexpected")),
+            patch("api.app.moderation_client") as mock_mod,
+            patch("api.app.run_agent", new_callable=AsyncMock, side_effect=RuntimeError("Unexpected")),
         ):
             mock_mod.moderations.create = AsyncMock(return_value=mock_response)
             with TestClient(app) as client:
@@ -383,9 +383,9 @@ class TestMetricsTracking:
         fresh_metrics = reset_metrics_singleton
 
         with (
-            patch("api.http.moderation_client") as mock_mod,
-            patch("api.http.metrics", fresh_metrics),
-            patch("api.http.run_agent", new_callable=AsyncMock, return_value="Reply"),
+            patch("api.app.moderation_client") as mock_mod,
+            patch("api.app.metrics", fresh_metrics),
+            patch("api.app.run_agent", new_callable=AsyncMock, return_value="Reply"),
         ):
             mock_mod.moderations.create = AsyncMock(return_value=mock_response)
             with TestClient(app) as client:
@@ -401,7 +401,7 @@ class TestMetricsTracking:
         """Test that auth failures increment error count."""
         fresh_metrics = reset_metrics_singleton
 
-        with patch("api.http.metrics", fresh_metrics):
+        with patch("api.app.metrics", fresh_metrics):
             with TestClient(app) as client:
                 client.post(
                     "/chat",
@@ -416,8 +416,8 @@ class TestMetricsTracking:
         fresh_metrics = reset_metrics_singleton
 
         with (
-            patch("api.http.moderation_client") as mock_mod,
-            patch("api.http.metrics", fresh_metrics),
+            patch("api.app.moderation_client") as mock_mod,
+            patch("api.app.metrics", fresh_metrics),
         ):
             mock_mod.moderations.create = AsyncMock(side_effect=Exception("Service down"))
             with TestClient(app) as client:

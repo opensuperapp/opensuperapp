@@ -20,7 +20,7 @@ Unit tests for metrics tracking.
 
 import pytest
 
-from api.http import MetricsTracker
+from api.app import MetricsTracker
 
 
 @pytest.mark.unit

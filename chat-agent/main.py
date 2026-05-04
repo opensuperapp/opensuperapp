@@ -22,7 +22,7 @@ import os
 
 import uvicorn
 
-from api.http import app
+from api.app import app
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))

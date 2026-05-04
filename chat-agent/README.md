@@ -88,7 +88,7 @@ cp .env.example .env
 pip install -e .
 
 # Start the server
-uvicorn api.http:app --host 0.0.0.0 --port 8000 --reload
+uvicorn api.app:app --host 0.0.0.0 --port 8000 --reload
 
 # The API will be available at http://localhost:8000
 # Swagger docs at http://localhost:8000/docs

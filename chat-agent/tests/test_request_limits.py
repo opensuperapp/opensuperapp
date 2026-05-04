@@ -21,7 +21,7 @@ Unit tests for request size limit validators.
 import pytest
 from pydantic import ValidationError
 
-from api.http import ChatRequest, HistoryMessage, MAX_MESSAGE_LENGTH, MAX_HISTORY_LENGTH, MAX_HISTORY_ITEM_LENGTH
+from api.app import ChatRequest, HistoryMessage, MAX_MESSAGE_LENGTH, MAX_HISTORY_LENGTH, MAX_HISTORY_ITEM_LENGTH
 
 
 @pytest.mark.unit

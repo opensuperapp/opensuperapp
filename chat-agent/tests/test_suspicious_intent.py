@@ -20,7 +20,7 @@ Unit tests for suspicious intent detection.
 
 import pytest
 
-from api.http import check_suspicious_intent, SUSPICIOUS_PATTERNS
+from api.app import check_suspicious_intent, SUSPICIOUS_PATTERNS
 
 
 @pytest.mark.unit

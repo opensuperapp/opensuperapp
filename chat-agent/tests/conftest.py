@@ -28,7 +28,7 @@ from pytest_mock import MockerFixture
 
 # Set default env vars before any module-level imports in test files.
 # This ensures moderation_client = AsyncOpenAI(api_key=OPENAI_API_KEY)
-# in api/http.py is initialized with a non-empty key.
+# in api/app.py is initialized with a non-empty key.
 os.environ.setdefault("OPENAI_API_KEY", "test-api-key")
 os.environ.setdefault("OPENAI_MODEL", "gpt-4o")
 os.environ.setdefault("OPENAI_TEMPERATURE", "0.3")
@@ -146,5 +146,5 @@ def sample_tool_result():
 @pytest.fixture
 def metrics_tracker():
     """Import and return MetricsTracker instance."""
-    from api.http import MetricsTracker
+    from api.app import MetricsTracker
     return MetricsTracker()
