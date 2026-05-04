@@ -100,14 +100,14 @@ The project includes a comprehensive test suite covering all security guardrails
 
 ### Test Statistics
 
-- **Total Tests**: 259 tests
-- **Coverage**: 82% code coverage
+- **Total Tests**: 230 tests
 - **Test Categories**:
   - Request Limits (22 tests)
   - Suspicious Intent Detection (54 tests)
   - Response Sanitization (49 tests)
   - Content Moderation (84 tests)
   - Metrics Tracking (50 tests)
+  - System Prompt Security, Integration, and Unit tests
 
 ### Running Tests
 
@@ -177,50 +177,53 @@ x-user-assertion: <access_token>
 ```
 chat-agent/
 ├── main.py                        # Compatibility launcher
-├── api/
-│   ├── __init__.py
-│   └── http.py                    # FastAPI entry point
-├── core/
-│   ├── __init__.py
-│   └── config.py                  # Environment configuration
-├── application/
-│   ├── __init__.py
-│   ├── chat_service.py            # LangChain orchestration & MCP dispatch
-│   └── prompts/
-│       ├── __init__.py
-│       ├── manager.py             # Prompt composition
-│       └── templates/
-│           ├── base.md
-│           ├── meals.md
-│           ├── guest_wifi.md
-│           ├── leave.md
-│           ├── formatting.md
-│           └── fallback.md
-├── infrastructure/
-│   ├── __init__.py
-│   ├── auth/
-│   │   ├── __init__.py
-│   │   └── token_exchange.py      # Asgardeo RFC 8693 token exchange
-│   ├── mcp/
-│   │   ├── __init__.py
-│   │   ├── client.py              # MCP client facade
-│   │   ├── server.py              # Tool registry + token exchange dispatch
-│   │   └── types.py               # MCP app/tool registration types
-│   └── tools/
-│       ├── __init__.py
-│       ├── meals.py               # meals tools
-│       ├── guest_wifi.py          # guest Wi-Fi tools
-│       └── leave.py               # leave tools
+├── Procfile                       # Process definition for deployment
+├── pyproject.toml                 # Project metadata and package config
+├── pytest.ini                     # Pytest configuration
 ├── requirements.txt               # Python dependencies
 ├── .env.example                   # Environment variables template
 ├── .gitignore
 ├── README.md                      # This file
 ├── SKILLS.md                      # Agent skills architecture documentation
-├── CHAT_AGENT_RUNBOOK.md          # Local run, Postman, tokens, headers
-├── LEAVE_APP_API.md               # Leave backend integration reference
 ├── openapi.yaml                   # OpenAPI 3.1 specification
-│
+├── api/
+│   └── http.py                    # FastAPI entry point & request validation
+├── core/
+│   └── config.py                  # Environment configuration
+├── application/
+│   ├── chat_service.py            # LangChain orchestration & MCP dispatch
+│   ├── prompt_manager.py          # Prompt composition from template files
+│   └── templates/
+│       ├── base.md                # Core identity & security rules
+│       ├── formatting.md          # Response formatting rules
+│       └── fallback.md            # Out-of-scope redirection behavior
+├── infrastructure/
+│   ├── auth/
+│   │   └── token_exchange.py      # Asgardeo RFC 8693 token exchange
+│   └── mcp/
+│       ├── __init__.py
+│       ├── client.py              # MCP client facade
+│       ├── server.py              # Tool registry + token exchange dispatch
+│       └── types.py               # MCP app/tool registration types
+├── tools/
+│   ├── meals/
+│   │   ├── meals.py               # Meals tool functions
+│   │   └── meals.md               # Meals prompt section
+│   ├── guest_wifi/
+│   │   ├── guset_wifi.py          # Guest Wi-Fi tool functions
+│   │   └── guset_wifi.md          # Guest Wi-Fi prompt section
+│   └── leave/
+│       ├── leave.py               # Leave tool functions
+│       └── leave.md               # Leave prompt section
 └── tests/
+    ├── conftest.py
+    ├── test_content_moderation.py
+    ├── test_integration.py
+    ├── test_metrics.py
+    ├── test_request_limits.py
+    ├── test_sanitization.py
+    ├── test_suspicious_intent.py
+    ├── test_system_prompt_security.py
     └── unit/
         ├── test_agent_mcp_dispatch.py
         ├── test_mcp_server.py
