@@ -14,16 +14,12 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""
-Compatibility entrypoint.
-"""
+from core.config import MCP_APP_CONFIGS
 
-import os
 
-import uvicorn
+def test_mcp_app_configs_include_meals_scopes():
+    meals = MCP_APP_CONFIGS["meals"]
 
-from api.app import app
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port, h11_max_incomplete_event_size=16384)
+    assert meals.app_key == "meals"
+    assert isinstance(meals.client_id, str)
+    assert meals.scope == "openid email groups profile"

@@ -38,7 +38,7 @@ from typing import List, Optional
 import httpx
 from langchain_core.tools import tool
 
-from config import DEBUG, LEAVE_BACKEND_URL
+from core.config import DEBUG, LEAVE_BACKEND_URL
 
 logger = logging.getLogger(__name__)
 

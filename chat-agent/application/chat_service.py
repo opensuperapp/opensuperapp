@@ -34,20 +34,23 @@ import httpx
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_openai import ChatOpenAI
 
-from config import DEBUG, LEAVE_BACKEND_URL, OPENAI_API_KEY, OPENAI_MODEL, OPENAI_TEMPERATURE
-from agent.prompt_manager import compose_system_prompt
-from agent.token_exchange import (
-    exchange_token_for_guest_wifi,
-    exchange_token_for_leave,
-    exchange_token_for_meals,
+from core.config import (
+    DEBUG,
+    LEAVE_BACKEND_URL,
+    MCP_APP_CONFIGS,
+    OPENAI_API_KEY,
+    OPENAI_MODEL,
+    OPENAI_TEMPERATURE,
 )
-from tools.meals.meals_tools import get_todays_menu, submit_lunch_feedback
-from tools.guest_wifi.wifi_tools import (
+from infrastructure.mcp import McpClient, McpServer, ToolRegistration
+from application.prompt_manager import compose_system_prompt
+from tools.meals.meals import get_todays_menu, submit_lunch_feedback
+from tools.guest_wifi.guest_wifi import (
     create_guest_wifi_account,
     delete_guest_wifi_account,
     get_guest_wifi_accounts,
 )
-from tools.leave.leave_tools import (
+from tools.leave.leave import (
     cancel_leave_request,
     get_leave_app_configs,
     list_my_leaves,
@@ -59,21 +62,6 @@ from tools.leave.leave_tools import (
 
 logger = logging.getLogger(__name__)
 
-# Maximum number of tool-call rounds before forcing a text reply
-MAX_TOOL_ITERATIONS = 5
-
-# Sri Lanka timezone (UTC+5:30)
-_SL_TIMEZONE = timezone(timedelta(hours=5, minutes=30))
-
-# Leave types per location (labels used in chat)
-_LOCATION_LEAVE_TYPES: dict[str, list[str]] = {
-    "sri lanka": ["Casual", "Maternity", "Paternity", "Lieu"],
-    "india":     ["Annual", "Casual (Maharashtra only)", "Sick (Karnataka only)", "Maternity", "Paternity", "Lieu"],
-    "france":    ["Conges Payes", "RTT", "Sick", "Maternity", "Paternity", "Lieu"],
-    "spain":     ["Annual", "Casual", "Sick", "Maternity", "Paternity", "Lieu"],
-}
-_ALL_LEAVE_TYPES = ["Annual", "Casual", "Sick", "Maternity", "Paternity", "Lieu"]
-
 
 # ---------------------------------------------------------------------------
 # Response sanitization
@@ -81,23 +69,9 @@ _ALL_LEAVE_TYPES = ["Annual", "Casual", "Sick", "Maternity", "Paternity", "Lieu"
 
 
 def sanitize_tool_result(result: Any) -> str:
-    """Sanitize tool result by redacting sensitive information.
-
-    Redacts:
-    - URLs (http/https patterns)
-    - SQL queries (SELECT, INSERT, UPDATE, DELETE)
-    - Passwords (common password fields)
-    - Tokens (JWT tokens, API keys)
-
-    Args:
-        result: Tool result (dict, list, str, or other types)
-
-    Returns:
-        Sanitized string representation of the result
-    """
+    """Sanitize tool result by redacting sensitive information."""
 
     def sanitize_dict(data: dict) -> dict:
-        """Recursively sanitize dictionary values."""
         sanitized = {}
         for key, value in data.items():
             key_lower = str(key).lower() if isinstance(key, str) else ""
@@ -114,50 +88,38 @@ def sanitize_tool_result(result: Any) -> str:
         return sanitized
 
     def sanitize_list(data: list) -> list:
-        """Recursively sanitize list values."""
         return [sanitize_dict(item) if isinstance(item, dict) else
                 sanitize_list(item) if isinstance(item, list) else
                 sanitize_string(item) if isinstance(item, str) else
                 item for item in data]
 
     def sanitize_string(text: str) -> str:
-        """Redact sensitive patterns from strings."""
         if not isinstance(text, str):
             return str(text)
-
         sanitized = text
-
-        # Redact URLs (http/https)
         sanitized = re.sub(
             r'https?://[^\s<>"{}|\\^`\[\]]+',
             '[URL_REDACTED]',
             sanitized,
             flags=re.IGNORECASE
         )
-
-        # Redact SQL keywords with required context
         sanitized = re.sub(
             r'\bSELECT\s+\S+\s+FROM\b|\bINSERT\s+INTO\b|\bUPDATE\s+\S+\s+SET\b|\bDELETE\s+FROM\b|\bDROP\s+TABLE\b|\bALTER\s+TABLE\b|\bCREATE\s+TABLE\b|\bTRUNCATE\s+TABLE\b',
             '[SQL_REDACTED]',
             sanitized,
             flags=re.IGNORECASE
         )
-
-        # Redact JWT tokens (base64 with dots)
         sanitized = re.sub(
             r'[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}',
             '[TOKEN_REDACTED]',
             sanitized
         )
-
-        # Redact API keys (common patterns)
         sanitized = re.sub(
             r'(api[_-]?key|apikey|secret[_-]?key)\s*[:=]\s*[\'"]?[A-Za-z0-9_\-]{16,}[\'"]?',
             '[API_KEY_REDACTED]',
             sanitized,
             flags=re.IGNORECASE
         )
-
         return sanitized
 
     if isinstance(result, dict):
@@ -170,6 +132,84 @@ def sanitize_tool_result(result: Any) -> str:
         sanitized_result = str(result)
 
     return str(sanitized_result)
+
+
+# Maximum number of tool-call rounds before forcing a text reply
+MAX_TOOL_ITERATIONS = 5
+
+# Sri Lanka timezone (UTC+5:30)
+_SL_TIMEZONE = timezone(timedelta(hours=5, minutes=30))
+
+# Leave types per location (labels used in chat)
+_LOCATION_LEAVE_TYPES: dict[str, list[str]] = {
+    "sri lanka": ["Casual", "Maternity", "Paternity", "Lieu"],
+    "india":     ["Annual", "Casual (Maharashtra only)", "Sick (Karnataka only)", "Maternity", "Paternity", "Lieu"],
+    "france":    ["Conges Payes", "RTT", "Sick", "Maternity", "Paternity", "Lieu"],
+    "spain":     ["Annual", "Casual", "Sick", "Maternity", "Paternity", "Lieu"],
+}
+_ALL_LEAVE_TYPES = ["Annual", "Casual", "Sick", "Maternity", "Paternity", "Lieu"]
+
+_LEAVE_KEYWORDS: frozenset[str] = frozenset({
+    "leave", "vacation", "holiday", "time off", "pto",
+    "sick", "maternity", "paternity", "lieu", "casual",
+    "annual", "cancel leave", "apply leave", "submit leave",
+})
+
+
+def _is_likely_leave_query(message: str) -> bool:
+    """Return True if the message is likely about leave management."""
+    text = message.lower()
+    return any(kw in text for kw in _LEAVE_KEYWORDS)
+
+
+_MCP_TOOL_TO_APP: dict[str, str] = {
+    "get_todays_menu": "meals",
+    "submit_lunch_feedback": "meals",
+    "create_guest_wifi_account": "guest_wifi",
+    "get_guest_wifi_accounts": "guest_wifi",
+    "delete_guest_wifi_account": "guest_wifi",
+    "get_leave_app_configs": "leave",
+    "validate_leave_request": "leave",
+    "submit_leave_request": "leave",
+    "cancel_leave_request": "leave",
+    "list_my_leaves": "leave",
+}
+
+
+def _build_mcp_client() -> McpClient:
+    """Create an in-process MCP client with tool registrations."""
+    tools = [
+        get_todays_menu,
+        submit_lunch_feedback,
+        create_guest_wifi_account,
+        get_guest_wifi_accounts,
+        delete_guest_wifi_account,
+        validate_leave_request,
+        submit_leave_request,
+        cancel_leave_request,
+        list_my_leaves,
+        get_leave_app_configs,
+    ]
+    registrations = [
+        ToolRegistration(
+            tool_name=tool.name,
+            app_key=_MCP_TOOL_TO_APP[tool.name],
+            func=tool.ainvoke,
+        )
+        for tool in tools
+    ]
+    return McpClient(McpServer(app_configs=MCP_APP_CONFIGS, tools=registrations))
+
+
+_MCP_CLIENT: McpClient | None = None
+
+
+def _get_mcp_client() -> McpClient:
+    """Return the shared MCP client, building it once on first call."""
+    global _MCP_CLIENT
+    if _MCP_CLIENT is None:
+        _MCP_CLIENT = _build_mcp_client()
+    return _MCP_CLIENT
 
 
 # ---------------------------------------------------------------------------
@@ -468,20 +508,14 @@ def _dates_already_validated(messages: list, dates: list[str]) -> bool:
 async def _run_proactive_date_validation(
     dates: list[str],
     access_token: str,
+    mcp_client: McpClient,
 ) -> list[tuple[str, dict]]:
     """Call isValidationOnlyMode=true for each date; return (date, result) pairs."""
     results: list[tuple[str, dict]] = []
-    try:
-        leave_token = await exchange_token_for_leave(access_token)
-    except Exception as exc:
-        logger.warning("Token exchange failed for proactive date validation: %s", exc)
-        return results
-
     for date_str in dates:
         try:
             logger.info("Proactive date validation: checking %s", date_str)
-            val_result = await validate_leave_request.ainvoke({
-                "access_token": leave_token,
+            val_result = await mcp_client.invoke("validate_leave_request", {
                 "start_date": date_str,
                 "end_date": date_str,
                 "period_type": "one",
@@ -490,7 +524,7 @@ async def _run_proactive_date_validation(
                 "comment": "",
                 "is_public_comment": False,
                 "email_recipients": [],
-            })
+            }, access_token)
             if (
                 isinstance(val_result, dict)
                 and "error" not in val_result
@@ -518,12 +552,12 @@ async def _run_proactive_date_validation(
 # Employee location — API only
 # ---------------------------------------------------------------------------
 
-async def get_employee_location(access_token: str) -> str | None:
+async def get_employee_location(access_token: str, mcp_client: McpClient) -> str | None:
     """Fetch the employee's location from the Leave backend /user-info endpoint."""
     if not LEAVE_BACKEND_URL:
         return None
     try:
-        leave_token = await exchange_token_for_leave(access_token)
+        leave_token = await mcp_client.get_app_token("leave", access_token)
         headers: dict[str, str] = {"Authorization": f"Bearer {leave_token}"}
         if DEBUG:
             headers["x-jwt-assertion"] = leave_token
@@ -614,7 +648,12 @@ async def run_agent(
     Returns:
         The agent's text response.
     """
-    employee_location = await get_employee_location(access_token)
+    mcp_client = _get_mcp_client()
+    employee_location = (
+        await get_employee_location(access_token, mcp_client)
+        if _is_likely_leave_query(user_message)
+        else None
+    )
 
     llm = ChatOpenAI(
         model=OPENAI_MODEL,
@@ -656,7 +695,11 @@ async def run_agent(
         logger.info("Proactive date extraction from user message: %s", mentioned_dates)
         if mentioned_dates and not _dates_already_validated(messages, mentioned_dates):
             today_date = datetime.now(_SL_TIMEZONE).date()
-            date_validation_pairs = await _run_proactive_date_validation(mentioned_dates, access_token)
+            date_validation_pairs = await _run_proactive_date_validation(
+                mentioned_dates,
+                access_token,
+                mcp_client,
+            )
             for date_str, val_result in date_validation_pairs:
                 tool_call_id = f"date_check_{uuid.uuid4().hex[:8]}"
                 messages.append(AIMessage(
@@ -709,6 +752,7 @@ async def run_agent(
 
         for tool_call in ai_message.tool_calls:
             tool_name = tool_call["name"]
+            args = tool_call["args"]
 
             if metrics:
                 metrics.increment_tool_call()
@@ -716,20 +760,17 @@ async def run_agent(
 
             if tool_name == "get_todays_menu":
                 try:
-                    meals_token = await exchange_token_for_meals(access_token)
-                    result = await get_todays_menu.ainvoke({"access_token": meals_token})
+                    result = await mcp_client.invoke("get_todays_menu", {}, access_token)
                 except Exception as e:
                     logger.error("get_todays_menu failed: %s", e)
                     result = {"error": "Failed to fetch data. Please try again later."}
 
             elif tool_name == "submit_lunch_feedback":
                 try:
-                    meals_token = await exchange_token_for_meals(access_token)
-                    result = await submit_lunch_feedback.ainvoke(
-                        {
-                            "access_token": meals_token,
-                            "message": tool_call["args"].get("message", ""),
-                        }
+                    result = await mcp_client.invoke(
+                        "submit_lunch_feedback",
+                        {"message": args.get("message", "")},
+                        access_token,
                     )
                 except Exception as e:
                     logger.error("submit_lunch_feedback failed: %s", e)
@@ -737,8 +778,7 @@ async def run_agent(
 
             elif tool_name == "create_guest_wifi_account":
                 try:
-                    wifi_token = await exchange_token_for_guest_wifi(access_token)
-                    result = await create_guest_wifi_account.ainvoke({"access_token": wifi_token})
+                    result = await mcp_client.invoke("create_guest_wifi_account", {}, access_token)
                     if result.get("success"):
                         email_prefix = _get_email_prefix(access_token)
                         if email_prefix:
@@ -749,20 +789,17 @@ async def run_agent(
 
             elif tool_name == "get_guest_wifi_accounts":
                 try:
-                    wifi_token = await exchange_token_for_guest_wifi(access_token)
-                    result = await get_guest_wifi_accounts.ainvoke({"access_token": wifi_token})
+                    result = await mcp_client.invoke("get_guest_wifi_accounts", {}, access_token)
                 except Exception as e:
                     logger.error("get_guest_wifi_accounts failed: %s", e)
                     result = {"error": "Failed to fetch guest Wi-Fi accounts. Please try again later."}
 
             elif tool_name == "delete_guest_wifi_account":
                 try:
-                    wifi_token = await exchange_token_for_guest_wifi(access_token)
-                    result = await delete_guest_wifi_account.ainvoke(
-                        {
-                            "access_token": wifi_token,
-                            "username": tool_call["args"].get("username", ""),
-                        }
+                    result = await mcp_client.invoke(
+                        "delete_guest_wifi_account",
+                        {"username": args.get("username", "")},
+                        access_token,
                     )
                 except Exception as e:
                     logger.error("delete_guest_wifi_account failed: %s", e)
@@ -770,15 +807,13 @@ async def run_agent(
 
             elif tool_name == "get_leave_app_configs":
                 try:
-                    leave_token = await exchange_token_for_leave(access_token)
-                    result = await get_leave_app_configs.ainvoke({"access_token": leave_token})
+                    result = await mcp_client.invoke("get_leave_app_configs", {}, access_token)
                 except Exception as e:
                     logger.error("get_leave_app_configs failed: %s", e)
                     result = {"error": "Could not fetch leave configurations."}
 
             elif tool_name == "validate_additional_recipient_emails":
                 try:
-                    args = tool_call["args"]
                     result = await validate_additional_recipient_emails.ainvoke(
                         {"email_recipients": _coerce_email_recipients_list(args)}
                     )
@@ -791,17 +826,15 @@ async def run_agent(
 
             elif tool_name == "validate_leave_request":
                 try:
-                    args = tool_call["args"]
                     missing_fields = _get_missing_leave_fields(args)
                     if missing_fields:
                         result = _missing_leave_fields_response(missing_fields)
                         messages.append(ToolMessage(content=str(result), tool_call_id=tool_call["id"]))
                         continue
 
-                    leave_token = await exchange_token_for_leave(access_token)
-                    result = await validate_leave_request.ainvoke(
+                    result = await mcp_client.invoke(
+                        "validate_leave_request",
                         {
-                            "access_token": leave_token,
                             "start_date": args.get("start_date", ""),
                             "end_date": args.get("end_date", ""),
                             "period_type": args.get("period_type", ""),
@@ -810,7 +843,8 @@ async def run_agent(
                             "comment": args.get("comment", "") or "",
                             "is_public_comment": args.get("is_public_comment", False),
                             "email_recipients": _coerce_email_recipients_list(args),
-                        }
+                        },
+                        access_token,
                     )
                 except Exception as e:
                     logger.error("validate_leave_request failed: %s", e)
@@ -818,17 +852,13 @@ async def run_agent(
 
             elif tool_name == "submit_leave_request":
                 try:
-                    args = tool_call["args"]
                     missing_fields = _get_missing_leave_fields(args)
                     if missing_fields:
                         result = _missing_leave_fields_response(missing_fields)
                         messages.append(ToolMessage(content=str(result), tool_call_id=tool_call["id"]))
                         continue
 
-                    leave_token = await exchange_token_for_leave(access_token)
-
                     val_params = {
-                        "access_token": leave_token,
                         "start_date": args.get("start_date", ""),
                         "end_date": args.get("end_date", ""),
                         "period_type": args.get("period_type", ""),
@@ -838,7 +868,11 @@ async def run_agent(
                         "is_public_comment": args.get("is_public_comment", False),
                         "email_recipients": _coerce_email_recipients_list(args),
                     }
-                    validation_result = await validate_leave_request.ainvoke(val_params)
+                    validation_result = await mcp_client.invoke(
+                        "validate_leave_request",
+                        val_params,
+                        access_token,
+                    )
 
                     is_valid = (
                         "error" not in validation_result
@@ -848,7 +882,7 @@ async def run_agent(
                         logger.warning("Leave validation failed before submission: %s", validation_result)
                         result = validation_result
                     else:
-                        result = await submit_leave_request.ainvoke(val_params)
+                        result = await mcp_client.invoke("submit_leave_request", val_params, access_token)
 
                 except Exception as e:
                     logger.error("submit_leave_request failed: %s", e)
@@ -856,8 +890,6 @@ async def run_agent(
 
             elif tool_name == "cancel_leave_request":
                 try:
-                    leave_token = await exchange_token_for_leave(access_token)
-                    args = tool_call["args"]
                     raw_id = args.get("leave_id")
                     if raw_id is None:
                         leave_id = ""
@@ -871,12 +903,16 @@ async def run_agent(
                         leave_id = str(int(raw_id))
                     else:
                         leave_id = str(raw_id)
-                    result = await cancel_leave_request.ainvoke(
-                        {"access_token": leave_token, "leave_id": leave_id}
+                    result = await mcp_client.invoke(
+                        "cancel_leave_request",
+                        {"leave_id": leave_id},
+                        access_token,
                     )
                     if result.get("success"):
-                        list_result = await list_my_leaves.ainvoke(
-                            {"access_token": leave_token, "limit": 15}
+                        list_result = await mcp_client.invoke(
+                            "list_my_leaves",
+                            {"limit": 15},
+                            access_token,
                         )
                         result["updated_leave_list"] = list_result
                 except Exception as e:
@@ -885,21 +921,20 @@ async def run_agent(
 
             elif tool_name == "list_my_leaves":
                 try:
-                    leave_token = await exchange_token_for_leave(access_token)
-                    args = tool_call["args"]
                     try:
                         limit_val = int(args.get("limit", 15))
                     except (TypeError, ValueError):
                         limit_val = 15
-                    result = await list_my_leaves.ainvoke(
+                    result = await mcp_client.invoke(
+                        "list_my_leaves",
                         {
-                            "access_token": leave_token,
                             "limit": limit_val,
                             "start_date": args.get("start_date"),
                             "end_date": args.get("end_date"),
                             "statuses": args.get("statuses"),
                             "categories": args.get("categories"),
-                        }
+                        },
+                        access_token,
                     )
                 except Exception as e:
                     logger.error("list_my_leaves failed: %s", e)

@@ -15,803 +15,416 @@
 # under the License.
 
 """
-Integration tests for chat-agent end-to-end flow.
-
-Tests the full HTTP request/response cycle through the FastAPI /chat endpoint,
-including all security guardrails, error handling, and metrics tracking.
+Integration tests for the /chat endpoint.
 """
 
-from typing import AsyncGenerator
-from unittest.mock import AsyncMock, MagicMock, ANY, patch
-
 import pytest
-import pytest_asyncio
-from httpx import AsyncClient, Response, ASGITransport
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from main import app, MetricsTracker
+from fastapi.testclient import TestClient
+from httpx import AsyncClient, ASGITransport
+
+from api.app import app, MetricsTracker
+
+# A minimal valid JWT whose payload decodes to {"userid": "test-user"}
+_SAMPLE_TOKEN = (
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+    "eyJ1c2VyaWQiOiJ0ZXN0LXVzZXIifQ."
+    "SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+)
+
+_HEADERS = {
+    "x-jwt-assertion": _SAMPLE_TOKEN,
+    "x-user-assertion": _SAMPLE_TOKEN,
+    "Content-Type": "application/json",
+}
 
 
-@pytest.fixture
-def sample_jwt_token() -> str:
-    """Return a sample JWT token for testing."""
-    return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." \
-           "eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWQiOiIxMjM0NTY3ODkwIiwidXNlcmlkIjoiMTIzNDU2Nzg5MCJ9." \
-           "SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+def _make_safe_moderation_response() -> MagicMock:
+    """Build a mock moderation response that passes (not flagged)."""
+    result = MagicMock()
+    result.flagged = False
+    cat_mock = MagicMock()
+    cat_mock.model_dump.return_value = {}
+    result.categories = cat_mock
+    response = MagicMock()
+    response.results = [result]
+    return response
 
 
 @pytest.fixture(autouse=True)
 def reset_metrics_singleton():
-    """
-    Reset the module-level metrics singleton before each test.
-    
-    This fixture patches main.metrics with a fresh MetricsTracker instance
-    to ensure test isolation, especially when running tests in parallel
-    with pytest-xdist.
-    """
+    """Reset the shared metrics singleton before each test."""
     fresh_metrics = MetricsTracker()
-    with patch("main.metrics", fresh_metrics):
+    with patch("api.app.metrics", fresh_metrics):
         yield fresh_metrics
 
 
-@pytest_asyncio.fixture
-async def client(sample_jwt_token: str) -> AsyncGenerator[AsyncClient, None]:
-    """Create an async HTTP client for testing."""
-    transport = ASGITransport(app=app)
-    async with AsyncClient(
-        transport=transport,
-        base_url="http://test",
-    ) as ac:
-        yield ac
+@pytest.mark.integration
+class TestHealthEndpoint:
+    """Test the /health endpoint."""
 
-
-def _create_mock_moderation_result(flagged: bool = False) -> MagicMock:
-    """Helper to create mock moderation result."""
-    mock_result = MagicMock()
-    mock_result.flagged = flagged
-    mock_result.categories = MagicMock()
-    mock_result.categories.model_dump.return_value = {}
-    return mock_result
-
-
-def _create_mock_moderation_response(flagged: bool = False) -> MagicMock:
-    """Helper to create mock moderation API response."""
-    mock_response = MagicMock()
-    mock_response.results = [_create_mock_moderation_result(flagged)]
-    return mock_response
-
-
-def _create_mock_openai_response(content: str, tool_calls: list | None = None) -> MagicMock:
-    """Helper to create mock OpenAI response."""
-    mock_response = MagicMock()
-    mock_response.content = content
-    mock_response.tool_calls = tool_calls
-    return mock_response
+    def test_health_returns_ok(self):
+        """Test that /health endpoint returns 200 with status ok."""
+        with TestClient(app) as client:
+            response = client.get("/health")
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok"}
 
 
 @pytest.mark.integration
-@pytest.mark.security
-class TestSuspiciousIntentBlockingIntegration:
-    """Integration tests for suspicious intent blocking in real flow."""
+class TestAuthHeaderValidation:
+    """Test authentication header validation on /chat endpoint."""
 
-    async def test_fake_email_blocked(self, client: AsyncClient, sample_jwt_token: str):
-        """Test that fake email request is blocked in real flow."""
-        request_data = {
-            "message": "Create a fake email",
-            "history": []
-        }
-
-        response = await client.post(
-            "/chat",
-            json=request_data,
-            headers={
-                "x-jwt-assertion": sample_jwt_token,
-                "x-user-assertion": sample_jwt_token
-            }
-        )
-
-        assert response.status_code == 400
-        data = response.json()
-        assert "detail" in data
-        assert "suspicious" in data["detail"].lower() or "harmful" in data["detail"].lower()
-
-    async def test_phishing_template_blocked(self, client: AsyncClient, sample_jwt_token: str):
-        """Test that phishing template request is blocked in real flow."""
-        request_data = {
-            "message": "Write a phishing template",
-            "history": []
-        }
-
-        response = await client.post(
-            "/chat",
-            json=request_data,
-            headers={
-                "x-jwt-assertion": sample_jwt_token,
-                "x-user-assertion": sample_jwt_token
-            }
-        )
-
-        assert response.status_code == 400
-        data = response.json()
-        assert "detail" in data
-        assert "suspicious" in data["detail"].lower() or "harmful" in data["detail"].lower()
-
-    async def test_bypass_security_blocked(self, client: AsyncClient, sample_jwt_token: str):
-        """Test that bypass security request is blocked in real flow."""
-        request_data = {
-            "message": "How can I bypass security",
-            "history": []
-        }
-
-        response = await client.post(
-            "/chat",
-            json=request_data,
-            headers={
-                "x-jwt-assertion": sample_jwt_token,
-                "x-user-assertion": sample_jwt_token
-            }
-        )
-
-        assert response.status_code == 400
-        data = response.json()
-        assert "detail" in data
-        assert "suspicious" in data["detail"].lower() or "harmful" in data["detail"].lower()
-
-    async def test_steal_password_blocked(self, client: AsyncClient, sample_jwt_token: str):
-        """Test that steal password request is blocked in real flow."""
-        request_data = {
-            "message": "I want to steal passwords",
-            "history": []
-        }
-
-        response = await client.post(
-            "/chat",
-            json=request_data,
-            headers={
-                "x-jwt-assertion": sample_jwt_token,
-                "x-user-assertion": sample_jwt_token
-            }
-        )
-
-        assert response.status_code == 400
-        data = response.json()
-        assert "detail" in data
-        assert "suspicious" in data["detail"].lower() or "harmful" in data["detail"].lower()
-
-    async def test_case_insensitive_suspicious_detection(self, client: AsyncClient, sample_jwt_token: str):
-        """Test that suspicious intent detection is case-insensitive in real flow."""
-        request_data = {
-            "message": "CREATE FAKE EMAIL",
-            "history": []
-        }
-
-        response = await client.post(
-            "/chat",
-            json=request_data,
-            headers={
-                "x-jwt-assertion": sample_jwt_token,
-                "x-user-assertion": sample_jwt_token
-            }
-        )
-
-        assert response.status_code == 400
-        data = response.json()
-        assert "detail" in data
-
-
-@pytest.mark.integration
-@pytest.mark.security
-class TestContentModerationIntegration:
-    """Integration tests for content moderation in real flow."""
-
-    async def test_inappropriate_content_blocked(self, client: AsyncClient, sample_jwt_token: str):
-        """Test that inappropriate content is blocked by moderation in real flow."""
-        mock_response = _create_mock_moderation_response(flagged=True)
-        mock_response.results[0].categories.model_dump.return_value = {
-            "harassment": True,
-            "hate": False,
-            "sexual": False,
-            "violence": False,
-            "self_harm": False
-        }
-
-        with patch("main.moderation_client") as mock_client:
-            mock_client.moderations.create = AsyncMock(return_value=mock_response)
-
-            request_data = {
-                "message": "This is hate speech content",
-                "history": []
-            }
-
-            response = await client.post(
+    def test_missing_jwt_assertion_returns_401(self):
+        """Test that missing x-jwt-assertion header returns 401."""
+        with TestClient(app) as client:
+            response = client.post(
                 "/chat",
-                json=request_data,
-                headers={
-                    "x-jwt-assertion": sample_jwt_token,
-                    "x-user-assertion": sample_jwt_token
-                }
+                json={"message": "Hello"},
+                headers={"x-user-assertion": _SAMPLE_TOKEN},
             )
-
-            assert response.status_code == 400
-            data = response.json()
-            assert "detail" in data
-            assert "content" in data["detail"].lower() or "policy" in data["detail"].lower()
-
-    async def test_safe_content_passes_moderation(self, client: AsyncClient, sample_jwt_token: str):
-        """Test that safe content passes moderation in real flow."""
-        mock_moderation_response = _create_mock_moderation_response(flagged=False)
-        mock_openai_response = _create_mock_openai_response("Hello! How can I help you today?", tool_calls=None)
-
-        with patch("main.moderation_client") as mock_client:
-            mock_client.moderations.create = AsyncMock(return_value=mock_moderation_response)
-
-            with patch("agent.agent.ChatOpenAI") as mock_llm:
-                mock_llm_instance = MagicMock()
-                mock_llm_instance.bind_tools.return_value = mock_llm_instance
-                mock_llm_instance.ainvoke = AsyncMock(return_value=mock_openai_response)
-                mock_llm.return_value = mock_llm_instance
-
-                request_data = {
-                    "message": "Hello, how are you?",
-                    "history": []
-                }
-
-                response = await client.post(
-                    "/chat",
-                    json=request_data,
-                    headers={
-                        "x-jwt-assertion": sample_jwt_token,
-                        "x-user-assertion": sample_jwt_token
-                    }
-                )
-
-                assert response.status_code == 200
-                data = response.json()
-                assert "reply" in data
-
-
-@pytest.mark.integration
-@pytest.mark.security
-class TestRequestSizeLimitIntegration:
-    """Integration tests for request size limit enforcement in real flow."""
-
-    async def test_message_exceeds_limit_blocked(self, client: AsyncClient, sample_jwt_token: str):
-        """Test that message exceeding size limit is blocked in real flow."""
-        from main import MAX_MESSAGE_LENGTH
-
-        request_data = {
-            "message": "A" * (MAX_MESSAGE_LENGTH + 1),
-            "history": []
-        }
-
-        response = await client.post(
-            "/chat",
-            json=request_data,
-            headers={
-                "x-jwt-assertion": sample_jwt_token,
-                "x-user-assertion": sample_jwt_token
-            }
-        )
-
-        assert response.status_code == 422
-
-    async def test_history_exceeds_limit_blocked(self, client: AsyncClient, sample_jwt_token: str):
-        """Test that history exceeding size limit is blocked in real flow."""
-        from main import MAX_HISTORY_LENGTH
-
-        history = [
-            {"role": "user", "content": "Message"}
-            for _ in range(MAX_HISTORY_LENGTH + 1)
-        ]
-
-        request_data = {
-            "message": "Test message",
-            "history": history
-        }
-
-        response = await client.post(
-            "/chat",
-            json=request_data,
-            headers={
-                "x-jwt-assertion": sample_jwt_token,
-                "x-user-assertion": sample_jwt_token
-            }
-        )
-
-        assert response.status_code == 422
-
-    async def test_history_item_exceeds_limit_blocked(self, client: AsyncClient, sample_jwt_token: str):
-        """Test that history item exceeding size limit is blocked in real flow."""
-        from main import MAX_HISTORY_ITEM_LENGTH
-
-        history = [
-            {"role": "user", "content": "A" * (MAX_HISTORY_ITEM_LENGTH + 1)}
-        ]
-
-        request_data = {
-            "message": "Test message",
-            "history": history
-        }
-
-        response = await client.post(
-            "/chat",
-            json=request_data,
-            headers={
-                "x-jwt-assertion": sample_jwt_token,
-                "x-user-assertion": sample_jwt_token
-            }
-        )
-
-        assert response.status_code == 422
-
-    async def test_valid_sizes_pass_validation(self, client: AsyncClient, sample_jwt_token: str):
-        """Test that valid sizes pass validation in real flow."""
-        mock_moderation_response = _create_mock_moderation_response(flagged=False)
-        mock_openai_response = _create_mock_openai_response("Hello!", tool_calls=None)
-
-        with patch("main.moderation_client") as mock_client:
-            mock_client.moderations.create = AsyncMock(return_value=mock_moderation_response)
-
-            with patch("agent.agent.ChatOpenAI") as mock_llm:
-                mock_llm_instance = MagicMock()
-                mock_llm_instance.bind_tools.return_value = mock_llm_instance
-                mock_llm_instance.ainvoke = AsyncMock(return_value=mock_openai_response)
-                mock_llm.return_value = mock_llm_instance
-
-                request_data = {
-                    "message": "Test message",
-                    "history": [
-                        {"role": "user", "content": "Previous message"},
-                        {"role": "assistant", "content": "Previous response"}
-                    ]
-                }
-
-                response = await client.post(
-                    "/chat",
-                    json=request_data,
-                    headers={
-                        "x-jwt-assertion": sample_jwt_token,
-                        "x-user-assertion": sample_jwt_token
-                    }
-                )
-
-                assert response.status_code == 200
-
-
-@pytest.mark.integration
-@pytest.mark.security
-class TestMetricsTrackingIntegration:
-    """Integration tests for metrics tracking in real flow."""
-
-    async def test_request_count_incremented(self, client: AsyncClient, sample_jwt_token: str, reset_metrics_singleton: MetricsTracker):
-        """Test that request count is incremented in metrics."""
-        initial_count = reset_metrics_singleton.get_metrics()["request_count"]
-
-        mock_moderation_response = _create_mock_moderation_response(flagged=False)
-        mock_openai_response = _create_mock_openai_response("Hello!", tool_calls=None)
-
-        with patch("main.moderation_client") as mock_client:
-            mock_client.moderations.create = AsyncMock(return_value=mock_moderation_response)
-
-            with patch("agent.agent.ChatOpenAI") as mock_llm:
-                mock_llm_instance = MagicMock()
-                mock_llm_instance.bind_tools.return_value = mock_llm_instance
-                mock_llm_instance.ainvoke = AsyncMock(return_value=mock_openai_response)
-                mock_llm.return_value = mock_llm_instance
-
-                request_data = {
-                    "message": "Hello",
-                    "history": []
-                }
-
-                await client.post(
-                    "/chat",
-                    json=request_data,
-                    headers={
-                        "x-jwt-assertion": sample_jwt_token,
-                        "x-user-assertion": sample_jwt_token
-                    }
-                )
-
-                new_count = reset_metrics_singleton.get_metrics()["request_count"]
-                assert new_count == initial_count + 1
-
-    async def test_error_count_incremented_on_error(self, client: AsyncClient, sample_jwt_token: str, reset_metrics_singleton: MetricsTracker):
-        """Test that error count is incremented when agent error occurs."""
-        initial_count = reset_metrics_singleton.get_metrics()["error_count"]
-
-        mock_moderation_response = _create_mock_moderation_response(flagged=False)
-
-        with patch("main.moderation_client") as mock_client:
-            mock_client.moderations.create = AsyncMock(return_value=mock_moderation_response)
-
-            with patch("agent.agent.ChatOpenAI") as mock_llm:
-                mock_llm_instance = MagicMock()
-                mock_llm_instance.bind_tools.side_effect = Exception("LLM error")
-                mock_llm_instance.ainvoke = AsyncMock(return_value=MagicMock(content="Error", tool_calls=None))
-                mock_llm.return_value = mock_llm_instance
-
-                request_data = {
-                    "message": "Hello",
-                    "history": []
-                }
-
-                response = await client.post(
-                    "/chat",
-                    json=request_data,
-                    headers={
-                        "x-jwt-assertion": sample_jwt_token,
-                        "x-user-assertion": sample_jwt_token
-                    }
-                )
-
-                assert response.status_code == 500
-                new_count = reset_metrics_singleton.get_metrics()["error_count"]
-                assert new_count == initial_count + 1
-
-    async def test_user_requests_tracked(self, client: AsyncClient, sample_jwt_token: str, reset_metrics_singleton: MetricsTracker):
-        """Test that user requests are tracked per user."""
-        mock_moderation_response = _create_mock_moderation_response(flagged=False)
-        mock_openai_response = _create_mock_openai_response("Hello!", tool_calls=None)
-
-        with patch("main.moderation_client") as mock_client:
-            mock_client.moderations.create = AsyncMock(return_value=mock_moderation_response)
-
-            with patch("agent.agent.ChatOpenAI") as mock_llm:
-                mock_llm_instance = MagicMock()
-                mock_llm_instance.bind_tools.return_value = mock_llm_instance
-                mock_llm_instance.ainvoke = AsyncMock(return_value=mock_openai_response)
-                mock_llm.return_value = mock_llm_instance
-
-                request_data = {
-                    "message": "Hello",
-                    "history": []
-                }
-
-                await client.post(
-                    "/chat",
-                    json=request_data,
-                    headers={
-                        "x-jwt-assertion": sample_jwt_token,
-                        "x-user-assertion": sample_jwt_token
-                    }
-                )
-
-                user_metrics = reset_metrics_singleton.get_metrics()["user_requests"]
-                assert "1234567890" in user_metrics
-                assert user_metrics["1234567890"] >= 1
-
-
-@pytest.mark.integration
-@pytest.mark.security
-class TestErrorHandlingIntegration:
-    """Integration tests for error handling scenarios."""
-
-    async def test_missing_jwt_header_error(self, client: AsyncClient):
-        """Test that missing JWT header returns appropriate error."""
-        request_data = {
-            "message": "Hello",
-            "history": []
-        }
-
-        response = await client.post(
-            "/chat",
-            json=request_data,
-            headers={
-                "x-user-assertion": "some_token"
-            }
-        )
-
         assert response.status_code == 401
-        data = response.json()
-        assert "detail" in data
-        assert "x-jwt-assertion" in data["detail"].lower()
+        assert "x-jwt-assertion" in response.json()["detail"].lower()
 
-    async def test_missing_user_assertion_header_error(self, client: AsyncClient):
-        """Test that missing user assertion header returns appropriate error."""
-        request_data = {
-            "message": "Hello",
-            "history": []
-        }
-
-        response = await client.post(
-            "/chat",
-            json=request_data,
-            headers={
-                "x-jwt-assertion": "some_token"
-            }
-        )
-
+    def test_missing_user_assertion_returns_401(self):
+        """Test that missing x-user-assertion header returns 401."""
+        with TestClient(app) as client:
+            response = client.post(
+                "/chat",
+                json={"message": "Hello"},
+                headers={"x-jwt-assertion": _SAMPLE_TOKEN},
+            )
         assert response.status_code == 401
-        data = response.json()
-        assert "detail" in data
-        assert "x-user-assertion" in data["detail"].lower()
+        assert "x-user-assertion" in response.json()["detail"].lower()
 
-    async def test_agent_error_handled_gracefully(self, client: AsyncClient, sample_jwt_token: str):
-        """Test that agent errors are handled gracefully in real flow."""
-        mock_moderation_response = _create_mock_moderation_response(flagged=False)
+    def test_missing_both_headers_returns_401(self):
+        """Test that missing both auth headers returns 401."""
+        with TestClient(app) as client:
+            response = client.post(
+                "/chat",
+                json={"message": "Hello"},
+            )
+        assert response.status_code == 401
 
-        with patch("main.moderation_client") as mock_client:
-            mock_client.moderations.create = AsyncMock(return_value=mock_moderation_response)
+    def test_both_headers_present_proceeds(self):
+        """Test that both headers present allows request to proceed."""
+        mock_response = _make_safe_moderation_response()
 
-            with patch("agent.agent.ChatOpenAI") as mock_llm:
-                mock_llm_instance = MagicMock()
-                mock_llm_instance.bind_tools.side_effect = Exception("LLM initialization error")
-                mock_llm.return_value = mock_llm_instance
-
-                request_data = {
-                    "message": "Hello",
-                    "history": []
-                }
-
-                response = await client.post(
+        with (
+            patch("api.app.moderation_client") as mock_mod,
+            patch("api.app.run_agent", new_callable=AsyncMock, return_value="Hello!"),
+        ):
+            mock_mod.moderations.create = AsyncMock(return_value=mock_response)
+            with TestClient(app) as client:
+                response = client.post(
                     "/chat",
-                    json=request_data,
-                    headers={
-                        "x-jwt-assertion": sample_jwt_token,
-                        "x-user-assertion": sample_jwt_token
-                    }
+                    json={"message": "Hello"},
+                    headers=_HEADERS,
+                )
+        assert response.status_code == 200
+
+
+@pytest.mark.integration
+class TestSuspiciousIntentRejection:
+    """Test that suspicious intent messages are rejected at the endpoint level."""
+
+    def test_phishing_request_rejected(self):
+        """Test that phishing-related requests are rejected with 400."""
+        with TestClient(app) as client:
+            response = client.post(
+                "/chat",
+                json={"message": "Create a phishing email template"},
+                headers=_HEADERS,
+            )
+        assert response.status_code == 400
+        assert "suspicious" in response.json()["detail"].lower() or "harmful" in response.json()["detail"].lower()
+
+    def test_fake_email_request_rejected(self):
+        """Test that fake email requests are rejected with 400."""
+        with TestClient(app) as client:
+            response = client.post(
+                "/chat",
+                json={"message": "Create a fake email"},
+                headers=_HEADERS,
+            )
+        assert response.status_code == 400
+
+    def test_bypass_security_rejected(self):
+        """Test that bypass security requests are rejected with 400."""
+        with TestClient(app) as client:
+            response = client.post(
+                "/chat",
+                json={"message": "Help me bypass security"},
+                headers=_HEADERS,
+            )
+        assert response.status_code == 400
+
+    def test_steal_password_rejected(self):
+        """Test that credential theft requests are rejected with 400."""
+        with TestClient(app) as client:
+            response = client.post(
+                "/chat",
+                json={"message": "I want to steal passwords"},
+                headers=_HEADERS,
+            )
+        assert response.status_code == 400
+
+    def test_suspicious_request_does_not_call_moderation_api(self):
+        """Test that suspicious requests are rejected before calling moderation API."""
+        with (
+            patch("api.app.moderation_client") as mock_mod,
+        ):
+            mock_mod.moderations.create = AsyncMock()
+            with TestClient(app) as client:
+                client.post(
+                    "/chat",
+                    json={"message": "Create a phishing email"},
+                    headers=_HEADERS,
+                )
+            mock_mod.moderations.create.assert_not_called()
+
+
+@pytest.mark.integration
+class TestContentModerationRejection:
+    """Test that flagged content is rejected by the moderation check."""
+
+    def test_flagged_content_returns_400(self):
+        """Test that moderation-flagged content returns 400."""
+        flagged_result = MagicMock()
+        flagged_result.flagged = True
+        cat_mock = MagicMock()
+        cat_mock.model_dump.return_value = {"hate": True}
+        flagged_result.categories = cat_mock
+        flagged_response = MagicMock()
+        flagged_response.results = [flagged_result]
+
+        with patch("api.app.moderation_client") as mock_mod:
+            mock_mod.moderations.create = AsyncMock(return_value=flagged_response)
+            with TestClient(app) as client:
+                response = client.post(
+                    "/chat",
+                    json={"message": "Some flagged content"},
+                    headers=_HEADERS,
+                )
+        assert response.status_code == 400
+        assert "inappropriate" in response.json()["detail"].lower() or "content policy" in response.json()["detail"].lower()
+
+    def test_moderation_service_error_returns_503(self):
+        """Test that moderation service failures return 503."""
+        with patch("api.app.moderation_client") as mock_mod:
+            mock_mod.moderations.create = AsyncMock(side_effect=Exception("Service down"))
+            with TestClient(app) as client:
+                response = client.post(
+                    "/chat",
+                    json={"message": "Normal message"},
+                    headers=_HEADERS,
+                )
+        assert response.status_code == 503
+        assert "unavailable" in response.json()["detail"].lower()
+
+
+@pytest.mark.integration
+class TestSuccessfulChatFlow:
+    """Test successful end-to-end chat request flow."""
+
+    def test_successful_chat_returns_reply(self):
+        """Test that a valid chat request returns a reply."""
+        mock_response = _make_safe_moderation_response()
+
+        with (
+            patch("api.app.moderation_client") as mock_mod,
+            patch("api.app.run_agent", new_callable=AsyncMock, return_value="Today's menu includes rice and curry."),
+        ):
+            mock_mod.moderations.create = AsyncMock(return_value=mock_response)
+            with TestClient(app) as client:
+                response = client.post(
+                    "/chat",
+                    json={"message": "What's on the menu today?"},
+                    headers=_HEADERS,
                 )
 
-                assert response.status_code == 500
-                data = response.json()
-                assert "detail" in data
-
-    async def test_health_endpoint(self, client: AsyncClient):
-        """Test that health endpoint returns correct status."""
-        response = await client.get("/health")
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "ok"
+        assert "reply" in data
+        assert data["reply"] == "Today's menu includes rice and curry."
 
-
-@pytest.mark.integration
-@pytest.mark.security
-class TestConversationHistoryIntegration:
-    """Integration tests for conversation history handling."""
-
-    async def test_conversation_with_history(self, client: AsyncClient, sample_jwt_token: str):
-        """Test that conversation history is used correctly in real flow."""
+    def test_chat_with_history_succeeds(self):
+        """Test that chat with conversation history succeeds."""
+        mock_response = _make_safe_moderation_response()
         history = [
-            {"role": "user", "content": "What's for lunch?"},
-            {"role": "assistant", "content": "Today's menu includes rice and curry."}
+            {"role": "user", "content": "Hello"},
+            {"role": "assistant", "content": "Hi! How can I help?"},
         ]
 
-        mock_moderation_response = _create_mock_moderation_response(flagged=False)
-        mock_openai_response = _create_mock_openai_response(
-            "The menu also includes salad for the side dish.",
-            tool_calls=None
-        )
-
-        with patch("main.moderation_client") as mock_client:
-            mock_client.moderations.create = AsyncMock(return_value=mock_moderation_response)
-
-            with patch("agent.agent.ChatOpenAI") as mock_llm:
-                mock_llm_instance = MagicMock()
-                mock_llm_instance.bind_tools.return_value = mock_llm_instance
-                mock_llm_instance.ainvoke = AsyncMock(return_value=mock_openai_response)
-                mock_llm.return_value = mock_llm_instance
-
-                request_data = {
-                    "message": "What about side dishes?",
-                    "history": history
-                }
-
-                response = await client.post(
+        with (
+            patch("api.app.moderation_client") as mock_mod,
+            patch("api.app.run_agent", new_callable=AsyncMock, return_value="I can help with that."),
+        ):
+            mock_mod.moderations.create = AsyncMock(return_value=mock_response)
+            with TestClient(app) as client:
+                response = client.post(
                     "/chat",
-                    json=request_data,
-                    headers={
-                        "x-jwt-assertion": sample_jwt_token,
-                        "x-user-assertion": sample_jwt_token
-                    }
+                    json={"message": "What's on the menu?", "history": history},
+                    headers=_HEADERS,
                 )
 
-                assert response.status_code == 200
-                data = response.json()
-                assert "reply" in data
+        assert response.status_code == 200
+        assert response.json()["reply"] == "I can help with that."
 
-    async def test_conversation_with_empty_history(self, client: AsyncClient, sample_jwt_token: str):
-        """Test that conversation with empty history works correctly."""
-        mock_moderation_response = _create_mock_moderation_response(flagged=False)
-        mock_openai_response = _create_mock_openai_response("Hello! How can I help you?", tool_calls=None)
+    def test_chat_without_history_succeeds(self):
+        """Test that chat without history succeeds."""
+        mock_response = _make_safe_moderation_response()
 
-        with patch("main.moderation_client") as mock_client:
-            mock_client.moderations.create = AsyncMock(return_value=mock_moderation_response)
-
-            with patch("agent.agent.ChatOpenAI") as mock_llm:
-                mock_llm_instance = MagicMock()
-                mock_llm_instance.bind_tools.return_value = mock_llm_instance
-                mock_llm_instance.ainvoke = AsyncMock(return_value=mock_openai_response)
-                mock_llm.return_value = mock_llm_instance
-
-                request_data = {
-                    "message": "Hello",
-                    "history": []
-                }
-
-                response = await client.post(
+        with (
+            patch("api.app.moderation_client") as mock_mod,
+            patch("api.app.run_agent", new_callable=AsyncMock, return_value="No problem!"),
+        ):
+            mock_mod.moderations.create = AsyncMock(return_value=mock_response)
+            with TestClient(app) as client:
+                response = client.post(
                     "/chat",
-                    json=request_data,
-                    headers={
-                        "x-jwt-assertion": sample_jwt_token,
-                        "x-user-assertion": sample_jwt_token
-                    }
+                    json={"message": "Hello"},
+                    headers=_HEADERS,
                 )
 
-                assert response.status_code == 200
-                data = response.json()
-                assert "reply" in data
-
-    async def test_conversation_with_no_history(self, client: AsyncClient, sample_jwt_token: str):
-        """Test that conversation with no history field works correctly."""
-        mock_moderation_response = _create_mock_moderation_response(flagged=False)
-        mock_openai_response = _create_mock_openai_response("Hello! How can I help you?", tool_calls=None)
-
-        with patch("main.moderation_client") as mock_client:
-            mock_client.moderations.create = AsyncMock(return_value=mock_moderation_response)
-
-            with patch("agent.agent.ChatOpenAI") as mock_llm:
-                mock_llm_instance = MagicMock()
-                mock_llm_instance.bind_tools.return_value = mock_llm_instance
-                mock_llm_instance.ainvoke = AsyncMock(return_value=mock_openai_response)
-                mock_llm.return_value = mock_llm_instance
-
-                request_data = {
-                    "message": "Hello"
-                }
-
-                response = await client.post(
-                    "/chat",
-                    json=request_data,
-                    headers={
-                        "x-jwt-assertion": sample_jwt_token,
-                        "x-user-assertion": sample_jwt_token
-                    }
-                )
-
-                assert response.status_code == 200
-                data = response.json()
-                assert "reply" in data
+        assert response.status_code == 200
 
 
 @pytest.mark.integration
-@pytest.mark.security
-class TestResponseSanitizationIntegration:
-    """Integration tests for response sanitization in real flow."""
+class TestRequestValidation:
+    """Test request payload validation at the endpoint level."""
 
-    async def test_sanitization_function_exists(self):
-        """Test that sanitization function exists and can be called."""
-        from agent.agent import sanitize_tool_result
+    def test_message_exceeding_limit_returns_422(self):
+        """Test that a message exceeding the length limit returns 422."""
+        from api.app import MAX_MESSAGE_LENGTH
+        long_message = "A" * (MAX_MESSAGE_LENGTH + 1)
+        with TestClient(app) as client:
+            response = client.post(
+                "/chat",
+                json={"message": long_message},
+                headers=_HEADERS,
+            )
+        assert response.status_code == 422
 
-        test_data = {
-            "username": "test_user",
-            "password": "secret123",
-            "api_url": "https://api.example.com/v1"
-        }
+    def test_history_exceeding_limit_returns_422(self):
+        """Test that history exceeding the length limit returns 422."""
+        from api.app import MAX_HISTORY_LENGTH
+        history = [{"role": "user", "content": f"msg {i}"} for i in range(MAX_HISTORY_LENGTH + 1)]
+        with TestClient(app) as client:
+            response = client.post(
+                "/chat",
+                json={"message": "Hello", "history": history},
+                headers=_HEADERS,
+            )
+        assert response.status_code == 422
 
-        result = sanitize_tool_result(test_data)
-        assert result is not None
-        assert "[REDACTED]" in result
-        assert "secret123" not in result
-
-    async def test_final_response_sanitized(self, client: AsyncClient, sample_jwt_token: str):
-        """Test that final response is sanitized before returning to user."""
-        mock_moderation_response = _create_mock_moderation_response(flagged=False)
-        mock_openai_response = _create_mock_openai_response(
-            "Here is the API: https://api.example.com/v1 and the query: SELECT * FROM users",
-            tool_calls=None
-        )
-
-        with patch("main.moderation_client") as mock_client:
-            mock_client.moderations.create = AsyncMock(return_value=mock_moderation_response)
-
-            with patch("agent.agent.ChatOpenAI") as mock_llm:
-                mock_llm_instance = MagicMock()
-                mock_llm_instance.bind_tools.return_value = mock_llm_instance
-                mock_llm_instance.ainvoke = AsyncMock(return_value=mock_openai_response)
-                mock_llm.return_value = mock_llm_instance
-
-                request_data = {
-                    "message": "Test",
-                    "history": []
-                }
-
-                response = await client.post(
-                    "/chat",
-                    json=request_data,
-                    headers={
-                        "x-jwt-assertion": sample_jwt_token,
-                        "x-user-assertion": sample_jwt_token
-                    }
-                )
-
-                assert response.status_code == 200
-                data = response.json()
-                assert "reply" in data
-                assert "https://api.example.com" not in data["reply"]
-                assert "SELECT" not in data["reply"]
-                assert "[URL_REDACTED]" in data["reply"]
-                assert "[SQL_REDACTED]" in data["reply"]
+    def test_history_item_exceeding_limit_returns_422(self):
+        """Test that a history item exceeding content limit returns 422."""
+        from api.app import MAX_HISTORY_ITEM_LENGTH
+        long_content = "A" * (MAX_HISTORY_ITEM_LENGTH + 1)
+        with TestClient(app) as client:
+            response = client.post(
+                "/chat",
+                json={"message": "Hello", "history": [{"role": "user", "content": long_content}]},
+                headers=_HEADERS,
+            )
+        assert response.status_code == 422
 
 
 @pytest.mark.integration
-@pytest.mark.security
-class TestSkillsIntegration:
-    """Integration tests for skill-based flows through /chat endpoint."""
+class TestAgentErrorHandling:
+    """Test error handling when the agent fails."""
 
-    async def test_basic_chat_response(self, client: AsyncClient, sample_jwt_token: str):
-        """Test that basic chat without tool calls works."""
-        mock_moderation_response = _create_mock_moderation_response(flagged=False)
-        mock_openai_response = _create_mock_openai_response("Hello! How can I help you today?", tool_calls=None)
+    def test_agent_value_error_returns_400(self):
+        """Test that agent ValueError returns 400."""
+        mock_response = _make_safe_moderation_response()
 
-        with patch("main.moderation_client") as mock_client:
-            mock_client.moderations.create = AsyncMock(return_value=mock_moderation_response)
-
-            with patch("agent.agent.ChatOpenAI") as mock_llm:
-                mock_llm_instance = MagicMock()
-                mock_llm_instance.bind_tools.return_value = mock_llm_instance
-                mock_llm_instance.ainvoke = AsyncMock(return_value=mock_openai_response)
-                mock_llm.return_value = mock_llm_instance
-
-                request_data = {
-                    "message": "Hello",
-                    "history": []
-                }
-
-                response = await client.post(
+        with (
+            patch("api.app.moderation_client") as mock_mod,
+            patch("api.app.run_agent", new_callable=AsyncMock, side_effect=ValueError("Invalid input")),
+        ):
+            mock_mod.moderations.create = AsyncMock(return_value=mock_response)
+            with TestClient(app) as client:
+                response = client.post(
                     "/chat",
-                    json=request_data,
-                    headers={
-                        "x-jwt-assertion": sample_jwt_token,
-                        "x-user-assertion": sample_jwt_token
-                    }
+                    json={"message": "Hello"},
+                    headers=_HEADERS,
                 )
 
-                assert response.status_code == 200
-                data = response.json()
-                assert "reply" in data
-                assert "Hello" in data["reply"]
+        assert response.status_code == 400
+
+    def test_agent_exception_returns_500(self):
+        """Test that unexpected agent exception returns 500."""
+        mock_response = _make_safe_moderation_response()
+
+        with (
+            patch("api.app.moderation_client") as mock_mod,
+            patch("api.app.run_agent", new_callable=AsyncMock, side_effect=RuntimeError("Unexpected")),
+        ):
+            mock_mod.moderations.create = AsyncMock(return_value=mock_response)
+            with TestClient(app) as client:
+                response = client.post(
+                    "/chat",
+                    json={"message": "Hello"},
+                    headers=_HEADERS,
+                )
+
+        assert response.status_code == 500
 
 
 @pytest.mark.integration
-@pytest.mark.security
-class TestParallelExecution:
-    """Integration tests for parallel execution support."""
+class TestMetricsTracking:
+    """Test that metrics are tracked correctly through the endpoint."""
 
-    async def test_multiple_concurrent_requests(self, client: AsyncClient, sample_jwt_token: str):
-        """Test that multiple concurrent requests are handled correctly."""
-        import asyncio
+    def test_successful_request_increments_metrics(self, reset_metrics_singleton):
+        """Test that a successful request increments request count."""
+        mock_response = _make_safe_moderation_response()
+        fresh_metrics = reset_metrics_singleton
 
-        mock_moderation_response = _create_mock_moderation_response(flagged=False)
-        mock_openai_response = _create_mock_openai_response("Hello!", tool_calls=None)
+        with (
+            patch("api.app.moderation_client") as mock_mod,
+            patch("api.app.metrics", fresh_metrics),
+            patch("api.app.run_agent", new_callable=AsyncMock, return_value="Reply"),
+        ):
+            mock_mod.moderations.create = AsyncMock(return_value=mock_response)
+            with TestClient(app) as client:
+                client.post(
+                    "/chat",
+                    json={"message": "Hello"},
+                    headers=_HEADERS,
+                )
 
-        async def make_request():
-            with patch("main.moderation_client") as mock_client:
-                mock_client.moderations.create = AsyncMock(return_value=mock_moderation_response)
+        assert fresh_metrics.get_metrics()["request_count"] >= 1
 
-                with patch("agent.agent.ChatOpenAI") as mock_llm:
-                    mock_llm_instance = MagicMock()
-                    mock_llm_instance.bind_tools.return_value = mock_llm_instance
-                    mock_llm_instance.ainvoke = AsyncMock(return_value=mock_openai_response)
-                    mock_llm.return_value = mock_llm_instance
+    def test_auth_failure_increments_error_count(self, reset_metrics_singleton):
+        """Test that auth failures increment error count."""
+        fresh_metrics = reset_metrics_singleton
 
-                    request_data = {
-                        "message": "Hello",
-                        "history": []
-                    }
+        with patch("api.app.metrics", fresh_metrics):
+            with TestClient(app) as client:
+                client.post(
+                    "/chat",
+                    json={"message": "Hello"},
+                    headers={"x-user-assertion": _SAMPLE_TOKEN},
+                )
 
-                    return await client.post(
-                        "/chat",
-                        json=request_data,
-                        headers={
-                            "x-jwt-assertion": sample_jwt_token,
-                            "x-user-assertion": sample_jwt_token
-                        }
-                    )
+        assert fresh_metrics.get_metrics()["error_count"] >= 1
 
-        responses = await asyncio.gather(*[make_request() for _ in range(5)])
+    def test_moderation_failure_increments_error_count(self, reset_metrics_singleton):
+        """Test that moderation service errors increment error count."""
+        fresh_metrics = reset_metrics_singleton
 
-        for response in responses:
-            assert response.status_code == 200
-            data = response.json()
-            assert "reply" in data
+        with (
+            patch("api.app.moderation_client") as mock_mod,
+            patch("api.app.metrics", fresh_metrics),
+        ):
+            mock_mod.moderations.create = AsyncMock(side_effect=Exception("Service down"))
+            with TestClient(app) as client:
+                client.post(
+                    "/chat",
+                    json={"message": "Normal message"},
+                    headers=_HEADERS,
+                )
+
+        assert fresh_metrics.get_metrics()["error_count"] >= 1

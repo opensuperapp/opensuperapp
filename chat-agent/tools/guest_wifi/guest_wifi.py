@@ -31,7 +31,7 @@ from urllib.parse import quote
 import httpx
 from langchain_core.tools import tool
 
-from config import DEBUG, GUEST_WIFI_BACKEND_URL
+from core.config import DEBUG, GUEST_WIFI_BACKEND_URL
 
 logger = logging.getLogger(__name__)
 

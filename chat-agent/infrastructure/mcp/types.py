@@ -14,4 +14,30 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# Test package for chat-agent
+"""
+Shared types for in-process MCP server/client.
+"""
+
+from dataclasses import dataclass
+from typing import Any, Awaitable, Callable
+
+
+ToolCallable = Callable[[dict[str, Any]], Awaitable[dict]]
+
+
+@dataclass(frozen=True)
+class McpAppConfig:
+    """App-specific token exchange details."""
+
+    app_key: str
+    client_id: str
+    scope: str
+
+
+@dataclass(frozen=True)
+class ToolRegistration:
+    """Mapping between a tool and its owning app."""
+
+    tool_name: str
+    app_key: str
+    func: ToolCallable

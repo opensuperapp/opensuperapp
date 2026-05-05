@@ -26,13 +26,9 @@ import logging
 
 import httpx
 
-from config import (
+from core.config import (
     ASGARDEO_TOKEN_URL,
-    GUEST_WIFI_APP_CLIENT_ID,
-    GUEST_WIFI_EXTRA_SCOPES,
-    LEAVE_APP_CLIENT_ID,
-    MEALS_APP_CLIENT_ID,
-    MEALS_EXTRA_SCOPES,
+    DEFAULT_TOKEN_SCOPE,
 )
 
 logger = logging.getLogger(__name__)
@@ -40,10 +36,9 @@ logger = logging.getLogger(__name__)
 GRANT_TYPE_TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange"
 SUBJECT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt"
 REQUESTED_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token"
-DEFAULT_SCOPE = "openid email groups profile"
 
 
-async def exchange_token(access_token: str, client_id: str, scope: str = DEFAULT_SCOPE) -> str:
+async def exchange_token(access_token: str, client_id: str, scope: str = DEFAULT_TOKEN_SCOPE) -> str:
     """
     Exchange the super app access token for a micro-app-scoped access token.
 
@@ -99,23 +94,3 @@ async def exchange_token(access_token: str, client_id: str, scope: str = DEFAULT
         return exchanged_token
 
 
-def _build_scope(extra_scopes: str) -> str:
-    """Append extra scopes to the default scope if provided."""
-    if extra_scopes:
-        return f"{DEFAULT_SCOPE} {extra_scopes.strip()}"
-    return DEFAULT_SCOPE
-
-
-async def exchange_token_for_meals(access_token: str) -> str:
-    """Exchange the super app access token for a meals-app-scoped access token."""
-    return await exchange_token(access_token, MEALS_APP_CLIENT_ID, _build_scope(MEALS_EXTRA_SCOPES))
-
-
-async def exchange_token_for_guest_wifi(access_token: str) -> str:
-    """Exchange the super app access token for a guest-wifi-app-scoped access token."""
-    return await exchange_token(access_token, GUEST_WIFI_APP_CLIENT_ID, _build_scope(GUEST_WIFI_EXTRA_SCOPES))
-
-
-async def exchange_token_for_leave(access_token: str) -> str:
-    """Exchange the super app access token for a leave-app-scoped access token."""
-    return await exchange_token(access_token, LEAVE_APP_CLIENT_ID)

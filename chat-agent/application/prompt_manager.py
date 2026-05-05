@@ -17,12 +17,12 @@
 """
 Prompt manager: loads and composes the final system prompt from modular .md files.
 
-Prompt sections live in two locations:
-  - agent/prompts/   — shared/core sections (base, formatting, fallback)
-  - tools/<skill>/   — per-skill prompt sections (prompt.md in each tool folder)
+Prompt sections live under:
+  - application/templates/ — shared prompt sections
+  - tools/<skill>/ — skill-specific .md prompt sections
 
 PROMPT_ORDER defines the exact composition sequence. To add a new skill prompt:
-  1. Create a prompt.md in tools/<your_skill>/
+  1. Create a .md file in tools/<skill>/
   2. Add its path to PROMPT_ORDER at the appropriate position.
 
 Template variables use standard Python {placeholder} syntax. Any placeholder
@@ -37,12 +37,12 @@ _ROOT = Path(__file__).parent.parent
 # Composition order — sections appear in the final prompt in this sequence.
 # Paths are relative to the chat-agent root.
 PROMPT_ORDER = [
-    "agent/prompts/base.md",
-    "tools/meals/prompt.md",
-    "tools/guest_wifi/prompt.md",
-    "tools/leave/prompt.md",
-    "agent/prompts/formatting.md",
-    "agent/prompts/fallback.md",
+    "application/templates/base.md",
+    "tools/meals/meals.md",
+    "tools/guest_wifi/guest_wifi.md",
+    "tools/leave/leave.md",
+    "application/templates/formatting.md",
+    "application/templates/fallback.md",
 ]
 
 

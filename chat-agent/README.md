@@ -25,8 +25,9 @@ AI-powered chat agent for the OpenSuperApp. Built with **FastAPI**, **LangChain*
 2. **Frontend sends** the message + access token to `POST /chat`
 3. **LangChain agent** processes the message using GPT-4o
 4. If the agent decides to call a tool:
-   - The super app access token is **exchanged** via Asgardeo (RFC 8693) for a **micro-app–scoped** token
-   - The tool calls the backend with the exchanged token
+   - The tool call goes through the in-process **MCP server** registry
+   - MCP exchanges the super app access token via Asgardeo (RFC 8693) for a **micro-app–scoped** token
+   - MCP invokes the tool with the exchanged token
    - The agent formats the tool response into a friendly message
 5. **Response is returned** to the frontend
 
@@ -53,7 +54,7 @@ source .venv/bin/activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Register agent/ and tools/ as importable packages (one-time)
+# Register chat-agent packages as importable modules (one-time)
 pip install -e .
 
 # Copy and configure environment variables
@@ -63,20 +64,20 @@ cp .env.example .env
 
 ### Environment Variables
 
-| Variable | Description | Required |
-|----------|------------|----------|
-| `OPENAI_API_KEY` | Your OpenAI API key | Yes |
-| `OPENAI_MODEL` | OpenAI model name (default: `gpt-4o`) | No |
-| `MEALS_BACKEND_URL` | URL of the meals backend API | Yes |
-| `ASGARDEO_TOKEN_URL` | Asgardeo OAuth2 token endpoint | Yes |
-| `MEALS_APP_CLIENT_ID` | Client ID for the meals micro-app in Asgardeo | Yes |
-| `GUEST_WIFI_BACKEND_URL` | Guest Wi‑Fi API base URL | Yes (for Wi‑Fi tools) |
-| `GUEST_WIFI_APP_CLIENT_ID` | Asgardeo client ID for the guest Wi‑Fi app | Yes (for Wi‑Fi tools) |
-| `LEAVE_BACKEND_URL` | Leave API base URL | Yes (for leave tools) |
-| `LEAVE_APP_CLIENT_ID` | Asgardeo client ID for the Leave app | Yes (for leave tools) |
-| `MEALS_EXTRA_SCOPES` | Optional extra OAuth scopes for Meals token exchange | No |
-| `GUEST_WIFI_EXTRA_SCOPES` | Optional extra OAuth scopes for Guest Wi-Fi token exchange | No |
-| `DEBUG` | Enable debug headers and curl logging (`true`/`false`) | No |
+| Variable                   | Description                                                | Required              |
+| -------------------------- | ---------------------------------------------------------- | --------------------- |
+| `OPENAI_API_KEY`           | Your OpenAI API key                                        | Yes                   |
+| `OPENAI_MODEL`             | OpenAI model name (default: `gpt-4o`)                      | No                    |
+| `MEALS_BACKEND_URL`        | URL of the meals backend API                               | Yes                   |
+| `ASGARDEO_TOKEN_URL`       | Asgardeo OAuth2 token endpoint                             | Yes                   |
+| `MEALS_APP_CLIENT_ID`      | Client ID for the meals micro-app in Asgardeo              | Yes                   |
+| `GUEST_WIFI_BACKEND_URL`   | Guest Wi‑Fi API base URL                                   | Yes (for Wi‑Fi tools) |
+| `GUEST_WIFI_APP_CLIENT_ID` | Asgardeo client ID for the guest Wi‑Fi app                 | Yes (for Wi‑Fi tools) |
+| `LEAVE_BACKEND_URL`        | Leave API base URL                                         | Yes (for leave tools) |
+| `LEAVE_APP_CLIENT_ID`      | Asgardeo client ID for the Leave app                       | Yes (for leave tools) |
+| `MEALS_EXTRA_SCOPES`       | Optional extra OAuth scopes for Meals token exchange       | No                    |
+| `GUEST_WIFI_EXTRA_SCOPES`  | Optional extra OAuth scopes for Guest Wi-Fi token exchange | No                    |
+| `DEBUG`                    | Enable debug headers and curl logging (`true`/`false`)     | No                    |
 
 **Leave API details** (endpoints, payloads, auth): see [LEAVE_APP_API.md](./LEAVE_APP_API.md).
 
@@ -87,7 +88,7 @@ cp .env.example .env
 pip install -e .
 
 # Start the server
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn api.app:app --host 0.0.0.0 --port 8000 --reload
 
 # The API will be available at http://localhost:8000
 # Swagger docs at http://localhost:8000/docs
@@ -99,14 +100,14 @@ The project includes a comprehensive test suite covering all security guardrails
 
 ### Test Statistics
 
-- **Total Tests**: 259 tests
-- **Coverage**: 82% code coverage
+- **Total Tests**: 230 tests
 - **Test Categories**:
   - Request Limits (22 tests)
   - Suspicious Intent Detection (54 tests)
   - Response Sanitization (49 tests)
   - Content Moderation (84 tests)
   - Metrics Tracking (50 tests)
+  - System Prompt Security, Integration, and Unit tests
 
 ### Running Tests
 
@@ -135,6 +136,7 @@ See [tests/README.md](./tests/README.md) for detailed test documentation and tes
 Health check endpoint.
 
 **Response:**
+
 ```json
 { "status": "ok" }
 ```
@@ -144,12 +146,14 @@ Health check endpoint.
 Send a message to the AI chat agent.
 
 **Headers:**
-```
+
+```http
 x-jwt-assertion: <access_token>
 x-user-assertion: <access_token>
 ```
 
 **Request Body:**
+
 ```json
 {
   "message": "What's for lunch today?",
@@ -161,6 +165,7 @@ x-user-assertion: <access_token>
 ```
 
 **Response:**
+
 ```json
 {
   "reply": "Here's today's menu! ..."
@@ -171,46 +176,66 @@ x-user-assertion: <access_token>
 
 ```
 chat-agent/
-├── main.py                        # FastAPI entry point
-├── config.py                      # Environment configuration
+├── main.py                        # Compatibility launcher
+├── Procfile                       # Process definition for deployment
+├── pyproject.toml                 # Project metadata and package config
+├── pytest.ini                     # Pytest configuration
 ├── requirements.txt               # Python dependencies
 ├── .env.example                   # Environment variables template
 ├── .gitignore
 ├── README.md                      # This file
 ├── SKILLS.md                      # Agent skills architecture documentation
-├── CHAT_AGENT_RUNBOOK.md          # Local run, Postman, tokens, headers
-├── LEAVE_APP_API.md               # Leave backend integration reference
 ├── openapi.yaml                   # OpenAPI 3.1 specification
-│
-├── agent/                         # Agent core
-│   ├── agent.py                   # LangChain orchestration & tool-call loop
-│   ├── prompt_manager.py          # Modular prompt loader & composer
-│   ├── token_exchange.py          # Asgardeo RFC 8693 token exchange
-│   └── prompts/                   # Shared system prompt sections
-│       ├── base.md                # Identity, date/time, leave-type map
-│       ├── formatting.md          # Output formatting rules
-│       └── fallback.md            # Guidance for unsupported features
-│
-└── tools/                         # Per-skill tool implementations
-    ├── meals/
-    │   ├── meals_tools.py         # get_todays_menu, submit_lunch_feedback
-    │   ├── prompt.md              # Meals skill system prompt section
-    │   └── lunch_feedback_prompt.md  # Feedback skill system prompt section
-    ├── guest_wifi/
-    │   ├── wifi_tools.py          # create/get/delete guest Wi-Fi account
-    │   └── prompt.md              # Wi-Fi skill system prompt section
-    └── leave/
-        ├── leave_tools.py         # validate/submit/cancel/list leave + configs
-        └── prompt.md              # Leave skill system prompt section
+├── api/
+│   └── app.py                     # FastAPI entry point & request validation
+├── core/
+│   └── config.py                  # Environment configuration
+├── application/
+│   ├── chat_service.py            # LangChain orchestration & MCP dispatch
+│   ├── prompt_manager.py          # Prompt composition from template files
+│   └── templates/
+│       ├── base.md                # Core identity & security rules
+│       ├── formatting.md          # Response formatting rules
+│       └── fallback.md            # Out-of-scope redirection behavior
+├── infrastructure/
+│   ├── auth/
+│   │   └── token_exchange.py      # Asgardeo RFC 8693 token exchange
+│   └── mcp/
+│       ├── __init__.py
+│       ├── client.py              # MCP client facade
+│       ├── server.py              # Tool registry + token exchange dispatch
+│       └── types.py               # MCP app/tool registration types
+├── tools/
+│   ├── meals/
+│   │   ├── meals.py               # Meals tool functions
+│   │   └── meals.md               # Meals prompt section
+│   ├── guest_wifi/
+│   │   ├── guest_wifi.py          # Guest Wi-Fi tool functions
+│   │   └── guest_wifi.md          # Guest Wi-Fi prompt section
+│   └── leave/
+│       ├── leave.py               # Leave tool functions
+│       └── leave.md               # Leave prompt section
+└── tests/
+    ├── conftest.py
+    ├── test_agent_mcp_dispatch.py
+    ├── test_content_moderation.py
+    ├── test_integration.py
+    ├── test_meals_mcp.py
+    ├── test_metrics.py
+    ├── test_mcp_server.py
+    ├── test_request_limits.py
+    ├── test_sanitization.py
+    ├── test_suspicious_intent.py
+    └── test_system_prompt_security.py
 ```
 
 ### Adding a New Skill
 
-1. Create `tools/<skill_name>/` with `<skill>_tools.py` and `prompt.md`
-2. Add the token exchange wrapper in `agent/token_exchange.py`
-3. Add the env vars in `config.py` and `.env.example`
-4. Import the tools in `agent/agent.py`, add to the `tools` list, and add a handler in the tool-call loop
-5. Add `tools/<skill_name>/prompt.md` to `PROMPT_ORDER` in `agent/prompt_manager.py`
+1. Add tool functions in `tools/<skill_name>/<skill_name>.py`
+2. Add backend + client/env values in `core/config.py` and `.env.example`
+3. Register the tool to an app key in `_MCP_TOOL_TO_APP` and `_build_mcp_client()` in `application/chat_service.py`
+4. Add app-level MCP config to `MCP_APP_CONFIGS` in `core/config.py` (client_id + scope)
+5. Add `tools/<skill_name>/<skill_name>.md` to `PROMPT_ORDER` in `application/prompt_manager.py`
 6. Update the [Current Skills](SKILLS.md#current-skills) table in `SKILLS.md`
 
 ## License

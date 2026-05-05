@@ -27,7 +27,7 @@ import logging
 import httpx
 from langchain_core.tools import tool
 
-from config import DEBUG, MEALS_BACKEND_URL
+from core.config import DEBUG, MEALS_BACKEND_URL
 
 logger = logging.getLogger(__name__)
 
