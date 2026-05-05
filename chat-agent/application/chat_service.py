@@ -45,7 +45,7 @@ from core.config import (
 from infrastructure.mcp import McpClient, McpServer, ToolRegistration
 from application.prompt_manager import compose_system_prompt
 from tools.meals.meals import get_todays_menu, submit_lunch_feedback
-from tools.guest_wifi.guset_wifi import (
+from tools.guest_wifi.guest_wifi import (
     create_guest_wifi_account,
     delete_guest_wifi_account,
     get_guest_wifi_accounts,
@@ -199,6 +199,17 @@ def _build_mcp_client() -> McpClient:
         for tool in tools
     ]
     return McpClient(McpServer(app_configs=MCP_APP_CONFIGS, tools=registrations))
+
+
+_MCP_CLIENT: McpClient | None = None
+
+
+def _get_mcp_client() -> McpClient:
+    """Return the shared MCP client, building it once on first call."""
+    global _MCP_CLIENT
+    if _MCP_CLIENT is None:
+        _MCP_CLIENT = _build_mcp_client()
+    return _MCP_CLIENT
 
 
 # ---------------------------------------------------------------------------
@@ -637,7 +648,7 @@ async def run_agent(
     Returns:
         The agent's text response.
     """
-    mcp_client = _build_mcp_client()
+    mcp_client = _get_mcp_client()
     employee_location = (
         await get_employee_location(access_token, mcp_client)
         if _is_likely_leave_query(user_message)

@@ -30,8 +30,6 @@ import re
 from collections import OrderedDict
 from typing import List, Optional
 
-import uvicorn
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -296,5 +294,6 @@ async def chat(
 
 
 if __name__ == "__main__":
+    import uvicorn
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port, h11_max_incomplete_event_size=16384)
