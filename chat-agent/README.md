@@ -217,17 +217,16 @@ chat-agent/
 │       └── leave.md               # Leave prompt section
 └── tests/
     ├── conftest.py
+    ├── test_agent_mcp_dispatch.py
     ├── test_content_moderation.py
     ├── test_integration.py
+    ├── test_meals_mcp.py
     ├── test_metrics.py
+    ├── test_mcp_server.py
     ├── test_request_limits.py
     ├── test_sanitization.py
     ├── test_suspicious_intent.py
-    ├── test_system_prompt_security.py
-    └── unit/
-        ├── test_agent_mcp_dispatch.py
-        ├── test_mcp_server.py
-        └── test_meals_mcp.py
+    └── test_system_prompt_security.py
 ```
 
 ### Adding a New Skill
