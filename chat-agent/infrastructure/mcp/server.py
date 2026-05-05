@@ -43,11 +43,15 @@ class McpServer:
         if not app_config:
             return {"error": f"No MCP app config found for: {registration.app_key}"}
 
-        scoped_token = await exchange_token(
-            access_token=access_token,
-            client_id=app_config.client_id,
-            scope=app_config.scope,
-        )
+        try:
+            scoped_token = await exchange_token(
+                access_token=access_token,
+                client_id=app_config.client_id,
+                scope=app_config.scope,
+            )
+        except Exception as exc:
+            return {"error": f"Token exchange failed for {registration.app_key}: {exc}"}
+
         payload: dict[str, Any] = {"access_token": scoped_token, **args}
         return await registration.func(payload)
 

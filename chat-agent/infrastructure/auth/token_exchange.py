@@ -29,11 +29,6 @@ import httpx
 from core.config import (
     ASGARDEO_TOKEN_URL,
     DEFAULT_TOKEN_SCOPE,
-    GUEST_WIFI_APP_CLIENT_ID,
-    GUEST_WIFI_EXTRA_SCOPES,
-    LEAVE_APP_CLIENT_ID,
-    MEALS_APP_CLIENT_ID,
-    MEALS_EXTRA_SCOPES,
 )
 
 logger = logging.getLogger(__name__)
@@ -99,23 +94,3 @@ async def exchange_token(access_token: str, client_id: str, scope: str = DEFAULT
         return exchanged_token
 
 
-def _build_scope(extra_scopes: str) -> str:
-    """Append extra scopes to the default scope if provided."""
-    if extra_scopes:
-        return f"{DEFAULT_TOKEN_SCOPE} {extra_scopes.strip()}"
-    return DEFAULT_TOKEN_SCOPE
-
-
-async def exchange_token_for_meals(access_token: str) -> str:
-    """Exchange the super app access token for a meals-app-scoped access token."""
-    return await exchange_token(access_token, MEALS_APP_CLIENT_ID, _build_scope(MEALS_EXTRA_SCOPES))
-
-
-async def exchange_token_for_guest_wifi(access_token: str) -> str:
-    """Exchange the super app access token for a guest-wifi-app-scoped access token."""
-    return await exchange_token(access_token, GUEST_WIFI_APP_CLIENT_ID, _build_scope(GUEST_WIFI_EXTRA_SCOPES))
-
-
-async def exchange_token_for_leave(access_token: str) -> str:
-    """Exchange the super app access token for a leave-app-scoped access token."""
-    return await exchange_token(access_token, LEAVE_APP_CLIENT_ID)

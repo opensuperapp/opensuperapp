@@ -39,7 +39,7 @@ _ROOT = Path(__file__).parent.parent
 PROMPT_ORDER = [
     "application/templates/base.md",
     "tools/meals/meals.md",
-    "tools/guest_wifi/guset_wifi.md",
+    "tools/guest_wifi/guest_wifi.md",
     "tools/leave/leave.md",
     "application/templates/formatting.md",
     "application/templates/fallback.md",
