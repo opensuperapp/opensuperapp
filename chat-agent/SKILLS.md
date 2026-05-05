@@ -45,8 +45,8 @@ Every backend capability is isolated into `@tool` functions under `tools/`, each
 
 | File               | Purpose                                                                     |
 | ------------------ | --------------------------------------------------------------------------- |
-| `<skill>_tools.py` | LangChain `@tool` functions — HTTP logic, error handling, structured return |
-| `prompt.md`        | System prompt section — when to trigger this skill and how to behave        |
+| `<skill>.py` | LangChain `@tool` functions — HTTP logic, error handling, structured return |
+| `<skill>.md` | System prompt section — when to trigger this skill and how to behave        |
 
 ```text
 tools/
@@ -74,17 +74,17 @@ application/templates/
 
 > _"Present information incrementally. Don't overwhelm the user with everything at once."_
 
-The system prompt is composed from modular files in `PROMPT_ORDER` inside `application/prompts/manager.py`. Each section activates only when relevant:
+The system prompt is composed from modular files in `PROMPT_ORDER` inside `application/prompt_manager.py`. Each section activates only when relevant:
 
-### Level 1 — Capability Overview (`application/prompts/templates/base.md`)
+### Level 1 — Capability Overview (`application/templates/base.md`)
 
 Concise listing of what the agent can do — shown once at the top of every conversation.
 
-### Level 2 — Skill-Specific Instructions (`application/prompts/templates/*.md`)
+### Level 2 — Skill-Specific Instructions (`tools/*/<skill>.md`)
 
 Detailed flow logic (leave application steps, Wi-Fi deletion confirmation, etc.) — only active when the user triggers that skill.
 
-### Level 3 — Guided Fallback (`application/prompts/templates/fallback.md`)
+### Level 3 — Guided Fallback (`application/templates/fallback.md`)
 
 For unsupported features, routes the user to the correct micro-app instead of a generic refusal.
 
@@ -123,7 +123,7 @@ llm_with_tools = llm.bind_tools(tools)
 
 Three layers of protection:
 
-### Layer 1 — HTTP errors (`infrastructure/tools/*`)
+### Layer 1 — HTTP errors (`tools/*/`)
 
 ```python
 if response.status_code != 200:
@@ -136,8 +136,7 @@ Tools return errors _as data_, not exceptions — the LLM composes a human-frien
 
 ```python
 try:
-    token = await exchange_token_for_meals(access_token)
-    result = await get_todays_menu.ainvoke({"access_token": token})
+    result = await mcp_client.invoke("get_todays_menu", {}, access_token)
 except Exception as e:
     result = {"error": "Failed to fetch data. Please try again later."}
 ```
@@ -162,12 +161,10 @@ The user never sees a raw stack trace.
 Each micro-app has its **own OAuth2 client** in Asgardeo. The in-process MCP server exchanges the super app token for a micro-app–scoped token via RFC 8693 before invoking any tool.
 
 ```text
-Mobile App token  →  exchange_token_for_meals()   →  meals-scoped token  →  Meals Backend
-Mobile App token  →  exchange_token_for_leave()   →  leave-scoped token  →  Leave Backend
-Mobile App token  →  exchange_token_for_guest_wifi() → wifi-scoped token  →  Wi-Fi Backend
+Mobile App token  →  McpServer.invoke()  →  exchange_token(client_id, scope)  →  scoped token  →  Backend
 ```
 
-Adding a new backend requires an MCP app config entry plus tool registration in the MCP registry.
+The `McpServer` looks up the app config (client ID + scope) for each tool and calls the generic `exchange_token` from `infrastructure/auth/token_exchange.py`. Adding a new backend only requires a new `MCP_APP_CONFIGS` entry in `core/config.py`.
 
 ---
 
@@ -177,8 +174,8 @@ Adding a new backend requires an MCP app config entry plus tool registration in 
 
 | Skill Type          | Example            | Location                                   |
 | ------------------- | ------------------ | ------------------------------------------ |
-| **Action skill**    | Meals & Menu       | `infrastructure/tools/meals.py` + prompt template |
-| **Knowledge skill** | Micro-App Guidance | `application/prompts/templates/fallback.md` only |
+| **Action skill**    | Meals & Menu       | `tools/meals/meals.py` + `tools/meals/meals.md`   |
+| **Knowledge skill** | Micro-App Guidance | `application/templates/fallback.md` only          |
 
 The fallback prompt routes users to the right micro-app instead of saying "I can't help with that."
 As each micro-app gains a backend API, its knowledge skill can be upgraded to an action skill by adding a tools file.
@@ -191,23 +188,24 @@ As each micro-app gains a backend API, its knowledge skill can be upgraded to an
 
 ```text
 chat-agent/
-├── main.py               # HTTP interface — never changes for new skills
-├── core/config.py                # Env vars — add new vars only
+├── api/app.py                    # HTTP interface — never changes for new skills
+├── core/config.py                # Env vars + MCP_APP_CONFIGS — add new entry
 ├── application/chat_service.py   # Register tools in MCP registry + bind tools
-├── application/prompts/manager.py # Add new prompt path to PROMPT_ORDER
+├── application/prompt_manager.py # Add new prompt path to PROMPT_ORDER
 ├── infrastructure/mcp/server.py  # Shared dispatch + token exchange per app
 ├── infrastructure/auth/token_exchange.py # Generic RFC 8693 exchange primitive
-└── infrastructure/tools/<skill>.py       # Add tool implementations
+└── tools/<skill>/<skill>.py      # Add tool implementations here
 ```
 
-| File                      | Changes when adding a skill?      |
-| ------------------------- | --------------------------------- |
-| `infrastructure/tools/<skill>.py` | ✅ Add skill tools         |
-| `core/config.py`                | ✅ Add `MCP_APP_CONFIGS` entry |
-| `application/chat_service.py`   | ✅ Register tool -> app mapping |
+| File                            | Changes when adding a skill?      |
+| ------------------------------- | --------------------------------- |
+| `tools/<skill>/<skill>.py`      | ✅ Create skill tools              |
+| `tools/<skill>/<skill>.md`      | ✅ Create skill prompt section     |
+| `core/config.py`                | ✅ Add `MCP_APP_CONFIGS` entry     |
+| `application/chat_service.py`   | ✅ Register tool → app mapping     |
+| `application/prompt_manager.py` | ✅ Add to `PROMPT_ORDER`           |
 | `infrastructure/auth/token_exchange.py` | ❌ No per-app wrappers needed |
-| `application/prompts/manager.py`| ✅ Add to PROMPT_ORDER        |
-| `main.py`                 | ❌ No changes needed              |
+| `api/app.py`                    | ❌ No changes needed               |
 
 No existing skill code is modified when adding a new skill — only _new_ code is added.
 
@@ -218,14 +216,15 @@ No existing skill code is modified when adding a new skill — only _new_ code i
 ### Step 1: Create the Tool Folder
 
 ```bash
-touch infrastructure/tools/<skill_name>.py
-touch application/prompts/templates/<skill_name>.md
+mkdir tools/<skill_name>
+touch tools/<skill_name>/<skill_name>.py
+touch tools/<skill_name>/<skill_name>.md
 ```
 
 ### Step 2: Implement the Tool
 
 ```python
-# infrastructure/tools/<skill_name>.py
+# tools/<skill_name>/<skill_name>.py
 from langchain_core.tools import tool
 from core.config import YOUR_BACKEND_URL
 
@@ -247,8 +246,7 @@ async def your_tool(access_token: str) -> dict:
 ### Step 3: Write the Skill Prompt
 
 ```markdown
-# application/prompts/templates/<skill_name>.md
-
+<!-- tools/<skill_name>/<skill_name>.md -->
 N. **Your Skill Name**: Brief description of what it does.
 Use `your_tool` when the user asks about X, Y, or Z.
 ```
@@ -257,7 +255,7 @@ Use `your_tool` when the user asks about X, Y, or Z.
 
 ```python
 # application/chat_service.py
-from infrastructure.tools.<skill_name> import your_tool
+from tools.<skill_name>.<skill_name> import your_tool
 
 # Register app ownership:
 _MCP_TOOL_TO_APP["your_tool"] = "your_app"
@@ -268,10 +266,10 @@ _MCP_TOOL_TO_APP["your_tool"] = "your_app"
 ### Step 5: Add to Prompt Order
 
 ```python
-# application/prompts/manager.py
+# application/prompt_manager.py
 PROMPT_ORDER = [
     ...
-    "application/prompts/templates/<skill_name>.md",
+    "tools/<skill_name>/<skill_name>.md",
     ...
 ]
 ```
@@ -305,7 +303,7 @@ Add the new skill to the [Current Skills](#current-skills) table above.
 
 | Anthropic Skills Principle     | Our Implementation                                                                    |
 | ------------------------------ | ------------------------------------------------------------------------------------- |
-| **Modular skill definitions**  | Each skill = `infrastructure/tools/<name>.py` + prompt template                        |
+| **Modular skill definitions**  | Each skill = `tools/<name>/<name>.py` + `tools/<name>/<name>.md`                       |
 | **Progressive disclosure**     | `PROMPT_ORDER` reveals sections incrementally; fallback activates only when needed    |
 | **Structured tool schemas**    | LangChain `@tool` generates OpenAI-compatible schemas from type hints + docstrings    |
 | **Graceful degradation**       | Three-layer error handling: HTTP → tool execution → FastAPI endpoint                  |
