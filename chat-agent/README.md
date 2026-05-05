@@ -147,7 +147,7 @@ Send a message to the AI chat agent.
 
 **Headers:**
 
-```
+```http
 x-jwt-assertion: <access_token>
 x-user-assertion: <access_token>
 ```

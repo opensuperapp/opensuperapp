@@ -22,4 +22,4 @@ def test_mcp_app_configs_include_meals_scopes():
 
     assert meals.app_key == "meals"
     assert isinstance(meals.client_id, str)
-    assert meals.scope.startswith("openid email groups profile")
+    assert meals.scope == "openid email groups profile"
