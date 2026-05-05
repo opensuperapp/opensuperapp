@@ -187,7 +187,7 @@ chat-agent/
 ├── SKILLS.md                      # Agent skills architecture documentation
 ├── openapi.yaml                   # OpenAPI 3.1 specification
 ├── api/
-│   └── http.py                    # FastAPI entry point & request validation
+│   └── app.py                     # FastAPI entry point & request validation
 ├── core/
 │   └── config.py                  # Environment configuration
 ├── application/
@@ -210,8 +210,8 @@ chat-agent/
 │   │   ├── meals.py               # Meals tool functions
 │   │   └── meals.md               # Meals prompt section
 │   ├── guest_wifi/
-│   │   ├── guset_wifi.py          # Guest Wi-Fi tool functions
-│   │   └── guset_wifi.md          # Guest Wi-Fi prompt section
+│   │   ├── guest_wifi.py          # Guest Wi-Fi tool functions
+│   │   └── guest_wifi.md          # Guest Wi-Fi prompt section
 │   └── leave/
 │       ├── leave.py               # Leave tool functions
 │       └── leave.md               # Leave prompt section

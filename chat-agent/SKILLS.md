@@ -25,14 +25,14 @@ This document describes how the OpenSuperApp chat agent implements skill-based A
 
 | #   | Skill                          | Trigger Examples                                 | Tool File                        | Backend                                              | Auth                      |
 | --- | ------------------------------ | ------------------------------------------------ | -------------------------------- | ---------------------------------------------------- | ------------------------- |
-| 1   | **Meals & Menu**               | "What's for lunch?", "Show today's menu"         | `infrastructure/tools/meals.py`  | Meals API — `GET /menu`                              | Token exchange (RFC 8693) |
-| 2   | **Lunch Feedback**             | "The lunch was great", "I want to give feedback" | `infrastructure/tools/meals.py`  | Meals API — `POST /feedback`                         | Token exchange (RFC 8693) |
-| 3   | **Create Guest Wi-Fi**         | "Create a guest wifi account"                    | `infrastructure/tools/guest_wifi.py` | Wi-Fi API — `POST /guest-wifi-accounts`          | Token exchange (RFC 8693) |
-| 4   | **Get Guest Wi-Fi Accounts**   | "Show my guest wifi accounts"                    | `infrastructure/tools/guest_wifi.py` | Wi-Fi API — `GET /guest-wifi-accounts`           | Token exchange (RFC 8693) |
-| 5   | **Delete Guest Wi-Fi Account** | "Delete guest wifi account guest_xy12"           | `infrastructure/tools/guest_wifi.py` | Wi-Fi API — `DELETE /guest-wifi-accounts/{username}` | Token exchange (RFC 8693) |
-| 6   | **Apply Leave**                | "Apply for casual leave on 24 Apr"               | `infrastructure/tools/leave.py`  | Leave API — `POST /leaves`                           | Token exchange (RFC 8693) |
-| 7   | **Cancel Leave**               | "Cancel my leave on 24 Apr"                      | `infrastructure/tools/leave.py`  | Leave API — `DELETE /leaves/{id}`                    | Token exchange (RFC 8693) |
-| 8   | **List Leaves**                | "Show my upcoming leaves"                        | `infrastructure/tools/leave.py`  | Leave API — `GET /leaves`                            | Token exchange (RFC 8693) |
+| 1   | **Meals & Menu**               | "What's for lunch?", "Show today's menu"         | `tools/meals/meals.py`           | Meals API — `GET /menu`                              | Token exchange (RFC 8693) |
+| 2   | **Lunch Feedback**             | "The lunch was great", "I want to give feedback" | `tools/meals/meals.py`           | Meals API — `POST /feedback`                         | Token exchange (RFC 8693) |
+| 3   | **Create Guest Wi-Fi**         | "Create a guest wifi account"                    | `tools/guest_wifi/guest_wifi.py` | Wi-Fi API — `POST /guest-wifi-accounts`              | Token exchange (RFC 8693) |
+| 4   | **Get Guest Wi-Fi Accounts**   | "Show my guest wifi accounts"                    | `tools/guest_wifi/guest_wifi.py` | Wi-Fi API — `GET /guest-wifi-accounts`               | Token exchange (RFC 8693) |
+| 5   | **Delete Guest Wi-Fi Account** | "Delete guest wifi account guest_xy12"           | `tools/guest_wifi/guest_wifi.py` | Wi-Fi API — `DELETE /guest-wifi-accounts/{username}` | Token exchange (RFC 8693) |
+| 6   | **Apply Leave**                | "Apply for casual leave on 24 Apr"               | `tools/leave/leave.py`           | Leave API — `POST /leaves`                           | Token exchange (RFC 8693) |
+| 7   | **Cancel Leave**               | "Cancel my leave on 24 Apr"                      | `tools/leave/leave.py`           | Leave API — `DELETE /leaves/{id}`                    | Token exchange (RFC 8693) |
+| 8   | **List Leaves**                | "Show my upcoming leaves"                        | `tools/leave/leave.py`           | Leave API — `GET /leaves`                            | Token exchange (RFC 8693) |
 | 9   | **Micro-App Guidance**         | "How do I apply for sabbatical?", "Book a room"  | _None (prompt-only)_             | N/A                                                  | N/A                       |
 
 ---
@@ -41,7 +41,7 @@ This document describes how the OpenSuperApp chat agent implements skill-based A
 
 > _"Each skill should be a self-contained module with clear boundaries."_
 
-Every backend capability is isolated into `@tool` functions under `infrastructure/tools/`, while prompts are kept under `application/prompts/templates/`.
+Every backend capability is isolated into `@tool` functions under `tools/`, each in its own skill subfolder alongside its prompt section.
 
 | File               | Purpose                                                                     |
 | ------------------ | --------------------------------------------------------------------------- |
@@ -49,21 +49,24 @@ Every backend capability is isolated into `@tool` functions under `infrastructur
 | `prompt.md`        | System prompt section — when to trigger this skill and how to behave        |
 
 ```text
-infrastructure/tools/
-├── meals.py
-├── guest_wifi.py
-└── leave.py
+tools/
+├── meals/
+│   ├── meals.py          ← get_todays_menu, submit_lunch_feedback
+│   └── meals.md          ← "Use get_todays_menu when user asks about food…"
+├── guest_wifi/
+│   ├── guest_wifi.py     ← create/get/delete_guest_wifi_account
+│   └── guest_wifi.md
+└── leave/
+    ├── leave.py          ← validate/submit/cancel/list leave + configs
+    └── leave.md
 
-application/prompts/templates/
+application/templates/
 ├── base.md
-├── meals.md
-├── guest_wifi.md
-├── leave.md
 ├── formatting.md
 └── fallback.md
 ```
 
-**Why this matters:** Adding a new backend skill remains scoped: add a tool module, add a prompt template, and register it in `application/chat_service.py`.
+**Why this matters:** Adding a new backend skill remains scoped: create a new folder under `tools/`, write the tool and prompt, wire it in `application/chat_service.py` — done.
 
 ---
 
