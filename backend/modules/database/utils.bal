@@ -40,3 +40,11 @@ isolated function generateTargetRolesFilters(string[] groups) returns sql:Parame
     }
     return filterQuery;
 }
+
+# Generates filter for target users.
+#
+# + userId - User UUID to match against target_users
+# + return - Generated filter query
+isolated function generateTargetUsersFilter(string userId) returns sql:ParameterizedQuery {
+    return `FIND_IN_SET(${userId}, target_users) > 0`;
+}
