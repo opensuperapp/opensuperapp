@@ -237,44 +237,74 @@ public isolated function getAppConfigsQuery() returns sql:ParameterizedQuery => 
         app_configs
 `;
 
-# Query to get the count of notifications filtered by user groups.
+# Query to get the count of notifications filtered by user groups and user ID.
 #
 # + groups - Array of user groups to match against target_roles
+# + userId - User UUID to match against target_users
 # + return - Generated query to count filtered notifications
-public isolated function getNotificationsCountQuery(string[] groups) returns sql:ParameterizedQuery {
-    sql:ParameterizedQuery filterQuery = generateTargetRolesFilters(groups);
+public isolated function getNotificationsCountQuery(string[] groups, string userId) returns sql:ParameterizedQuery {
+    sql:ParameterizedQuery usersFilter = generateTargetUsersFilter(userId);
+    if groups.length() == 0 {
+        return sql:queryConcat(`
+            SELECT
+                COUNT(*) as count
+            FROM
+                push_notification
+            WHERE
+                (`, usersFilter, `)
+        `);
+    }
+    sql:ParameterizedQuery rolesFilter = generateTargetRolesFilters(groups);
     return sql:queryConcat(`
-        SELECT 
+        SELECT
             COUNT(*) as count
-        FROM 
+        FROM
             push_notification
-        WHERE 
-            (`, filterQuery, `)
+        WHERE
+            (`, rolesFilter, ` OR `, usersFilter, `)
     `);
 }
 
-# Query to get notifications filtered by user groups.
+# Query to get notifications filtered by user groups and user ID.
 #
 # + groups - Array of user groups to match against target_roles
+# + userId - User UUID to match against target_users
 # + startIndex - Start index for pagination
 # + itemsPerPage - Items per page
 # + return - Generated query to retrieve filtered notifications
-public isolated function getNotificationsQuery(string[] groups, int startIndex, int itemsPerPage)
+public isolated function getNotificationsQuery(string[] groups, string userId, int startIndex, int itemsPerPage)
     returns sql:ParameterizedQuery {
 
-    sql:ParameterizedQuery filterQuery = generateTargetRolesFilters(groups);
+    sql:ParameterizedQuery usersFilter = generateTargetUsersFilter(userId);
+    if groups.length() == 0 {
+        return sql:queryConcat(`
+            SELECT DISTINCT
+                id,
+                title,
+                message,
+                created_by,
+                created_at
+            FROM
+                push_notification
+            WHERE
+                (`, usersFilter, `)
+            ORDER BY
+                created_at DESC
+            LIMIT ${itemsPerPage} OFFSET ${startIndex}
+        `);
+    }
+    sql:ParameterizedQuery rolesFilter = generateTargetRolesFilters(groups);
     return sql:queryConcat(`
-        SELECT 
+        SELECT DISTINCT
             id,
             title,
             message,
-            target_roles,
             created_by,
             created_at
-        FROM 
+        FROM
             push_notification
-        WHERE 
-            (`, filterQuery, `)
+        WHERE
+            (`, rolesFilter, ` OR `, usersFilter, `)
         ORDER BY
             created_at DESC
         LIMIT ${itemsPerPage} OFFSET ${startIndex}

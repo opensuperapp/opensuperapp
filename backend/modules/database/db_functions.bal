@@ -240,16 +240,17 @@ public isolated function addDefaultUserConfig(string uuid, string[] configValues
     };
 }
 
-# Get notifications filtered by user groups.
+# Get notifications filtered by user groups and user ID.
 #
 # + groups - Array of user groups
+# + userId - User UUID to match against target_users
 # + startIndex - Start index for pagination
 # + itemsPerPage - Items per page
 # + return - Array of Notification or error
-public isolated function getNotifications(string[] groups, int startIndex, int itemsPerPage)
+public isolated function getNotifications(string[] groups, string userId, int startIndex, int itemsPerPage)
     returns NotificationResponse|error? {
 
-    NotificationsCount countRecord = check databaseClient->queryRow(getNotificationsCountQuery(groups));
+    NotificationsCount countRecord = check databaseClient->queryRow(getNotificationsCountQuery(groups, userId));
 
     if startIndex < 0 || startIndex >= countRecord.count {
         log:printDebug("Invalid start index", startIndex = startIndex, totalResults = countRecord.count);
@@ -257,7 +258,7 @@ public isolated function getNotifications(string[] groups, int startIndex, int i
     }
 
     stream<DbNotification, sql:Error?> result =
-        databaseClient->query(getNotificationsQuery(groups, startIndex, itemsPerPage));
+        databaseClient->query(getNotificationsQuery(groups, userId, startIndex, itemsPerPage));
 
     Notification[] notifications = check from DbNotification notification in result
         select {

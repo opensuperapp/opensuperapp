@@ -519,18 +519,10 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        string[]? groups = userInfo.groups;
-        if groups is () {
-            return {
-                notifications: [],
-                totalResults: 0,
-                startIndex: 0,
-                itemsPerPage: 0
-            };
-        }
+        string[] groups = userInfo.groups ?: [];
 
         database:NotificationResponse|error? notifications =
-            database:getNotifications(groups, startIndex, itemsPerPage);
+            database:getNotifications(groups, userInfo.userId, startIndex, itemsPerPage);
 
         if notifications is () {
             return {

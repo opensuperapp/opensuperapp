@@ -183,9 +183,6 @@ public type DbNotification record {|
     string title;
     # Message body
     string message;
-    # Target roles (groups)
-    @sql:Column {name: "target_roles"}
-    string targetRoles;
     # Creator of the notification
     @sql:Column {name: "created_by"}
     string createdBy;
