@@ -37,6 +37,7 @@ import {
   SecureAuthData,
 } from "@/utils/authTokenStore";
 import { clearAllExchangedTokens } from "@/utils/exchangedTokenStore";
+import { performTokenRefresh, AuthData } from "@/utils/tokenRefreshManager";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import dayjs from "dayjs";
@@ -45,27 +46,16 @@ import { Alert } from "react-native";
 import { logout as appLogout, AuthorizeResult } from "react-native-app-auth";
 
 const GRANT_TYPE_AUTHORIZATION_CODE = "authorization_code";
-const GRANT_TYPE_REFRESH_TOKEN = "refresh_token";
 const GRANT_TYPE_TOKEN_EXCHANGE =
   "urn:ietf:params:oauth:grant-type:token-exchange";
 const SUBJECT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt";
 const REQUESTED_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token";
 const MILLISECONDS_IN_A_SECOND = 1000;
 const SCOPE = "openid email groups profile";
-let refreshPromise: Promise<AuthData | null> | null = null;
 
 export interface DecodedIdToken {
   email?: string;
   userid?: string;
-}
-
-export interface AuthData {
-  accessToken: string;
-  refreshToken: string;
-  idToken: string;
-  email?: string;
-  userId?: string;
-  expiresAt: number;
 }
 
 export const getAccessToken = async (
@@ -125,97 +115,7 @@ export const getAccessToken = async (
 export const refreshAccessToken = async (
   onLogout: () => Promise<void>
 ): Promise<AuthData | null> => {
-  if (refreshPromise) {
-    return refreshPromise; // If a refresh is already in progress, return the same promise
-  }
-
-  refreshPromise = (async () => {
-    try {
-      const storedData = await loadAuthDataFromSecureStore();
-      if (!storedData) {
-        refreshPromise = null;
-        return null;
-      }
-
-      const authData: AuthData = storedData;
-      if (!authData.refreshToken) {
-        refreshPromise = null;
-        return null;
-      }
-
-      if (!TOKEN_URL) {
-        console.error(
-          "TOKEN_URL is not defined. Check your environment variables."
-        );
-        refreshPromise = null;
-        return null;
-      }
-
-      const requestBody = createAuthRequestBody({
-        grantType: GRANT_TYPE_REFRESH_TOKEN,
-        clientId: CLIENT_ID,
-        refreshToken: authData.refreshToken,
-      });
-
-      const response = await fetch(TOKEN_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: requestBody,
-      });
-
-      if (!response.ok) {
-        console.error(
-          `Token refresh failed: ${response.status} ${response.statusText}`
-        );
-        if (response.status === 400) await onLogout();
-
-        refreshPromise = null;
-        return null;
-      }
-
-      const data = await response.json();
-
-      if (data.access_token && data.id_token) {
-        const decodedIdToken = jwtDecode<DecodedIdToken>(data.id_token);
-        const exp = jwtDecode<{ exp: number }>(data.access_token).exp || 0;
-        const { email, userid: userId } = decodedIdToken;
-
-        const updatedAuthData: AuthData = {
-          accessToken: data.access_token,
-          refreshToken: data.refresh_token || authData.refreshToken,
-          idToken: data.id_token,
-          email,
-          userId,
-          expiresAt: exp * MILLISECONDS_IN_A_SECOND,
-        };
-
-        await saveAuthDataToSecureStore(updatedAuthData as SecureAuthData);
-
-        refreshPromise = null;
-        return updatedAuthData;
-      }
-
-      refreshPromise = null;
-      return null;
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        console.error("Token refresh error:", err.message);
-        if (err.message.includes("Network request failed")) {
-          Alert.alert("Network Error", "Check your connection and try again.");
-        } else {
-          await onLogout();
-        }
-      } else {
-        console.error("An unexpected error occurred during token refresh.");
-        await onLogout();
-      }
-
-      refreshPromise = null;
-      return null;
-    }
-  })();
-
-  return refreshPromise;
+  return performTokenRefresh(onLogout);
 };
 
 export const logout = async () => {
@@ -241,10 +141,7 @@ export const logout = async () => {
     // If idToken is missing, proceed with local logout
     if (!idToken) {
       console.warn("No idToken found. Performing local logout only.");
-      await clearAllExchangedTokens(appIds);
-      await clearAuthDataFromSecureStore();
-      await AsyncStorage.removeItem(APPS);
-      await AsyncStorage.removeItem(USER_INFO);
+      await clearSessionData(appIds);
       return;
     }
 
@@ -253,10 +150,7 @@ export const logout = async () => {
       idToken,
       postLogoutRedirectUrl: REDIRECT_URI,
     });
-    await clearAllExchangedTokens(appIds);
-    await clearAuthDataFromSecureStore();
-    await AsyncStorage.removeItem(APPS);
-    await AsyncStorage.removeItem(USER_INFO);
+    await clearSessionData(appIds);
   } catch (error) {
     console.error("Error logging out from Asgardeo:", error);
     Alert.alert(
@@ -265,6 +159,13 @@ export const logout = async () => {
     );
     throw error;
   }
+};
+
+const clearSessionData = async (appIds: string[]) => {
+  await clearAllExchangedTokens(appIds);
+  await clearAuthDataFromSecureStore();
+  await AsyncStorage.removeItem(APPS);
+  await AsyncStorage.removeItem(USER_INFO);
 };
 
 // Restore auth data form secure storage
@@ -336,6 +237,17 @@ export const tokenExchange = async (
     // Function to attempt token exchange, with retry on 401 error
     const attemptTokenExchange = async (token: string) => {
       try {
+        console.log(
+          "[AUTH_SERV][attemptTokenExchange] Creating auth request body",
+          JSON.stringify({
+            clientId,
+            grantType: GRANT_TYPE_TOKEN_EXCHANGE,
+            subjectToken: token,
+            subjectTokenType: SUBJECT_TOKEN_TYPE,
+            requestedTokenType: REQUESTED_TOKEN_TYPE,
+            scope: selectedScopes,
+          })
+        );
         const response = await axios.post(
           TOKEN_URL,
           createAuthRequestBody({
@@ -350,6 +262,8 @@ export const tokenExchange = async (
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
           }
         );
+
+        console.log("[AUTH_SERV][attemptTokenExchange] Response", response);
 
         if (response.status === 200) return response.data;
 
@@ -392,6 +306,7 @@ export const tokenExchange = async (
 
     // Attempt token exchange
     const data = await attemptTokenExchange(accessToken);
+    console.log("[AUTH_SERV][tokenExchange] Data", data);
 
     if (!data?.access_token) {
       console.error("Token exchange response does not contain access_token.");

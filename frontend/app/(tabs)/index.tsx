@@ -21,6 +21,7 @@ import { Colors } from "@/constants/Colors";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import useEventsFeed from "@/hooks/useEventsFeed";
 import useNewsFeed from "@/hooks/useNewsFeed";
+import useNetworkQuality from "@/hooks/useNetworkQuality";
 import { useTrackActiveScreen } from "@/hooks/useTrackActiveScreen";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import React, { useEffect, useState } from "react";
@@ -45,6 +46,7 @@ const Discovery = () => {
   const colorScheme = useColorScheme();
   const styles = createStyles(colorScheme ?? "light", tabBarHeight);
   const [isMinTimeElapsed, setIsMinTimeElapsed] = useState(false);
+  const networkQuality = useNetworkQuality();
 
   useTrackActiveScreen(ScreenPaths.FEED);
   const { newsItems, loading } = useNewsFeed();
@@ -80,6 +82,15 @@ const Discovery = () => {
         <FeedSkeleton />
       ) : (
         <ScrollView style={{ padding: 16, marginTop: 5 }}>
+          {/* Offline message */}
+          {networkQuality === "offline" && (
+            <View style={styles.offlineMessage}>
+              <Text style={styles.offlineText}>
+                You're offline. Showing cached content.
+              </Text>
+            </View>
+          )}
+
           {/* Banner image slider */}
           <BannerSlider />
 
@@ -132,5 +143,18 @@ const createStyles = (colorScheme: "light" | "dark", tabBarHeight: number) =>
       fontSize: 24,
       fontWeight: "700",
       marginVertical: 10,
+    },
+    offlineMessage: {
+      backgroundColor: Colors[colorScheme].ternaryBackgroundColor,
+      padding: 12,
+      borderRadius: 8,
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: Colors.companyOrange,
+    },
+    offlineText: {
+      color: Colors[colorScheme].primaryTextColor,
+      fontSize: 14,
+      textAlign: "center",
     },
   });

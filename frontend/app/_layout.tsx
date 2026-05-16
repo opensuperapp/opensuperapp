@@ -22,7 +22,7 @@ import { restoreAuth } from "@/context/slices/authSlice";
 import { getUserConfigurations } from "@/context/slices/userConfigSlice";
 import { setUserInfo } from "@/context/slices/userInfoSlice";
 import { getVersions } from "@/context/slices/versionSlice";
-import { AppDispatch, persistor, store } from "@/context/store";
+import { AppDispatch, persistor, RootState, store } from "@/context/store";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { useNotificationNavigation } from "@/hooks/useNotificationNavigation";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -35,6 +35,11 @@ import {
 import { buildAppsWithTokens } from "@/utils/exchangedTokenRehydrator";
 import { handleFreshInstall } from "@/utils/freshInstall";
 import { performLogout } from "@/utils/performLogout";
+import {
+  setInitializing,
+  startTokenRefreshManager,
+  stopTokenRefreshManager,
+} from "@/utils/tokenRefreshManager";
 import {
   initializeNotifications,
   setupBackgroundNotificationListeners,
@@ -53,15 +58,18 @@ import { lockAsync, OrientationLock } from "expo-screen-orientation";
 import { getItemAsync } from "expo-secure-store";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useState } from "react";
-import { Provider, useDispatch } from "react-redux";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Provider, useDispatch, useSelector } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
 
 // Component to handle app initialization
 function AppInitializer({ onReady }: { onReady: () => void }) {
-  const dispatch = useDispatch<AppDispatch>(); // Ensure correct typing for async actions
+  const dispatch = useDispatch<AppDispatch>();
+  const accessToken = useSelector((state: RootState) => state.auth.accessToken);
+  const isManagerRunning = useRef(false);
+
   const handleLogout = useCallback(async () => {
-    await dispatch(performLogout()).unwrap(); // Ensure the logout action is dispatched properly
+    await dispatch(performLogout()).unwrap();
   }, [dispatch]);
 
   /**
@@ -80,10 +88,20 @@ function AppInitializer({ onReady }: { onReady: () => void }) {
   useNotificationNavigation();
 
   useEffect(() => {
+    if (accessToken && !isManagerRunning.current) {
+      startTokenRefreshManager();
+      isManagerRunning.current = true;
+    } else if (!accessToken && isManagerRunning.current) {
+      stopTokenRefreshManager();
+      isManagerRunning.current = false;
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
     const initialize = async () => {
       try {
         await handleFreshInstall();
-        await runMigrations(); // Runs any migrations.
+        await runMigrations();
         const [savedApps, savedUserInfo] = await Promise.all([
           AsyncStorage.getItem(APPS),
           getItemAsync(USER_INFO),
@@ -99,7 +117,12 @@ function AppInitializer({ onReady }: { onReady: () => void }) {
 
         dispatch(getVersions(handleLogout));
         dispatch(getUserConfigurations(handleLogout));
-        await dispatch(restoreAuth()).unwrap();
+        setInitializing(true);
+        try {
+          await dispatch(restoreAuth()).unwrap();
+        } finally {
+          setInitializing(false);
+        }
       } catch (error) {
         console.error("Initialization error:", error);
       } finally {

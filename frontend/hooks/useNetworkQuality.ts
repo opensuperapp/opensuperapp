@@ -13,11 +13,21 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { migrateToSecureStore } from "./1_move_auth_to_secure_store";
-import { recoverTokenRefreshState } from "./2_recover_token_refresh_state";
 
-// Migrations registry
-export const migrations: Record<number, () => Promise<void>> = {
-  1: migrateToSecureStore,
-  2: recoverTokenRefreshState,
-};
+import useNetworkState from "./useNetworkState";
+
+export type NetworkQuality = "offline" | "slow" | "good";
+
+export default function useNetworkQuality(): NetworkQuality {
+  const { isConnected, isInternetReachable, type } = useNetworkState();
+
+  if (!isConnected || !isInternetReachable) {
+    return "offline";
+  }
+
+  if (type === "cellular") {
+    return "slow";
+  }
+
+  return "good";
+}

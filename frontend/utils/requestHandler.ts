@@ -13,31 +13,23 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { refreshAccessToken } from "@/services/authService";
+import { checkAndRefreshTokenIfNeeded } from "@/utils/tokenRefreshManager";
 import { loadAuthDataFromSecureStore } from "@/utils/authTokenStore";
+import { refreshAccessToken } from "@/services/authService";
+import { addToQueue } from "@/utils/offlineQueue";
 import axios, { AxiosRequestConfig } from "axios";
-import dayjs from "dayjs";
-import { jwtDecode } from "jwt-decode";
 
 // General API request handler
 export const apiRequest = async (
   config: AxiosRequestConfig,
   onLogout: () => Promise<void>
 ) => {
-  let accessToken = await getAccessToken(); // Get stored access token
+  let accessToken = await getAccessToken();
 
-  // If no access token, return early
   if (!accessToken) return;
 
-  // Check if token is expired before making request
-  if (isAccessTokenExpired(accessToken)) {
-    const newAuthData = await refreshAccessToken(onLogout);
-
-    if (!newAuthData?.accessToken) {
-      return; // Logout is triggered inside refreshAccessToken
-    }
-    accessToken = newAuthData.accessToken;
-  }
+  await checkAndRefreshTokenIfNeeded();
+  accessToken = await getAccessToken();
 
   // Set Authorization Header
   config.headers = {
@@ -70,19 +62,54 @@ export const apiRequest = async (
       }
     }
 
+    // Add to offline queue for retryable network errors
+    if (isRetryableError(error) && config.method && config.url) {
+      await addToQueue({
+        url: config.url,
+        method: config.method,
+        headers: config.headers as Record<string, string>,
+        body: config.data ? JSON.stringify(config.data) : undefined,
+      });
+    }
+
     throw error;
   }
 };
 
-// Helper function to check if the token is expired
-const isAccessTokenExpired = (accessToken: string): boolean => {
-  try {
-    const decoded = jwtDecode<{ exp: number }>(accessToken);
-    return dayjs.unix(decoded.exp).isBefore(dayjs());
-  } catch {
-    return true; // Assume expired if decoding fails
+export const isRetryableError = (error: unknown): boolean => {
+  if (error instanceof Error) {
+    return (
+      error.message.includes("Network request failed") ||
+      error.message.includes("timeout") ||
+      error.message.includes("ETIMEDOUT")
+    );
   }
+  return false;
 };
+
+// Exponential backoff retry helper
+export async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  baseDelay = 100,
+  multiplier = 2,
+  jitterMs = 0
+): Promise<T> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (attempt === maxRetries || !isRetryableError(error)) {
+        throw error;
+      }
+
+      const delay = baseDelay * Math.pow(multiplier, attempt - 1);
+      const jitter = jitterMs > 0 ? Math.random() * jitterMs : 0;
+      await new Promise(resolve => setTimeout(resolve, delay + jitter));
+    }
+  }
+  throw new Error('Max retries exceeded');
+}
 
 // Helper function to get the stored access token
 const getAccessToken = async (): Promise<string> => {

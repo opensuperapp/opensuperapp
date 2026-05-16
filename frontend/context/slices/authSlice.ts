@@ -14,14 +14,15 @@
 // specific language governing permissions and limitations
 // under the License.
 import { removeGoogleAuthState } from "@/services/googleService";
+import NetInfo from "@react-native-community/netinfo";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { getItemAsync, setItemAsync } from "expo-secure-store";
 import {
-  AuthData,
   loadAuthData,
   logout,
   refreshAccessToken,
 } from "../../services/authService";
+import { AuthData, shouldRefreshToken } from "../../utils/tokenRefreshManager";
 import { getAppConfigurations } from "./appConfigSlice";
 
 interface AuthState {
@@ -50,8 +51,10 @@ export const restoreAuth = createAsyncThunk(
 
     if (authData) {
       dispatch(setAuth(authData));
-      const isExpired = authData.expiresAt && Date.now() >= authData.expiresAt;
-      if (isExpired) {
+      const netInfo = await NetInfo.fetch();
+      const isOnline = !!netInfo.isConnected && !!netInfo.isInternetReachable;
+      const needsRefresh = await shouldRefreshToken();
+      if (needsRefresh && isOnline) {
         authData = await refreshAccessToken(logout);
       }
       // Load app configurations after restoring auth

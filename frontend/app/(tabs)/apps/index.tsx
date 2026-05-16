@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 import SearchBar from "@/components/SearchBar";
+import SignInMessage from "@/components/SignInMessage";
 import SyncingModal from "@/components/SyncingModal";
 import Widget from "@/components/Widget";
 import { Colors } from "@/constants/Colors";
@@ -23,9 +24,10 @@ import {
   DOWNLOADED,
 } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
-import { MicroApp } from "@/context/slices/appSlice";
+import { MicroApp, resetApps } from "@/context/slices/appSlice";
 import { getUserConfigurations } from "@/context/slices/userConfigSlice";
 import { AppDispatch, RootState } from "@/context/store";
+import useNetworkQuality from "@/hooks/useNetworkQuality";
 import { useTrackActiveScreen } from "@/hooks/useTrackActiveScreen";
 import {
   downloadMicroApp,
@@ -58,7 +60,7 @@ export default function HomeScreen() {
   const downloadProgress = useSelector(
     (state: RootState) => state.apps.downloadProgress
   );
-  const { email } = useSelector((state: RootState) => state.auth);
+  const { accessToken, email } = useSelector((state: RootState) => state.auth);
   const isForceUpdate = useSelector(
     (state: RootState) =>
       state.appConfig.configs.find(
@@ -74,6 +76,7 @@ export default function HomeScreen() {
     (state: RootState) => state.userConfig.configurations
   );
   const [syncing, setSyncing] = useState(false);
+  const networkQuality = useNetworkQuality();
   const colorScheme = useColorScheme();
   const styles = createStyles(colorScheme ?? "light");
   const version = Constants.expoConfig?.version;
@@ -86,6 +89,23 @@ export default function HomeScreen() {
   });
   const [updatingApps, setUpdatingApps] = useState<string[]>([]);
   const isCheckingUpdates = useRef(false);
+  const previousEmail = useRef<string | null>(null);
+
+  if (!accessToken) {
+    return (
+      <SafeAreaView
+        style={{
+          flex: 1,
+          backgroundColor: Colors[colorScheme ?? "light"].primaryBackgroundColor,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <SignInMessage message="Sign in to view your installed apps" />
+      </SafeAreaView>
+    );
+  }
+
   useTrackActiveScreen(ScreenPaths.MY_APPS);
   const updateCheckInterval = useSelector(
     (state: RootState) =>
@@ -166,6 +186,10 @@ export default function HomeScreen() {
   useEffect(() => {
     const initializeApp = async () => {
       try {
+        if (email && previousEmail.current === null) {
+          previousEmail.current = email;
+        }
+
         if (!apps || apps.length === 0) {
           await loadMicroAppDetails(
             dispatch,
@@ -192,6 +216,20 @@ export default function HomeScreen() {
 
     initializeApp();
   }, [email]);
+
+  // Handle email transitions (log in/log out)
+  useEffect(() => {
+    if (previousEmail.current === null && email) {
+      previousEmail.current = email;
+      return;
+    }
+
+    if (previousEmail.current && !email) {
+      previousEmail.current = null;
+      dispatch(resetApps());
+      setFilteredApps([]);
+    }
+  }, [email, dispatch]);
 
   // Load saved app order from AsyncStorage on mount
   useEffect(() => {
@@ -289,6 +327,14 @@ export default function HomeScreen() {
         setSearchQuery={setSearchQuery}
         placeholder="Search apps..."
       />
+
+      {networkQuality === "offline" && (
+        <View style={styles.offlineMessage}>
+          <Text style={styles.offlineText}>
+            You're offline. Some features may not be available.
+          </Text>
+        </View>
+      )}
 
       <SyncingModal
         syncing={syncing}
@@ -402,5 +448,19 @@ const createStyles = (colorScheme: "light" | "dark") =>
       alignItems: "center",
       justifyContent: "center",
       elevation: 3,
+    },
+    offlineMessage: {
+      backgroundColor: Colors[colorScheme].ternaryBackgroundColor,
+      padding: 12,
+      borderRadius: 8,
+      marginHorizontal: 16,
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: Colors.companyOrange,
+    },
+    offlineText: {
+      color: Colors[colorScheme].primaryTextColor,
+      fontSize: 14,
+      textAlign: "center",
     },
   });
