@@ -46,6 +46,7 @@ export const scheduleSessionNotifications = async (
           title: data.title,
           body: data.body,
           id: data.id,
+          data: { screen: "/(tabs)/apps/notifications" },
           android: {
             channelId: NOTIFICATION_CHANNEL_ID,
             smallIcon: "ic_notification",
