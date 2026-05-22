@@ -13,11 +13,6 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
-import { NewsItem } from "@/hooks/useNewsFeed";
-import { formatPubDate } from "@/utils/formatPubDate";
-import { Ionicons } from "@expo/vector-icons";
-import React from "react";
 import {
   Linking,
   StyleSheet,
@@ -26,6 +21,11 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import React from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { Colors } from "@/constants/Colors";
+import { NewsItem } from "@/hooks/useNewsFeed";
+import { formatPubDate } from "@/utils/formatPubDate";
 
 const stripHtml = (htmlString: string) => {
   if (!htmlString) return "";
@@ -67,26 +67,27 @@ const News = ({ item }: { item: NewsItem }) => {
             {stripHtml(item.description)}
           </Text>
         </View>
-
-        <TouchableOpacity
-          onPress={() => Linking.openURL(item.link)}
-          style={{
-            flexDirection: "row",
-            gap: 4,
-            alignItems: "center",
-            justifyContent: "flex-end",
-            marginTop: 6,
-          }}
-        >
-          <Text style={{ fontSize: 14, color: Colors.companyOrange }}>
-            Read More
-          </Text>
-          <Ionicons
-            name="arrow-forward"
-            size={15}
-            color={Colors.companyOrange}
-          />
-        </TouchableOpacity>
+        {item.link && (
+          <TouchableOpacity
+            onPress={() => Linking.openURL(item.link)}
+            style={{
+              flexDirection: "row",
+              gap: 4,
+              alignItems: "center",
+              justifyContent: "flex-end",
+              marginTop: 6,
+            }}
+          >
+            <Text style={{ fontSize: 14, color: Colors.companyOrange }}>
+              Read More
+            </Text>
+            <Ionicons
+              name="arrow-forward"
+              size={15}
+              color={Colors.companyOrange}
+            />
+          </TouchableOpacity>
+        )}
       </View>
     </>
   );

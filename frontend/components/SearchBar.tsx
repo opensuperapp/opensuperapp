@@ -13,17 +13,17 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
-import { Ionicons } from "@expo/vector-icons";
-import React from "react";
 import {
-  Platform,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  useColorScheme,
   View,
+  TextInput,
+  useColorScheme,
+  StyleSheet,
+  TouchableOpacity,
+  Platform,
 } from "react-native";
+import React from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { Colors } from "@/constants/Colors";
 
 type SearchProps = {
   searchQuery: string;

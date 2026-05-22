@@ -13,16 +13,15 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { removeGoogleAuthState } from "@/services/googleService";
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import { getItemAsync, setItemAsync } from "expo-secure-store";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import {
   AuthData,
   loadAuthData,
   logout,
   refreshAccessToken,
 } from "../../services/authService";
-import { getAppConfigurations } from "./appConfigSlice";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { removeGoogleAuthState } from "@/services/googleService";
 
 interface AuthState {
   accessToken: string | null;
@@ -41,38 +40,27 @@ const initialState: AuthState = {
 };
 
 // Async action to restore persisted auth state
-export const restoreAuth = createAsyncThunk(
-  "auth/restoreAuth",
-  async (_, { dispatch }) => {
-    let authData = await loadAuthData();
+export const restoreAuth = createAsyncThunk("auth/restoreAuth", async () => {
+  let authData = await loadAuthData();
 
-    if (authData) {
-      dispatch(setAuth(authData));
-      const isExpired = authData.expiresAt && Date.now() >= authData.expiresAt;
-      if (isExpired) {
-        authData = await refreshAccessToken(logout);
-      }
-      // Load app configurations after restoring auth
-      if (authData) {
-        try {
-          await dispatch(getAppConfigurations(logout)).unwrap();
-        } catch (configError) {
-          console.error("Failed to load app configurations", configError);
-        }
-      }
+  if (authData) {
+    const isExpired = authData.expiresAt && Date.now() >= authData.expiresAt;
 
-      return authData;
+    if (isExpired) {
+      authData = await refreshAccessToken(logout);
     }
 
-    return null;
+    return authData;
   }
-);
+
+  return null;
+});
 
 // Async action to set auth and check Google auth state
 export const setAuthWithCheck = createAsyncThunk(
   "auth/setAuthWithCheck",
   async (authPayload: AuthData, { dispatch }) => {
-    const previousAuthMail = await getItemAsync("authMail");
+    const previousAuthMail = await AsyncStorage.getItem("authMail");
     if (previousAuthMail) {
       const parsedMail = JSON.parse(previousAuthMail);
       if (authPayload.email && authPayload.email !== parsedMail) {
@@ -80,7 +68,7 @@ export const setAuthWithCheck = createAsyncThunk(
       }
     }
 
-    await setItemAsync("authMail", JSON.stringify(authPayload.email));
+    await AsyncStorage.setItem("authMail", JSON.stringify(authPayload.email));
     dispatch(setAuth(authPayload));
   }
 );

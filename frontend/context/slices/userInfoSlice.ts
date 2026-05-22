@@ -13,16 +13,16 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BASE_URL, USER_INFO } from "@/constants/Constants";
 import { apiRequest } from "@/utils/requestHandler";
-import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { setItemAsync } from "expo-secure-store";
 
 export type UserInfo = {
   workEmail: string;
   firstName: string;
   lastName: string;
-  employeeThumbnail: string | null;
+  userThumbnail: string | null;
 };
 
 interface AppsState {
@@ -77,7 +77,7 @@ const userInfoSlice = createSlice({
         state.loading = false;
         state.userInfo = action.payload;
 
-        setItemAsync(USER_INFO, JSON.stringify(state.userInfo));
+        AsyncStorage.setItem(USER_INFO, JSON.stringify(state.userInfo));
       })
       .addCase(getUserInfo.rejected, (state, action) => {
         state.loading = false;

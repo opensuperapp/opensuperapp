@@ -13,15 +13,15 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
 import {
-  ActivityIndicator,
   Modal,
-  StyleSheet,
-  Text,
-  useColorScheme,
   View,
+  Text,
+  ActivityIndicator,
+  useColorScheme,
+  StyleSheet,
 } from "react-native";
+import { Colors } from "@/constants/Colors";
 import { ProgressBar } from "react-native-paper";
 
 const SyncingModal = ({

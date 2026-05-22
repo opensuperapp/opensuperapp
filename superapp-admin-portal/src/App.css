@@ -1,0 +1,25 @@
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.app-container h1 {
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.app-container p {
+  margin: 0.5rem 0;
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.success-message {
+  color: #059669;
+  font-weight: 500;
+  margin-top: 1rem;
+}

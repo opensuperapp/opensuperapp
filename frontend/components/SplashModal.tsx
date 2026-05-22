@@ -13,9 +13,10 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
+import { Modal, Platform, useColorScheme, View } from "react-native";
 import LottieView from "lottie-react-native";
-import { Modal, useColorScheme, View } from "react-native";
+import { Colors } from "@/constants/Colors";
+import { StatusBar } from "expo-status-bar";
 
 const SplashModal = ({
   loading,
@@ -27,7 +28,13 @@ const SplashModal = ({
   const colorScheme = useColorScheme();
 
   return (
-    <Modal visible={loading} transparent animationType={animationType}>
+    <Modal
+      visible={loading}
+      transparent={false}
+      animationType={animationType}
+      presentationStyle="fullScreen"
+      statusBarTranslucent={Platform.OS === "android"}
+    >
       <View
         style={{
           flex: 1,
@@ -37,9 +44,11 @@ const SplashModal = ({
             Colors[colorScheme ?? "light"].primaryBackgroundColor,
         }}
       >
+        {/* Hide status bar while splash is visible to avoid top bar flicker */}
+        <StatusBar hidden />
         <LottieView
           source={
-            colorScheme == "dark"
+            colorScheme === "dark"
               ? require("../assets/animation/animation-dark.json")
               : require("../assets/animation/animation-light.json")
           }

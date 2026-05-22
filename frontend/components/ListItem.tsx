@@ -13,24 +13,24 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
-import { DOWNLOADED } from "@/constants/Constants";
-import { ScreenPaths } from "@/constants/ScreenPaths";
-import { Version } from "@/context/slices/appSlice";
-import { DisplayMode } from "@/types/navigation";
-import { Image } from "expo-image";
-import { router } from "expo-router";
-import React from "react";
 import {
-  Dimensions,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useColorScheme,
   View,
+  Text,
+  StyleSheet,
+  Dimensions,
+  useColorScheme,
+  TouchableOpacity,
 } from "react-native";
+import { Image } from "expo-image";
+import { Colors } from "@/constants/Colors";
+import { Version } from "@/context/slices/appSlice";
+import { DEFAULT_VIEWING_MODE, DOWNLOADED, FULL_SCREEN_VIEWING_MODE } from "@/constants/Constants";
+import React from "react";
 import ActionButton from "./ActionButton";
-import UpdateOverlay from "./UpdateOverlay";
+import { router } from "expo-router";
+import { ScreenPaths } from "@/constants/ScreenPaths";
+import { DisplayMode } from "@/types/navigation";
+
 
 type ListItemProps = {
   appId: string;
@@ -43,11 +43,9 @@ type ListItemProps = {
   iconUrl: string;
   status: string;
   downloading: boolean;
-  downloadProgress?: number;
   onDownload: () => void;
   onRemove: () => void;
   displayMode?: DisplayMode;
-  isDefaultApp?: boolean;
 };
 
 const ListItem = React.memo(
@@ -62,11 +60,9 @@ const ListItem = React.memo(
     iconUrl,
     status,
     downloading,
-    downloadProgress,
     onDownload,
     onRemove,
     displayMode,
-    isDefaultApp = false,
   }: ListItemProps) => {
     const screenWidth = Dimensions.get("window").width;
     const colorScheme = useColorScheme() ?? "light";
@@ -95,21 +91,11 @@ const ListItem = React.memo(
           disabled={status !== DOWNLOADED}
         >
           <Image
-            style={[styles.image, downloading && styles.imageUpdating]}
-            source={iconUrl}
+            style={styles.image}
+            source={iconUrl.trim()}
             contentFit="contain"
             transition={1000}
           />
-          {downloading && downloadProgress !== undefined && (
-            <View style={styles.updateOverlay}>
-              <UpdateOverlay
-                size={32}
-                strokeWidth={3}
-                color="#ffffff"
-                progress={downloadProgress}
-              />
-            </View>
-          )}
         </TouchableOpacity>
         {/* Info Section */}
         <View style={styles.infoContainer}>
@@ -121,45 +107,29 @@ const ListItem = React.memo(
               {description}
             </Text>
             <View style={styles.bottomTextContainer}>
-              {versions.length > 0 && (
-                <Text style={styles.versionText} allowFontScaling={false}>
-                  Version {versions[0].version}
-                </Text>
-              )}
-              {downloading && (
-                <View style={styles.updatingContainer}>
-                  <Text style={styles.updatingText}>
-                    {router.canGoBack() ? "Installing..." : "Updating..."}
-                  </Text>
-                  <Text style={styles.progressText}>
-                    {downloadProgress !== undefined
-                      ? `${Math.round(downloadProgress)}%`
-                      : ""}
-                  </Text>
-                </View>
-              )}
+              <Text style={styles.versionText} allowFontScaling={false}>
+                Version {versions[0].version}
+              </Text>
             </View>
           </View>
         </View>
         {/* Button Section */}
         <View style={styles.buttonContainer}>
-          {!isDefaultApp &&
-            (status === DOWNLOADED ? (
-              <ActionButton
-                label="Remove"
-                onPress={onRemove}
-                textColor={Colors.removeButtonTextColor}
-              />
-            ) : (
-              <ActionButton
-                label="Get"
-                onPress={onDownload}
-                textColor={Colors.actionButtonTextColor}
-                downloading={downloading}
-                fixedSize={true}
-              />
-            ))}
-          {isDefaultApp && <Text style={styles.defaultAppText}>Default</Text>}
+          {status === DOWNLOADED ? (
+            <ActionButton
+              label="Remove"
+              onPress={onRemove}
+              textColor={Colors.removeButtonTextColor}
+            />
+          ) : (
+            <ActionButton
+              label="Get"
+              onPress={onDownload}
+              textColor={Colors.actionButtonTextColor}
+              downloading={downloading}
+              fixedSize={true}
+            />
+          )}
         </View>
       </View>
     );
@@ -200,20 +170,6 @@ const createStyles = (colorScheme: "light" | "dark") =>
       height: 65,
       borderRadius: 10,
     },
-    imageUpdating: {
-      opacity: 0.4,
-    },
-    updateOverlay: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      justifyContent: "center",
-      alignItems: "center",
-      backgroundColor: "rgba(128, 128, 128, 0.7)",
-      borderRadius: 10,
-    },
     infoContainer: {
       marginLeft: 16,
       justifyContent: "center",
@@ -236,14 +192,6 @@ const createStyles = (colorScheme: "light" | "dark") =>
       color: Colors[colorScheme].primaryTextColor,
       fontSize: 10,
     },
-    defaultAppText: {
-      fontSize: 14,
-      color: Colors[colorScheme].defaultAppTextColor,
-      fontStyle: "italic",
-      paddingHorizontal: 16,
-      paddingVertical: 8,
-      minWidth: 50,
-    },
     descriptionText: {
       fontWeight: "normal",
       color: Colors[colorScheme].ternaryTextColor,
@@ -263,21 +211,5 @@ const createStyles = (colorScheme: "light" | "dark") =>
       alignItems: "center",
       borderRadius: 8,
       backgroundColor: Colors[colorScheme].secondaryBackgroundColor,
-    },
-    updatingContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      marginTop: 2,
-    },
-    updatingText: {
-      fontSize: 9,
-      color: Colors.companyOrange,
-      fontWeight: "500",
-      marginRight: 4,
-    },
-    progressText: {
-      fontSize: 9,
-      color: Colors.companyOrange,
-      fontWeight: "600",
     },
   });

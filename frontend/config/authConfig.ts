@@ -13,7 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { CLIENT_ID, REDIRECT_URI, TOKEN_URL } from "@/constants/Constants";
+import { CLIENT_ID, REDIRECT_URI, TOKEN_URL} from "@/constants/Constants";
 
 export const AUTH_CONFIG = {
   issuer: TOKEN_URL,

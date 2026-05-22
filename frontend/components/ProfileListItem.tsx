@@ -13,10 +13,10 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
-import { Ionicons } from "@expo/vector-icons";
+import { View, Text, useColorScheme, StyleSheet } from "react-native";
 import React from "react";
-import { StyleSheet, Text, useColorScheme, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Colors } from "@/constants/Colors";
 import { Skeleton } from "./Skeleton";
 
 /**

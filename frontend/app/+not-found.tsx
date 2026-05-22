@@ -13,9 +13,9 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import NotFound from "@/components/NotFound";
 import { Stack } from "expo-router";
 import React from "react";
+import NotFound from "@/components/NotFound";
 
 export default function NotFoundScreen() {
   return (

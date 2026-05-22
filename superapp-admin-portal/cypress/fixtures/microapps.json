@@ -1,0 +1,24 @@
+[
+  {
+    "appId": "calendar",
+    "name": "Calendar",
+    "description": "Org calendar app",
+    "promoText": "Stay up to date",
+    "iconUrl": "/icons/calendar.png",
+    "bannerImageUrl": "/banners/calendar.png",
+    "isMandatory": 0,
+    "versions": [],
+    "roles": []
+  },
+  {
+    "appId": "news",
+    "name": "News",
+    "description": "Company newsroom",
+    "promoText": "Latest updates",
+    "iconUrl": "/icons/news.png",
+    "bannerImageUrl": "/banners/news.png",
+    "isMandatory": 0,
+    "versions": [],
+    "roles": []
+  }
+]

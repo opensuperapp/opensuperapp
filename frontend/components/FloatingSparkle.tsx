@@ -13,12 +13,12 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
-import { ScreenPaths } from "@/constants/ScreenPaths";
+import React, { useEffect, useRef } from "react";
+import { View, StyleSheet, Animated } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { Colors } from "@/constants/Colors";
 import { router } from "expo-router";
-import React, { useEffect, useMemo, useRef } from "react";
-import { Animated, StyleSheet, View } from "react-native";
+import { ScreenPaths } from "@/constants/ScreenPaths";
 
 const SPARKLE_COUNT = 1;
 
@@ -33,10 +33,7 @@ const generateSparkle = () => ({
 });
 
 const SparkleIcon = () => {
-  const sparkles = useMemo(
-    () => Array.from({ length: SPARKLE_COUNT }, generateSparkle),
-    []
-  );
+  const sparkles = Array.from({ length: SPARKLE_COUNT }, generateSparkle);
 
   return (
     <View style={styles.container}>
@@ -62,11 +59,7 @@ const FloatingSparkle = ({ sparkle }: { sparkle: any }) => {
   const translateX = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(0)).current;
 
-  const isMounted = useRef(true);
-
   const animate = () => {
-    if (!isMounted.current) return;
-
     opacity.setValue(0.2);
     scale.setValue(0.3);
     translateX.setValue(0);
@@ -97,18 +90,11 @@ const FloatingSparkle = ({ sparkle }: { sparkle: any }) => {
         delay: sparkle.delay,
         useNativeDriver: true,
       }),
-    ]).start(() => {
-      if (isMounted.current) {
-        animate();
-      }
-    });
+    ]).start(() => animate());
   };
 
   useEffect(() => {
     animate();
-    return () => {
-      isMounted.current = false;
-    };
   }, []);
 
   return (

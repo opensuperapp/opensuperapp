@@ -13,16 +13,23 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { LAST_ACTIVE_PATH_KEY } from "@/constants/Constants";
-import { ScreenPaths } from "@/constants/ScreenPaths";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { ScreenPaths } from "@/constants/ScreenPaths";
+import { LAST_ACTIVE_PATH_KEY } from "@/constants/Constants";
+import { recordScreenView, recordScreenViewDuration } from "@/telemetry/metrics";
 
 export const useTrackActiveScreen = (pathname: ScreenPaths) => {
+  const screenStartTimeRef = useRef<number | null>(null);
+
   useFocusEffect(
     useCallback(() => {
       if (!pathname) return;
+
+      const screenStartTime = Date.now();
+      screenStartTimeRef.current = screenStartTime;
+      recordScreenView(pathname);
 
       const savePath = async () => {
         // Optional delay — only if needed
@@ -34,6 +41,15 @@ export const useTrackActiveScreen = (pathname: ScreenPaths) => {
       };
 
       savePath();
+
+      return () => {
+        // Record screen view duration when screen loses focus
+        if (screenStartTimeRef.current) {
+          const duration = Date.now() - screenStartTimeRef.current;
+          recordScreenViewDuration(duration, pathname);
+          screenStartTimeRef.current = null;
+        }
+      };
     }, [pathname])
   );
 };

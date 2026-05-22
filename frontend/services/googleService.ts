@@ -15,20 +15,20 @@
 // under the License.
 import {
   GOOGLE_ACCESS_TOKEN_KEY,
-  GOOGLE_ANDROID_CLIENT_ID,
-  GOOGLE_DRIVE_FILE_DOWNLOAD_URL,
-  GOOGLE_DRIVE_LIST_FILES_URL,
-  GOOGLE_DRIVE_UPLOAD_URL,
-  GOOGLE_IOS_CLIENT_ID,
-  GOOGLE_REFRESH_TOKEN_KEY,
-  GOOGLE_TOKEN_INFO_URL,
-  GOOGLE_TOKEN_URL,
   GOOGLE_USER_INFO_KEY,
   GOOGLE_USER_INFO_URL,
+  GOOGLE_DRIVE_UPLOAD_URL,
+  GOOGLE_DRIVE_LIST_FILES_URL,
+  GOOGLE_DRIVE_FILE_DOWNLOAD_URL,
+  GOOGLE_TOKEN_INFO_URL,
+  GOOGLE_IOS_CLIENT_ID,
+  GOOGLE_ANDROID_CLIENT_ID,
   GOOGLE_WEB_CLIENT_ID,
+  GOOGLE_TOKEN_URL,
+  GOOGLE_REFRESH_TOKEN_KEY,
 } from "@/constants/Constants";
 
-import { deleteItemAsync, getItemAsync, setItemAsync } from "expo-secure-store";
+import SecureStorage from "@/utils/secureStorage";
 import { Platform } from "react-native";
 
 /**
@@ -44,10 +44,9 @@ interface GoogleUserInfo {
 
 /**
  * Refresh access token using stored refresh token.
- * Read and write from SecureStore.
  */
 export async function refreshAccessToken(): Promise<string> {
-  const refreshToken = await getItemAsync(GOOGLE_REFRESH_TOKEN_KEY);
+  const refreshToken = await SecureStorage.getItem(GOOGLE_REFRESH_TOKEN_KEY);
   if (!refreshToken) throw new Error("No refresh token found");
 
   const clientId = Platform.select({
@@ -83,10 +82,10 @@ export async function refreshAccessToken(): Promise<string> {
     throw new Error("No access token returned from refresh");
   }
 
-  await setItemAsync(GOOGLE_ACCESS_TOKEN_KEY, data.access_token);
-
+  await SecureStorage.setItem(GOOGLE_ACCESS_TOKEN_KEY, data.access_token);
+  
   if (data.refresh_token) {
-    await setItemAsync(GOOGLE_REFRESH_TOKEN_KEY, data.refresh_token);
+    await SecureStorage.setItem(GOOGLE_REFRESH_TOKEN_KEY, data.refresh_token);
   }
 
   return data.access_token;
@@ -94,10 +93,9 @@ export async function refreshAccessToken(): Promise<string> {
 
 /**
  * Helper to get a valid access token, refreshing if needed.
- * Access token stored in SecureStore.
  */
 async function getValidAccessToken(): Promise<string> {
-  let accessToken = await getItemAsync(GOOGLE_ACCESS_TOKEN_KEY);
+  let accessToken = await SecureStorage.getItem(GOOGLE_ACCESS_TOKEN_KEY);
   if (!accessToken) throw new Error("No access token found");
 
   // Validate token
@@ -116,7 +114,7 @@ async function getValidAccessToken(): Promise<string> {
 }
 
 /**
- * Handles Google authentication and stores user info + tokens.
+ * Handles Google authentication and stores user info + token in SecureStorage.
  */
 export default async function googleAuthenticationService(
   response: any
@@ -130,11 +128,14 @@ export default async function googleAuthenticationService(
       const { authentication } = response;
 
       // Save access token
-      await setItemAsync(GOOGLE_ACCESS_TOKEN_KEY, authentication.accessToken);
+      await SecureStorage.setItem(
+        GOOGLE_ACCESS_TOKEN_KEY,
+        authentication.accessToken
+      );
 
       // Save refresh token if exists
       if (authentication.refreshToken) {
-        await setItemAsync(
+        await SecureStorage.setItem(
           GOOGLE_REFRESH_TOKEN_KEY,
           authentication.refreshToken
         );
@@ -151,7 +152,10 @@ export default async function googleAuthenticationService(
       const userInfo: GoogleUserInfo = await userInfoResponse.json();
 
       // Save user info
-      await setItemAsync(GOOGLE_USER_INFO_KEY, JSON.stringify(userInfo));
+      await SecureStorage.setItem(
+        GOOGLE_USER_INFO_KEY,
+        JSON.stringify(userInfo)
+      );
 
       return { status: true, error: "", userInfo };
     }
@@ -303,7 +307,7 @@ export async function listAppDataFiles(): Promise<
  */
 export async function isAuthenticatedWithGoogle(): Promise<boolean> {
   try {
-    const accessToken = await getItemAsync(GOOGLE_ACCESS_TOKEN_KEY);
+    const accessToken = await SecureStorage.getItem(GOOGLE_ACCESS_TOKEN_KEY);
     if (!accessToken) return false;
 
     const response = await fetch(GOOGLE_TOKEN_INFO_URL(accessToken));
@@ -322,24 +326,24 @@ export async function isAuthenticatedWithGoogle(): Promise<boolean> {
 }
 
 /**
- * Clears Google-related session info from SecureStore
+ * Clears Google-related session info from SecureStorage.
  */
 export async function removeGoogleAuthState(): Promise<void> {
   try {
-    await deleteItemAsync(GOOGLE_ACCESS_TOKEN_KEY);
-    await deleteItemAsync(GOOGLE_USER_INFO_KEY);
-    await deleteItemAsync(GOOGLE_REFRESH_TOKEN_KEY);
+    await SecureStorage.removeItem(GOOGLE_ACCESS_TOKEN_KEY);
+    await SecureStorage.removeItem(GOOGLE_USER_INFO_KEY);
+    await SecureStorage.removeItem(GOOGLE_REFRESH_TOKEN_KEY);
   } catch (error) {
     console.error("Failed to remove Google auth state:", error);
   }
 }
 
 /**
- * Retrieves stored Google user info from SecureStore.
+ * Retrieves stored Google user info from SecureStorage.
  */
 export async function getGoogleUserInfo(): Promise<GoogleUserInfo> {
   try {
-    const userInfo = await getItemAsync(GOOGLE_USER_INFO_KEY);
+    const userInfo = await SecureStorage.getItem(GOOGLE_USER_INFO_KEY);
     if (userInfo) {
       return JSON.parse(userInfo);
     }

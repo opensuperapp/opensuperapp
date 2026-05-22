@@ -15,7 +15,7 @@
 // under the License.
 import { Colors } from "@/constants/Colors";
 import React from "react";
-import { StyleSheet, Text, useColorScheme, View } from "react-native";
+import { View, Text, StyleSheet, useColorScheme } from "react-native";
 import { Skeleton } from "./Skeleton";
 
 interface AvatarProps {

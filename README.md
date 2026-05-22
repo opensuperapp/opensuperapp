@@ -1,90 +1,93 @@
-# OpenSuperApp
+<h1 align="left">Super App Mobile</h1>
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![GitHub last commit](https://img.shields.io/github/last-commit/opensuperapp/opensuperapp.svg)](https://github.com/opensuperapp/opensuperapp/commits/main)
-[![GitHub issues](https://img.shields.io/github/issues/opensuperapp/opensuperapp.svg)](https://github.com/opensuperapp/opensuperapp/issues)
+<img src="./resources/snapshots.png?" alt="Snapshot Image" width="700"/>
+<p align="left">
+  <a href="https://opensource.org/license/apache-2-0">
+    <img alt="License: Apache-2.0" src="https://img.shields.io/badge/License-Apache%202.0-blue.svg">
+  </a>
+  <!-- <a href="https://twitter.com/intent/follow?screen_name=wso2" rel="nofollow"><img src="https://img.shields.io/twitter/follow/wso2.svg?style=social&amp;label=Follow%20Us" style="max-width: 100%;"></a> -->
+</p>
 
-OpenSuperApp is an open-source Super App Framework built on micro-app architecture, enabling developers to integrate, orchestrate, and manage multiple web apps inside a unified container. It empowers organizations to create modular, scalable, and secure app ecosystems — without rebuilding authentication, communication, and lifecycle management for each individual app.
+This open source project provides a unified platform powered by **micro app architecture**, allowing you to seamlessly integrate multiple applications within a single container.
 
-## Why OpenSuperApp?
+With this approach, you can deploy multiple Web apps inside one super app while customizing its functionalities to fit your specific requirements.
 
-Modern organizations and platforms often evolve into ecosystems, hosting multiple apps for communication, productivity, learning, and operations. However, maintaining separate standalone apps leads to fragmentation, duplicated logic, and inconsistent user experiences.
+This repository serves as the foundation for hosting multiple micro-apps with seamless authentication, integration, and centralized management.
 
-**Micro-app architecture** solves this problem by allowing each app to be independently developed and deployed, while still operating inside one seamless super app environment.
+---
 
-OpenSuperApp fills that gap by providing all the core building blocks required for **Super App development**:
+📚 **[View Complete Documentation](https://opensource.lk/superapp-mobile/)** - Deployment guides, API references, and architecture details 
 
-- Unified authentication and access control,
-- Communication between super app via a **Native Bridge**,
-- Centralized configuration and analytics.
-
-By bringing together these capabilities, OpenSuperApp helps you build flexible, composable, and secure ecosystems — without reinventing infrastructure for each app.
-
-## OpenSuperApp Features
-
-- **Micro-App Architecture**
-
-  - Integrate multiple web applications within one host container. Each micro-app is isolated yet interoperable, enabling independent development and deployment cycles.
-
-- **Native Bridge**
-
-  - A lightweight, event-driven communication layer that enables secure data exchange via topics.
-
-- **Centralized Authentication**
-  - Built-in support for Single Sign-On (SSO) and access token propagation across all micro-apps. Works seamlessly with modern identity providers.
-
-## System Architecture
-
-Here’s a high-level view of the flow:
-<br></br>
-<img src="./resources/architecture_diagram.png" alt="Architecture Diagram" width="700"/>
-
-## Project Structure
+## 🧭 Project Structure
 
 ```bash
 .
-├── backend                  # Ballerina backend service
-│   └── README.md            # Detailed backend documentation
-├── frontend                 # React Native Super App
-│   └── README.md            # Detailed frontend documentation
-├── README.md                # You're here
+├── backend-services/         # Go microservices for SuperApp backend
+│   ├── core/                 # Main API service
+│   ├── token-service/        # OAuth2/JWT service
+│   └── README.md             
+├── docs/                     # Documentation (MkDocs)
+├── frontend/                 # React Native (Expo) mobile app
+├── observability/            # Monitoring stack (Prometheus, Grafana, Jaeger)
+├── sample-microapps/         # Example microapps for demonstration
+├── superapp-admin-portal/    # React admin web portal
+├── resources/                # Images, diagrams, and assets
+├── LICENSE                   # Apache 2.0 license
+├── mkdocs.yml                # Documentation site configuration
+├── package.json              # Root package configuration
+├── issue_template.md         # GitHub issue template
+└── pull_request_template.md  # GitHub pull request template
 ```
 
-## Technologies Used
+## ⚙️ Technologies Used
 
 ### Backend
 
-- **Language**: [Ballerina](https://ballerina.io/)
-- **Authentication**: Supports authentication via any standard OIDC-compliant Identity Provider
-- **Deployment**: Any cloud or internal developer platform
+- **Language**: [Go](https://go.dev/)
 
 ### Frontend
 
 - **Framework**: React Native (Expo)
-- **State Management**: Redux with Thunk
-- **Secure storage**
+- **State Management**: Redux Toolkit + Redux Persist
 
-## Getting Started
+### Authentication
 
-Each part of this repository has its own setup guide:
+- External identity provider (OIDC/OAuth2 compatible)
 
-- [Frontend](./frontend/README.md)
-- [Backend](./backend/README.md)
+## 🧱 System Architecture
 
-## Reporting Issues
+Here’s a high-level view of the flow:
+<br></br>
+<img src="./resources/architecture_diagram.png?" alt="Architecture Diagram" width="700"/>
 
-### 1. Opening an issue
 
-All known issues of WSO2 Superapp Mobile are filed at: https://github.com/opensuperapp/opensuperapp/issues. Please check this list before opening a new issue.
+### Key Concepts
 
-### 2. Reporting security issues
+#### SuperApp vs MicroApps
 
-Please do not report security issues via GitHub issues. Instead, follow the [WSO2 Security Vulnerability Reporting Guidelines](https://security.docs.wso2.com/en/latest/security-reporting/vulnerability-reporting-guidelines/).
+- **SuperApp**: The main container application that manages authentication, navigation, and micro-app lifecycle
+- **MicroApps**: Individual web applications loaded in WebViews, each serving specific functionality
+- **Bridge**: Communication layer between SuperApp and MicroApps (see `frontend/docs/BRIDGE_GUIDE.md`)
 
-## Contributing
 
-If you are planning on contributing to the development efforts of OpenSuperApp, you can do so by checking out the latest development version. The main branch holds the latest unreleased source code.
+## 🚀 Getting Started
 
-## License
+To get up and running quickly, follow the step-by-step guide in our documentation:
 
-OpenSuperApp is licensed under Apache 2.0. See the **[LICENSE](./LICENSE)** file for full details.
+👉 [Getting Started Guide](https://opensource.lk/superapp-mobile/getting-started/installation/)
+
+This guide covers prerequisites, setup instructions, and how to launch the Super App Mobile project locally.
+
+## 🐞 Reporting Issues
+
+### Opening an issue
+
+All known issues of Open Super App Mobile are filed at: https://github.com/opensuperapp/opensuperapp/issues. Please check this list before opening a new issue.
+
+### Next steps & future improvements
+
+Read the planned enhancements and longer-term tasks in [FUTURE_IMPROVEMENTS.md](./docs/FUTURE_IMPROVEMENTS.md).
+
+## 🤝 Contributing
+
+If you are planning on contributing to the development efforts of Open Superapp Mobile, you can do so by checking out the latest development version. The main branch holds the latest unreleased source code.

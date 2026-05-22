@@ -1,0 +1,184 @@
+[
+  {
+    "uid": "sl_51",
+    "summary": "Duruthu Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2023-01-06",
+    "end": "2023-01-07"
+  },
+  {
+    "uid": "sl_52",
+    "summary": "Tamil Thai Pongal Day",
+    "categories": ["Public", "Bank", "Mercantile"],
+    "start": "2023-01-15",
+    "end": "2023-01-16"
+  },
+  {
+    "uid": "sl_53",
+    "summary": "Independence Day",
+    "categories": ["Public", "Bank", "Mercantile"],
+    "start": "2023-02-04",
+    "end": "2023-02-05"
+  },
+  {
+    "uid": "sl_54",
+    "summary": "Nawam Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2023-02-05",
+    "end": "2023-02-06"
+  },
+  {
+    "uid": "sl_55",
+    "summary": "Maha sivarathri Day",
+    "categories": ["Public", "Bank"],
+    "start": "2023-03-18",
+    "end": "2023-03-19"
+  },
+  {
+    "uid": "sl_56",
+    "summary": "Madin Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2023-03-06",
+    "end": "2023-03-07"
+  },
+  {
+    "uid": "sl_57",
+    "summary": "Bak Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2023-04-05",
+    "end": "2023-04-06"
+  },
+  {
+    "uid": "sl_58",
+    "summary": "Good Friday",
+    "categories": ["Public", "Bank"],
+    "start": "2023-04-07",
+    "end": "2023-04-08"
+  },
+  {
+    "uid": "sl_59",
+    "summary": "Day prior to Sinhala & Tamil New Year Day",
+    "categories": ["Public", "Bank", "Mercantile"],
+    "start": "2023-04-13",
+    "end": "2023-04-14"
+  },
+  {
+    "uid": "sl_60",
+    "summary": "Sinhala & Tamil New Year Day",
+    "categories": ["Public", "Bank", "Mercantile"],
+    "start": "2023-04-14",
+    "end": "2023-04-15"
+  },
+  {
+    "uid": "sl_61",
+    "summary": "Id-Ul-Fitr (Ramazan Festival Day)",
+    "categories": ["Public", "Bank"],
+    "start": "2023-04-22",
+    "end": "2023-04-23"
+  },
+  {
+    "uid": "sl_62",
+    "summary": "May Day",
+    "categories": ["Public", "Bank", "Mercantile"],
+    "start": "2023-05-01",
+    "end": "2023-05-02"
+  },
+  {
+    "uid": "sl_63",
+    "summary": "Vesak Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2023-05-05",
+    "end": "2023-05-06"
+  },
+  {
+    "uid": "sl_64",
+    "summary": "Day following Vesak Full Moon Poya Day",
+    "categories": ["Public", "Bank", "Mercantile"],
+    "start": "2023-05-06",
+    "end": "2023-05-07"
+  },
+  {
+    "uid": "sl_65",
+    "summary": "Poson Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2023-06-03",
+    "end": "2023-06-04"
+  },
+  {
+    "uid": "sl_66",
+    "summary": "Id-Ul-Alha (Hadji Festival Day)",
+    "categories": ["Public", "Bank"],
+    "start": "2023-06-29",
+    "end": "2023-06-30"
+  },
+  {
+    "uid": "sl_67",
+    "summary": "Adhi Esala Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2023-07-03",
+    "end": "2023-07-04"
+  },
+  {
+    "uid": "sl_68",
+    "summary": "Esala Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2023-08-01",
+    "end": "2023-08-02"
+  },
+  {
+    "uid": "sl_69",
+    "summary": "Nikini Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2023-08-30",
+    "end": "2023-08-31"
+  },
+  {
+    "uid": "sl_70",
+    "summary": "Milad-Un-Nabi (Holy Prophet\u2019s Birthday)",
+    "categories": ["Public", "Bank", "Mercantile"],
+    "start": "2023-09-28",
+    "end": "2023-09-29"
+  },
+  {
+    "uid": "sl_71",
+    "summary": "Binara Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2023-09-29",
+    "end": "2023-09-30"
+  },
+  {
+    "uid": "sl_72",
+    "summary": "Vap Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2023-10-28",
+    "end": "2023-10-29"
+  },
+  {
+    "uid": "sl_73",
+    "summary": "Deepavali Festival Day",
+    "categories": ["Public", "Bank"],
+    "start": "2023-11-12",
+    "end": "2023-11-13"
+  },
+  {
+    "uid": "sl_74",
+    "summary": "Il Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2023-11-26",
+    "end": "2023-11-27"
+  },
+  {
+    "uid": "sl_75",
+    "summary": "Christmas Day",
+    "categories": ["Public", "Bank", "Mercantile"],
+    "start": "2023-12-25",
+    "end": "2023-12-26"
+  },
+  {
+    "uid": "sl_76",
+    "summary": "Unduvap Full Moon Poya Day",
+    "categories": ["Public", "Bank"],
+    "start": "2023-12-26",
+    "end": "2023-12-27"
+  }
+]

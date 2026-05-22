@@ -13,15 +13,15 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import { useEffect, useState } from "react";
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { XMLParser } from "fast-xml-parser";
 import {
   NEWS_STORAGE_KEY,
   NEWS_TIMESTAMP_KEY,
   NEWS_URL,
 } from "@/constants/Constants";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
-import { XMLParser } from "fast-xml-parser";
-import { useEffect, useState } from "react";
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
 

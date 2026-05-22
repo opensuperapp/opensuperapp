@@ -13,11 +13,10 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import {
-  AndroidConfig,
-  ConfigPlugin,
+const {
   withAndroidManifest,
-} from "@expo/config-plugins";
+  AndroidConfig,
+} = require("@expo/config-plugins");
 
 interface RemoveIntentSchemeProps {
   scheme: string;
@@ -28,9 +27,7 @@ interface RemoveIntentSchemeProps {
  * @param androidManifest The AndroidManifest.xml object
  * @returns The main activity object or null if not found
  */
-const getMainActivity = (
-  androidManifest: AndroidConfig.Manifest.AndroidManifest
-): AndroidConfig.Manifest.ManifestActivity | null => {
+const getMainActivity = (androidManifest: any): any => {
   const { application } = androidManifest.manifest;
   if (!application || !Array.isArray(application)) {
     return null;
@@ -42,14 +39,15 @@ const getMainActivity = (
   }
 
   // Find the activity with the LAUNCHER intent filter
-  const mainActivity = mainApplication.activity.find((activity) =>
+  const mainActivity = mainApplication.activity.find((activity: any) =>
     activity["intent-filter"]?.some(
-      (intentFilter) =>
+      (intentFilter: any) =>
         intentFilter.action?.some(
-          (action) => action.$["android:name"] === "android.intent.action.MAIN"
+          (action: any) =>
+            action.$["android:name"] === "android.intent.action.MAIN"
         ) &&
         intentFilter.category?.some(
-          (category) =>
+          (category: any) =>
             category.$["android:name"] === "android.intent.category.LAUNCHER"
         )
     )
@@ -64,16 +62,16 @@ const getMainActivity = (
  * @param props The properties for the plugin
  * @param props.scheme The scheme to remove
  */
-const withRemoveIntentScheme: ConfigPlugin<RemoveIntentSchemeProps> = (
-  config,
-  { scheme }
+const withRemoveIntentScheme = (
+  config: any,
+  { scheme }: RemoveIntentSchemeProps
 ) => {
   if (!scheme || typeof scheme !== "string" || scheme.trim() === "") {
     console.warn("Scheme is required and must be a non-empty string");
     return config;
   }
 
-  return withAndroidManifest(config, (config) => {
+  return withAndroidManifest(config, (config: any) => {
     const androidManifest = config.modResults;
     const mainActivity = getMainActivity(androidManifest);
 
@@ -86,11 +84,11 @@ const withRemoveIntentScheme: ConfigPlugin<RemoveIntentSchemeProps> = (
 
     if (mainActivity["intent-filter"]) {
       // Iterate over each intent-filter
-      mainActivity["intent-filter"].forEach((intentFilter) => {
+      mainActivity["intent-filter"].forEach((intentFilter: any) => {
         if (intentFilter.data) {
           // Filter out the data tag with the specified scheme
           intentFilter.data = intentFilter.data.filter(
-            (data) => data.$["android:scheme"] !== scheme
+            (data: any) => data.$["android:scheme"] !== scheme
           );
         }
       });
@@ -100,4 +98,4 @@ const withRemoveIntentScheme: ConfigPlugin<RemoveIntentSchemeProps> = (
   });
 };
 
-export default withRemoveIntentScheme;
+module.exports = withRemoveIntentScheme;

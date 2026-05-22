@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "target": "ES2021",
+    "lib": ["ES2021", "DOM"],
+    "types": ["cypress", "@testing-library/cypress"]
+  },
+  "include": ["cypress/**/*.ts", "cypress/**/*.tsx"]
+}

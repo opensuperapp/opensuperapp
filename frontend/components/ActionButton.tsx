@@ -16,11 +16,11 @@
 import { Colors } from "@/constants/Colors";
 import React from "react";
 import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
   TouchableOpacity,
+  Text,
+  StyleSheet,
   useColorScheme,
+  ActivityIndicator,
 } from "react-native";
 
 interface ActionButtonProps {

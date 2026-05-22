@@ -25,3 +25,6 @@ replay_pid*
 
 # Node modules
 node_modules/
+
+# MkDocs 
+/site

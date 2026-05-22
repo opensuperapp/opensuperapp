@@ -13,13 +13,15 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { APPS, DEFAULT_VIEWING_MODE } from "@/constants/Constants";
 import { DisplayMode } from "@/types/navigation";
 import {
+  saveExchangedToken,
   deleteExchangedToken,
   persistAppsWithoutTokens,
-  saveExchangedToken,
 } from "@/utils/exchangedTokenStore";
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export type Version = {
   version: string;
@@ -27,6 +29,13 @@ export type Version = {
   releaseNotes: string;
   downloadUrl: string;
   iconUrl: string;
+};
+
+export type MicroAppConfig = {
+  microAppId: string;
+  configKey: string;
+  configValue: any;
+  isActive: number;
 };
 
 export type MicroApp = {
@@ -38,6 +47,7 @@ export type MicroApp = {
   bannerImageUrl: string;
   isMandatory: number;
   versions: Version[];
+  configs?: MicroAppConfig[];
   status?: string | "";
   webViewUri?: string | "";
   clientId?: string | "";
@@ -48,13 +58,11 @@ export type MicroApp = {
 interface AppsState {
   apps: MicroApp[];
   downloading: string[];
-  downloadProgress: { [appId: string]: number }; // Track download progress for each app (0-100)
 }
 
 const initialState: AppsState = {
   apps: [],
   downloading: [],
-  downloadProgress: {},
 };
 
 const appsSlice = createSlice({
@@ -71,14 +79,6 @@ const appsSlice = createSlice({
       state.downloading = state.downloading.filter(
         (appId) => appId !== action.payload
       );
-      delete state.downloadProgress[action.payload];
-    },
-    updateDownloadProgress(
-      state,
-      action: PayloadAction<{ appId: string; progress: number }>
-    ) {
-      const { appId, progress } = action.payload;
-      state.downloadProgress[appId] = Math.min(Math.max(progress, 0), 100); // Clamp between 0-100
     },
     updateAppStatus: (
       state,
@@ -104,18 +104,21 @@ const appsSlice = createSlice({
         app.status = status;
         app.webViewUri = webViewUri;
         app.clientId = clientId;
-        app.displayMode = displayMode ?? app.displayMode;
-        if (exchangedToken !== undefined) {
+        app.displayMode = displayMode || DEFAULT_VIEWING_MODE;
+        if (exchangedToken) {
           app.exchangedToken = exchangedToken;
-          void (exchangedToken
-            ? saveExchangedToken(appId, exchangedToken)
-            : deleteExchangedToken(appId));
+          // Save exchanged token to SecureStore
+          saveExchangedToken(appId, exchangedToken);
+        } else {
+          app.exchangedToken = "";
+          // Remove exchanged token from SecureStore
+          deleteExchangedToken(appId);
         }
       }
-      // persist without tokens
-      void persistAppsWithoutTokens(state.apps);
-    },
 
+      // Save apps to AsyncStorage without tokens
+      persistAppsWithoutTokens(state.apps);
+    },
     updateExchangedToken: (
       state,
       action: PayloadAction<{ appId: string; exchangedToken: string }>
@@ -124,9 +127,12 @@ const appsSlice = createSlice({
       const app = state.apps.find((app) => app.appId === appId);
       if (app) {
         app.exchangedToken = exchangedToken;
-        void saveExchangedToken(appId, exchangedToken); // secure store
+        // Save exchanged token to SecureStore
+        saveExchangedToken(appId, exchangedToken);
       }
-      void persistAppsWithoutTokens(state.apps); // strip tokens when saving
+
+      // Save apps to AsyncStorage without tokens
+      persistAppsWithoutTokens(state.apps);
     },
   },
 });
@@ -135,7 +141,6 @@ export const {
   setApps,
   addDownloading,
   removeDownloading,
-  updateDownloadProgress,
   updateAppStatus,
   updateExchangedToken,
 } = appsSlice.actions;

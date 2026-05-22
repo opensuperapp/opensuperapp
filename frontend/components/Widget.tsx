@@ -26,7 +26,6 @@ import {
   useColorScheme,
   View,
 } from "react-native";
-import UpdateOverlay from "./UpdateOverlay";
 
 /**
  * Widget component to render a tappable micro app icon and name.
@@ -41,9 +40,6 @@ type WidgetProps = {
   exchangedToken: string;
   appId: string;
   displayMode?: DisplayMode;
-  version?: string;
-  isUpdating?: boolean;
-  downloadProgress?: number;
 };
 
 const Widget = React.memo(
@@ -56,9 +52,6 @@ const Widget = React.memo(
     exchangedToken,
     appId,
     displayMode,
-    version,
-    isUpdating = false,
-    downloadProgress,
   }: WidgetProps) => {
     const colorScheme = useColorScheme();
     const styles = createStyles(colorScheme ?? "light");
@@ -73,7 +66,6 @@ const Widget = React.memo(
           exchangedToken,
           appId,
           displayMode,
-          version,
         },
       });
     };
@@ -83,25 +75,14 @@ const Widget = React.memo(
         activeOpacity={0.5}
         style={styles.container}
         onPress={handlePress}
-        disabled={isUpdating}
       >
         <View style={styles.iconContainer}>
           <Image
-            style={[styles.image, isUpdating && styles.imageUpdating]}
-            source={iconUrl}
+            style={styles.image}
+            source={iconUrl.trim()}
             contentFit="contain"
             transition={1000}
           />
-          {isUpdating && (
-            <View style={styles.updateOverlay}>
-              <UpdateOverlay
-                size={32}
-                strokeWidth={3}
-                color="#ffffff"
-                progress={downloadProgress}
-              />
-            </View>
-          )}
         </View>
         <Text
           style={styles.appName}
@@ -111,16 +92,6 @@ const Widget = React.memo(
         >
           {name}
         </Text>
-        {isUpdating && (
-          <View style={styles.updatingContainer}>
-            <Text style={styles.updatingText}>Updating...</Text>
-            <Text style={styles.progressText}>
-              {downloadProgress !== undefined
-                ? `${Math.round(downloadProgress)}%`
-                : ""}
-            </Text>
-          </View>
-        )}
       </TouchableOpacity>
     );
   }
@@ -156,20 +127,6 @@ const createStyles = (colorScheme: "light" | "dark") =>
       height: 65,
       borderRadius: 10,
     },
-    imageUpdating: {
-      opacity: 0.4,
-    },
-    updateOverlay: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      justifyContent: "center",
-      alignItems: "center",
-      backgroundColor: "rgba(128, 128, 128, 0.7)",
-      borderRadius: 10,
-    },
     appName: {
       marginTop: 8,
       textAlign: "center",
@@ -177,26 +134,6 @@ const createStyles = (colorScheme: "light" | "dark") =>
       lineHeight: 16,
       color: Colors[colorScheme].ternaryTextColor,
       paddingHorizontal: 4,
-    },
-    updatingContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      marginTop: 2,
-      paddingHorizontal: 4,
-    },
-    updatingText: {
-      textAlign: "center",
-      fontSize: 10,
-      color: Colors.companyOrange,
-      fontWeight: "500",
-      marginRight: 4,
-    },
-    progressText: {
-      textAlign: "center",
-      fontSize: 10,
-      color: Colors.companyOrange,
-      fontWeight: "600",
     },
   });
 

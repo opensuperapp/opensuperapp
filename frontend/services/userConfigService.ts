@@ -20,9 +20,9 @@ import {
   USER_CONFIGURATIONS,
 } from "@/constants/Constants";
 import { UserConfig } from "@/context/slices/userConfigSlice";
-import { store } from "@/context/store";
 import { apiRequest } from "@/utils/requestHandler";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as secureStorage from "@/utils/secureStorage";
+import { store } from "@/context/store";
 
 // Send downloaded appId to backend (user configurations)
 export const UpdateUserConfiguration = async (
@@ -31,12 +31,11 @@ export const UpdateUserConfiguration = async (
   onLogout: () => Promise<void>
 ) => {
   try {
-    type CachedUserConfig = Omit<UserConfig, "email">;
-    // Get the latest state directly from AsyncStorage each time
-    const storedUserConfigsJson = await AsyncStorage.getItem(
+    // Get the latest state directly from secure storage each time
+    const storedUserConfigsJson = await secureStorage.getItem(
       USER_CONFIGURATIONS
     );
-    let storedUserConfigs: CachedUserConfig[] = storedUserConfigsJson
+    let storedUserConfigs: UserConfig[] = storedUserConfigsJson
       ? JSON.parse(storedUserConfigsJson)
       : [];
 
@@ -53,6 +52,7 @@ export const UpdateUserConfiguration = async (
         {
           configKey: APP_LIST_CONFIG_KEY,
           configValue: [],
+          email,
           isActive: 1,
         },
       ];
@@ -85,27 +85,19 @@ export const UpdateUserConfiguration = async (
         : { ...config }
     );
 
-    await AsyncStorage.setItem(
+    await secureStorage.setItem(
       USER_CONFIGURATIONS,
       JSON.stringify(updatedUserConfigs)
     );
-    const state = store.getState();
-    const email = state.auth.email;
-    if (!email) {
-      console.error(
-        "Missing auth.email in Redux (expected after SecureStore restore)."
-      );
-      return false;
-    }
 
     const response = await apiRequest(
       {
-        url: `${BASE_URL}/users/user-configs`,
+        url: `${BASE_URL}/users/app-configs`,
         method: "POST",
         data: {
           configKey: APP_LIST_CONFIG_KEY,
           configValue: updatedConfigValue,
-          email,
+          email: appUserConfigs.email,
           isActive: appUserConfigs.isActive,
         },
       },
@@ -118,7 +110,7 @@ export const UpdateUserConfiguration = async (
         response?.status
       );
 
-      await AsyncStorage.setItem(
+      await secureStorage.setItem(
         USER_CONFIGURATIONS,
         JSON.stringify(storedUserConfigs)
       );

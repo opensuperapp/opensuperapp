@@ -13,203 +13,47 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+
 import ListItem from "@/components/ListItem";
 import SearchBar from "@/components/SearchBar";
 import SignInMessage from "@/components/SignInMessage";
 import SignInModal from "@/components/SignInModal";
 import { Colors } from "@/constants/Colors";
 import { NOT_DOWNLOADED } from "@/constants/Constants";
-import { AppDispatch, RootState } from "@/context/store";
-import {
-  downloadMicroApp,
-  loadMicroAppDetails,
-  removeMicroApp,
-} from "@/services/appStoreService";
-import { logout } from "@/services/authService";
-import { useEffect, useRef, useState } from "react";
+import { useStore } from "@/hooks/useStore";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Keyboard,
-  SafeAreaView,
   StyleSheet,
   Text,
   useColorScheme,
   View,
 } from "react-native";
-import { useDispatch, useSelector } from "react-redux";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const Store = () => {
-  const dispatch = useDispatch();
-  const { apps, downloading } = useSelector((state: RootState) => state.apps);
-  const downloadProgress = useSelector(
-    (state: RootState) => state.apps.downloadProgress
-  );
-  const { accessToken } = useSelector((state: RootState) => state.auth);
-  const { defaultMicroAppIds } = useSelector(
-    (state: RootState) => state.appConfig
-  );
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [showModal, setShowModal] = useState<boolean>(false);
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [filteredApps, setFilteredApps] = useState(apps);
-  const [installationQueue, setInstallationQueue] = useState<
-    {
-      appId: string;
-      downloadUrl: string;
-    }[]
-  >([]);
-  const [isProcessingQueue, setIsProcessingQueue] = useState(false);
-
-  const isMountedRef = useRef(true);
-  const activeDownloadsRef = useRef(new Set<string>());
-
   const colorScheme = useColorScheme();
   const styles = createStyles(colorScheme ?? "light");
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  // load micro apps list
-  useEffect(() => {
-    const initializeApps = async () => {
-      if (!accessToken) return;
-
-      setIsLoading(true);
-      try {
-        await loadMicroAppDetails(dispatch, logout);
-      } finally {
-        if (isMountedRef.current) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    initializeApps();
-  }, [dispatch, accessToken]);
-
-  const handleRemoveMicroApp = async (dispatch: AppDispatch, appId: string) => {
-    Alert.alert(
-      "Confirm Removal",
-      "Are you sure you want to remove this app?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: async () => {
-            await removeMicroApp(dispatch, appId, logout);
-          },
-        },
-      ]
-    );
-  };
-
-  // Filter apps based on search query
-  useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setFilteredApps(apps);
-    } else {
-      const filtered = apps.filter(
-        (app) =>
-          app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          app.description.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredApps(filtered);
-    }
-  }, [searchQuery, apps]);
-
-  // Process the installation queue
-  useEffect(() => {
-    let isProcessing = false;
-    const processQueue = async () => {
-      if (
-        isProcessing ||
-        installationQueue.length === 0 ||
-        !isMountedRef.current
-      )
-        return;
-
-      isProcessing = true;
-      const currentItem = installationQueue[0];
-
-      try {
-        if (!activeDownloadsRef.current.has(currentItem.appId)) {
-          activeDownloadsRef.current.add(currentItem.appId);
-
-          dispatch({
-            type: "SET_DOWNLOAD_PROGRESS",
-            payload: { appId: currentItem.appId, progress: 0 },
-          });
-          await downloadMicroApp(
-            dispatch,
-            currentItem.appId,
-            currentItem.downloadUrl,
-            logout
-          );
-          if (isMountedRef.current) {
-            setInstallationQueue((prev) =>
-              prev.filter((item) => item.appId !== currentItem.appId)
-            );
-          }
-        }
-      } catch (error) {
-        console.error("Installation failed:", error);
-        if (isMountedRef.current) {
-          Alert.alert("Error", "Installation failed try again later");
-          dispatch({
-            type: "REMOVE_DOWNLOADING_APP",
-            payload: currentItem.appId,
-          });
-          setInstallationQueue((prev) =>
-            prev.filter((item) => item.appId !== currentItem.appId)
-          );
-        }
-      } finally {
-        if (isMountedRef.current) {
-          activeDownloadsRef.current.delete(currentItem.appId);
-          isProcessing = false;
-        }
-      }
-    };
-
-    processQueue();
-  }, [installationQueue, dispatch]);
-
-  // Modified download handler to create a serialized task queue
-  const handleDownload = (appId: string, downloadUrl: string) => {
-    //if not logged in, show signin
-    if (!accessToken) {
-      setShowModal(true);
-      return;
-    }
-
-    // Check if already in queue, downloading, or in the downloading state
-    const isAlreadyQueued = installationQueue.some(
-      (item) => item.appId === appId
-    );
-    const isCurrentlyDownloading = activeDownloadsRef.current.has(appId);
-    const isInDownloadingState = downloading.includes(appId);
-
-    if (!isAlreadyQueued && !isCurrentlyDownloading && !isInDownloadingState) {
-      dispatch({
-        type: "SET_DOWNLOAD_PROGRESS",
-        payload: { appId, progress: 0 },
-      });
-      setInstallationQueue((prev) => [...prev, { appId, downloadUrl }]);
-      dispatch({ type: "ADD_DOWNLOADING_APP", payload: appId });
-    }
-  };
+  const {
+    accessToken,
+    filteredApps,
+    downloading,
+    installationQueue,
+    isLoading,
+    showModal,
+    setShowModal,
+    searchQuery,
+    setSearchQuery,
+    handleDownload,
+    handleRemoveMicroApp,
+  } = useStore();
 
   // When default apps added need to remove this logic
   if (!accessToken) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
         <View style={styles.signInContainer}>
           <View style={styles.overlay}>
             <View style={styles.modal}>
@@ -223,6 +67,7 @@ const Store = () => {
 
   return (
     <SafeAreaView
+      edges={['left', 'right']}
       style={{
         backgroundColor: Colors[colorScheme ?? "light"].primaryBackgroundColor,
         flex: 1,
@@ -264,12 +109,10 @@ const Store = () => {
                   downloading.includes(item.appId) ||
                   installationQueue.some((i) => i.appId === item.appId)
                 }
-                downloadProgress={downloadProgress[item.appId]}
                 onDownload={() =>
                   handleDownload(item.appId, item.versions[0].downloadUrl)
                 }
-                onRemove={() => handleRemoveMicroApp(dispatch, item.appId)}
-                isDefaultApp={defaultMicroAppIds?.includes(item.appId)}
+                onRemove={() => handleRemoveMicroApp(item.appId)}
               />
               {/* Horizontal Line */}
               {index !== filteredApps.length - 1 && (

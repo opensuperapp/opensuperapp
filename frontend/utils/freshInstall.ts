@@ -29,7 +29,7 @@ import { deleteItemAsync } from "expo-secure-store";
 
 const INSTALL_MARKER = "install_marker_v1";
 /**
- * Wipes SecureStore only on a true fresh install using an AsyncStorage “install marker”.
+ * Wipes SecureStore only on a true fresh install using an AsyncStorage "install marker".
  * Used because SecureStore can persist across app reinstalls, leaving stale auth secrets.
  * The AsyncStorage marker is a simple, widely used pattern in RN/Expo to detect fresh installs.
  * Ensures a clean, secure baseline before restoring auth or registering push tokens.
