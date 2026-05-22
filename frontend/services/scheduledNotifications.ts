@@ -101,7 +101,21 @@ export const scheduleSessionNotifications = async (
 export const clearNotifications = async () => {
   try {
     await notifee.cancelAllNotifications();
-    await clearLocalNotifications();
+
+    const scheduledIdsJson = await AsyncStorage.getItem(SCHEDULED_IDS_KEY);
+    const scheduledIds: string[] = scheduledIdsJson
+      ? JSON.parse(scheduledIdsJson)
+      : [];
+    const scheduledDataKeys = scheduledIds.map(
+      (id) => SCHEDULED_DATA_PREFIX + id
+    );
+
+    await AsyncStorage.multiRemove([
+      SCHEDULED_LOCAL_NOTIFICATIONS_KEY,
+      SCHEDULED_IDS_KEY,
+      CANCELLED_IDS_KEY,
+      ...scheduledDataKeys,
+    ]);
   } catch (error) {
     console.error("Error clearing notifications:", error);
   }
@@ -211,6 +225,7 @@ export const reconcileTriggeredNotifications = async () => {
         continue;
       }
       if (cancelledIds.has(id)) {
+        await AsyncStorage.removeItem(SCHEDULED_DATA_PREFIX + id);
         continue;
       }
 

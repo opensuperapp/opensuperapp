@@ -55,8 +55,8 @@ export default function Notifications() {
   const { localNotifications } = useLocalNotifications();
 
   const allNotifications = useMemo(() => {
-    const localMapped: Notification[] = localNotifications.map((ln) => ({
-      id: Number(`local-${ln.id}`),
+    const localMapped: Notification[] = localNotifications.map((ln, index) => ({
+      id: -(index + 1),
       title: ln.title,
       message: ln.body,
       createdAt: ln.triggeredAt.slice(0, 19).replace("T", " "),
