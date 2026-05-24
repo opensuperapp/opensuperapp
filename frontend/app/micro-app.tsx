@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 import NotFound from "@/components/NotFound";
+import TextPromptDialog from "@/components/TextPromptDialog";
 import { Colors } from "@/constants/Colors";
 import {
   DEVELOPER_APP_ANDROID_DEFAULT_URL,
@@ -59,9 +60,7 @@ import { injectedJavaScript, TOPIC } from "@/utils/bridge";
 import { qrScannerEmitter } from "@/utils/eventEmitter";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Google from "expo-auth-session/providers/google";
-import * as DocumentPicker from "expo-document-picker";
-import * as FileSystem from "expo-file-system";
-import { documentDirectory } from "expo-file-system";
+import { File, Paths } from "expo-file-system";
 import * as MailComposer from "expo-mail-composer";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
@@ -71,6 +70,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Keyboard,
+  KeyboardAvoidingView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -78,10 +78,10 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import prompt from "react-native-prompt-android";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 import { useDispatch, useSelector } from "react-redux";
+import * as DocumentPicker from "expo-document-picker";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -108,6 +108,7 @@ const MicroApp = () => {
   const [webUri, setWebUri] = useState<string>(
     isIos ? DEVELOPER_APP_IOS_DEFAULT_URL : DEVELOPER_APP_ANDROID_DEFAULT_URL
   );
+  const [appUrlDialogVisible, setAppUrlDialogVisible] = useState(false);
   const colorScheme = useColorScheme();
   const apps = useSelector((state: RootState) => state.apps.apps);
   const appScopes = useSelector(
@@ -621,8 +622,8 @@ const MicroApp = () => {
 
       if (config.attachments?.length) {
         for (const attachment of config.attachments) {
-          const info = await FileSystem.getInfoAsync(attachment);
-          if (!info.exists) {
+          const attachmentFile = new File(attachment);
+          if (!attachmentFile.exists) {
             throw new Error(`Attachment not found: ${attachment}`);
           }
         }
@@ -642,7 +643,6 @@ const MicroApp = () => {
     const targetApp = apps.find((app) => app.appId === targetAppId);
 
     if (targetApp?.status === DOWNLOADED) {
-      router.dismissAll();
       router.push({
         pathname: ScreenPaths.MICRO_APP,
         params: {
@@ -699,14 +699,14 @@ const MicroApp = () => {
 
   // Function to pick a document from device storage
   const handlePickDocument = async (
-    config?: DocumentPicker.DocumentPickerOptions
+    config?: DocumentPicker.DocumentPickerOptions,
   ) => {
     try {
       if (!config) {
         console.error("Missing Required DocumentPicker configuration.");
         sendResponseToWeb(
           "rejectPickDocument",
-          "Document picker configuration is missing."
+          "Document picker configuration is missing.",
         );
         return;
       }
@@ -715,7 +715,7 @@ const MicroApp = () => {
       if (result.canceled) {
         sendResponseToWeb(
           "rejectPickDocument",
-          "Document pick canceled by user."
+          "Document pick canceled by user.",
         );
         return;
       }
@@ -937,7 +937,7 @@ const MicroApp = () => {
             source={{
               uri: isDeveloper
                 ? webViewUri
-                : `${documentDirectory}${webViewUri}`,
+                : `${Paths.document.uri}${webViewUri}`,
             }}
             allowFileAccess
             allowUniversalAccessFromFileURLs
@@ -968,54 +968,7 @@ const MicroApp = () => {
             isDeveloper &&
             shouldShowHeader && (
               <TouchableOpacity
-                onPressIn={() => {
-                  isIos
-                    ? Alert.prompt(
-                        "App URL",
-                        "Enter App URL",
-                        [
-                          {
-                            text: "Cancel",
-                            style: "cancel",
-                          },
-                          {
-                            text: "OK",
-                            onPress: (value) => {
-                              if (value) {
-                                setWebUri(value);
-                              }
-                            },
-                          },
-                        ],
-                        "plain-text",
-                        webUri
-                      )
-                    : prompt(
-                        "App URL",
-                        "Enter App URL",
-                        [
-                          {
-                            text: "Cancel",
-                            onPress: () => {},
-                            style: "cancel",
-                          },
-                          {
-                            text: "OK",
-                            onPress: (value) => {
-                              if (value) {
-                                setWebUri(value);
-                              }
-                            },
-                            style: "default",
-                          },
-                        ],
-                        {
-                          type: "plain-text",
-                          cancelable: false,
-                          defaultValue: webUri,
-                        }
-                      );
-                }}
+                onPressIn={() => setAppUrlDialogVisible(true)}
                 hitSlop={20}
               >
                 <Text style={styles.headerText}>App URL</Text>
@@ -1028,6 +981,14 @@ const MicroApp = () => {
           {renderWebView(isDeveloper ? webUri : webViewUri)}
         </View>
       </View>
+      <TextPromptDialog
+        visible={appUrlDialogVisible}
+        title="App URL"
+        message="Enter App URL"
+        defaultValue={webUri}
+        onConfirm={setWebUri}
+        onCancel={() => setAppUrlDialogVisible(false)}
+      />
     </>
   );
 };
