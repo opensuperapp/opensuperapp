@@ -2,6 +2,9 @@
   "name": "superapp-mobile",
   "main": "expo-router/entry",
   "version": "1.0.0",
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
