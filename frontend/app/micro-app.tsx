@@ -60,8 +60,7 @@ import { injectedJavaScript, TOPIC } from "@/utils/bridge";
 import { qrScannerEmitter } from "@/utils/eventEmitter";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Google from "expo-auth-session/providers/google";
-import * as FileSystem from "expo-file-system/legacy";
-import { documentDirectory } from "expo-file-system/legacy";
+import { File, Paths } from "expo-file-system";
 import * as MailComposer from "expo-mail-composer";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
@@ -623,8 +622,8 @@ const MicroApp = () => {
 
       if (config.attachments?.length) {
         for (const attachment of config.attachments) {
-          const info = await FileSystem.getInfoAsync(attachment);
-          if (!info.exists) {
+          const attachmentFile = new File(attachment);
+          if (!attachmentFile.exists) {
             throw new Error(`Attachment not found: ${attachment}`);
           }
         }
@@ -938,7 +937,7 @@ const MicroApp = () => {
             source={{
               uri: isDeveloper
                 ? webViewUri
-                : `${documentDirectory}${webViewUri}`,
+                : `${Paths.document.uri}${webViewUri}`,
             }}
             allowFileAccess
             allowUniversalAccessFromFileURLs

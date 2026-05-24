@@ -118,6 +118,12 @@ let config: ExpoConfig = {
       },
     ],
     [
+      "react-native-app-auth",
+      {
+        redirectUrls: [`${APP_SCHEME}://`],
+      },
+    ],
+    [
       "expo-build-properties",
       {
         android: {
