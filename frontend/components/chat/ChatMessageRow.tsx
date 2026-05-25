@@ -98,7 +98,12 @@ const ChatMessageRow = ({
       {canShowActions && (
         <View style={styles.actionRow}>
           {showRegenerate && onRegenerate && (
-            <TouchableOpacity onPress={onRegenerate} hitSlop={8}>
+            <TouchableOpacity
+              onPress={onRegenerate}
+              hitSlop={8}
+              accessibilityLabel="regenerate_message"
+              accessibilityRole="button"
+            >
               <Ionicons name="refresh" size={20} color={theme.muted} />
             </TouchableOpacity>
           )}
@@ -106,6 +111,8 @@ const ChatMessageRow = ({
             <TouchableOpacity
               onPress={() => onCopyMessage(message.content)}
               hitSlop={8}
+              accessibilityLabel="copy_message"
+              accessibilityRole="button"
             >
               <Ionicons name="copy-outline" size={20} color={theme.muted} />
             </TouchableOpacity>

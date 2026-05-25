@@ -68,7 +68,12 @@ const RenameSessionModal = ({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <View style={[styles.overlay, { backgroundColor: "rgba(0,0,0,0.45)" }]}>
         <View
           style={[
