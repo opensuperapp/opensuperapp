@@ -176,21 +176,9 @@ export const CHAT_MENU_BUTTON_SIZE = 44;
 
 export const CHAT_SUGGESTIONS: ChatSuggestion[] = [
   {
-    id: "breakfast-today",
-    label: "Breakfast today",
-    prompt: "What's for breakfast today?",
-    category: ChatSuggestionCategory.Meals,
-  },
-  {
-    id: "lunch-today",
-    label: "Lunch today",
-    prompt: "What's for lunch today?",
-    category: ChatSuggestionCategory.Meals,
-  },
-  {
-    id: "snacks-today",
-    label: "Snacks today",
-    prompt: "What's for snacks today?",
+    id: "menu-today",
+    label: "Menu today",
+    prompt: "What's on the menu today?",
     category: ChatSuggestionCategory.Meals,
   },
   {
@@ -200,9 +188,21 @@ export const CHAT_SUGGESTIONS: ChatSuggestion[] = [
     category: ChatSuggestionCategory.Wifi,
   },
   {
-    id: "leave-tomorrow",
-    label: "Add leave tomorrow",
-    prompt: "I want to apply for leave tomorrow",
+    id: "wifi-delete",
+    label: "Delete guest Wi-Fi account",
+    prompt: "Delete my guest Wi-Fi account",
+    category: ChatSuggestionCategory.Wifi,
+  },
+  {
+    id: "view-leaves",
+    label: "View leaves",
+    prompt: "Show my upcoming leave requests",
+    category: ChatSuggestionCategory.Leave,
+  },
+  {
+    id: "cancel-leave",
+    label: "Cancel leave",
+    prompt: "I want to cancel a leave request",
     category: ChatSuggestionCategory.Leave,
   },
 ];
