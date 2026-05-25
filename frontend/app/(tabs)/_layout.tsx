@@ -76,7 +76,7 @@ const tabs: TabType[] = [
     name: "chat",
     requiresAuth: true,
     options: {
-      headerShown: true,
+      headerShown: false,
       title: CHAT_TAB_NAME,
       icon: "chatbubble-ellipses-outline",
       iconFocused: "chatbubble-ellipses",
