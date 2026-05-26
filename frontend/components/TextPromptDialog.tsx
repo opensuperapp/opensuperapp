@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 import { Colors } from "@/constants/Colors";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Modal,
@@ -23,6 +23,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  type TextInputProps,
   TouchableWithoutFeedback,
   useColorScheme,
   View,
@@ -38,8 +39,12 @@ type TextPromptDialogProps = {
   placeholder?: string;
   confirmLabel?: string;
   cancelLabel?: string;
+  autoCapitalize?: TextInputProps["autoCapitalize"];
+  autoCorrect?: boolean;
+  keyboardType?: TextInputProps["keyboardType"];
   onConfirm: (value: string) => void;
-  onCancel: () => void;
+  onClose: () => void;
+  onCancel?: () => void;
 };
 
 /**
@@ -55,25 +60,38 @@ const TextPromptDialog = ({
   placeholder,
   confirmLabel = "OK",
   cancelLabel = "Cancel",
+  autoCapitalize = "none",
+  autoCorrect = false,
+  keyboardType = "url",
   onConfirm,
+  onClose,
   onCancel,
 }: TextPromptDialogProps) => {
   const colorScheme = useColorScheme() ?? "light";
   const styles = createStyles(colorScheme);
   const [value, setValue] = useState(defaultValue);
+  const prevVisible = useRef(false);
+  const canConfirm = value.trim().length > 0;
 
   useEffect(() => {
-    if (visible) {
+    if (visible && !prevVisible.current) {
       setValue(defaultValue);
     }
+    prevVisible.current = visible;
   }, [visible, defaultValue]);
+
+  const handleDismiss = () => {
+    onCancel?.();
+    onClose();
+  };
 
   const handleConfirm = () => {
     const trimmed = value.trim();
-    if (trimmed) {
-      onConfirm(trimmed);
+    if (!trimmed) {
+      return;
     }
-    onCancel();
+    onConfirm(trimmed);
+    onClose();
   };
 
   return (
@@ -81,13 +99,13 @@ const TextPromptDialog = ({
       transparent
       visible={visible}
       animationType="fade"
-      onRequestClose={onCancel}
+      onRequestClose={handleDismiss}
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.keyboardView}
       >
-        <TouchableWithoutFeedback onPress={onCancel}>
+        <TouchableWithoutFeedback onPress={handleDismiss}>
           <View style={styles.overlay}>
             <TouchableWithoutFeedback>
               <View style={styles.card}>
@@ -98,22 +116,28 @@ const TextPromptDialog = ({
                   onChangeText={setValue}
                   placeholder={placeholder ?? message}
                   placeholderTextColor={Colors[colorScheme].mutedTextColor}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  keyboardType="url"
+                  autoCapitalize={autoCapitalize}
+                  autoCorrect={autoCorrect}
+                  keyboardType={keyboardType}
+                  autoFocus
                   style={styles.input}
                   selectionColor={Colors.companyOrange}
                 />
                 <View style={styles.actions}>
                   <Pressable
                     style={[styles.button, styles.cancelButton]}
-                    onPress={onCancel}
+                    onPress={handleDismiss}
                   >
                     <Text style={styles.cancelButtonText}>{cancelLabel}</Text>
                   </Pressable>
                   <Pressable
-                    style={[styles.button, styles.confirmButton]}
+                    style={[
+                      styles.button,
+                      styles.confirmButton,
+                      !canConfirm && styles.confirmButtonDisabled,
+                    ]}
                     onPress={handleConfirm}
+                    disabled={!canConfirm}
                   >
                     <Text style={styles.confirmButtonText}>{confirmLabel}</Text>
                   </Pressable>
@@ -206,6 +230,9 @@ const createStyles = (colorScheme: "light" | "dark") => {
     },
     confirmButton: {
       backgroundColor: Colors.companyOrange,
+    },
+    confirmButtonDisabled: {
+      opacity: 0.45,
     },
     cancelButtonText: {
       fontSize: 16,
