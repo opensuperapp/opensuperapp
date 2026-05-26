@@ -111,13 +111,6 @@ let config: ExpoConfig = {
   },
   plugins: [
     [
-      "@wavemaker/react-native-app-auth-expo-plugin",
-      {
-        redirectScheme: APP_SCHEME,
-        enableUniversalLinks: false,
-      },
-    ],
-    [
       "react-native-app-auth",
       {
         redirectUrls: [`${APP_SCHEME}://`],

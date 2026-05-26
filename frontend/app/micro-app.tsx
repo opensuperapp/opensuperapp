@@ -643,6 +643,7 @@ const MicroApp = () => {
     const targetApp = apps.find((app) => app.appId === targetAppId);
 
     if (targetApp?.status === DOWNLOADED) {
+      router.dismissAll();
       router.push({
         pathname: ScreenPaths.MICRO_APP,
         params: {
@@ -987,7 +988,7 @@ const MicroApp = () => {
         message="Enter App URL"
         defaultValue={webUri}
         onConfirm={setWebUri}
-        onCancel={() => setAppUrlDialogVisible(false)}
+        onClose={() => setAppUrlDialogVisible(false)}
       />
     </>
   );
