@@ -74,7 +74,6 @@ export const withFirebase = (config: ExpoConfig) => {
             "RNFBApp",
             "RNFBMessaging",
             "RNFBRemoteConfig",
-            "RNFBAnalytics",
           ],
         },
       };
