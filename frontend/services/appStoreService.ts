@@ -161,7 +161,7 @@ const unzipFile = async (dispatch: AppDispatch, appId: string) => {
       updateAppStatus({
         appId,
         status: DOWNLOADED,
-        webViewUri: relativeUri,
+        webViewUri: encodeURI(relativeUri),
         clientId: microAppConfig.clientId,
         displayMode: microAppConfig.displayMode,
       })
