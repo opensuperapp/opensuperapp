@@ -13,25 +13,16 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { isAndroid, isIos } from "@/constants/Constants";
 import { Event } from "@/constants/enums/Event";
-import { NativeEventEmitter, NativeModules } from "react-native";
 
 type EventHandler<T> = (data: T) => void;
 
+/**
+ * In-process event bus for cross-screen communication (e.g. QR scanner → micro-app).
+ * @returns {EventEmitter} Emitter instance.
+ */
 class EventEmitter<T> {
   private listeners: Map<Event, Set<EventHandler<T>>> = new Map();
-  private nativeEmitter?: NativeEventEmitter;
-
-  constructor() {
-    if (isIos || isAndroid) {
-      if (NativeModules.DeviceEventEmitter) {
-        this.nativeEmitter = new NativeEventEmitter(
-          NativeModules.DeviceEventEmitter
-        );
-      }
-    }
-  }
 
   /**
    * Add a listener for a specific event.
@@ -73,10 +64,6 @@ class EventEmitter<T> {
     if (handlers) {
       handlers.forEach((handler) => handler(data));
     }
-
-    if (this.nativeEmitter) {
-      this.nativeEmitter.emit(event, data);
-    }
   }
 
   /**
@@ -92,7 +79,6 @@ class EventEmitter<T> {
   }
 }
 
-// List of event emitters
 const qrScannerEmitter = new EventEmitter<string>();
 
 export { qrScannerEmitter };
