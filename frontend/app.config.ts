@@ -48,7 +48,7 @@ const ENABLE_FIREBASE = process.env.EXPO_PUBLIC_ENABLE_FIREBASE ?? FALSE;
 const ADD_ANDROID_NOTIFICATION_ICON =
   process.env.EXPO_PUBLIC_ADD_ANDROID_NOTIFICATION_ICON ?? FALSE;
 const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID ?? ""; // Comment this if EAS is not used
-const UPDATES_CHANNEL = process.env.EXPO_UPDATES_CHANNEL_NAME ?? "";
+const UPDATES_CHANNEL = process.env.EXPO_PUBLIC_UPDATES_CHANNEL ?? ""; // Comment this if EAS is not used
 
 /* =============== Firebase Configuration ===============
  *
@@ -84,7 +84,7 @@ let config: ExpoConfig = {
     checkAutomatically: "ON_LOAD",
     fallbackToCacheTimeout: 0,
   },
-  runtimeVersion: {
+   runtimeVersion: {
     policy: "appVersion",
   },
   ios: {
@@ -116,11 +116,6 @@ let config: ExpoConfig = {
       foregroundImage: "./assets/images/adaptive-icon.png",
       backgroundColor: "#476481",
     },
-  },
-  web: {
-    bundler: "metro",
-    output: "static",
-    favicon: "./assets/images/favicon.png",
   },
   plugins: [
     [
