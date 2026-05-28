@@ -1047,4 +1047,3 @@ const createStyles = (colorScheme: "light" | "dark", bottomSafeArea: number) =>
       fontWeight: "600",
     },
   });
-  
