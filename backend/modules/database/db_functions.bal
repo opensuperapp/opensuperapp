@@ -106,59 +106,69 @@ public isolated function getVersionsByPlatform(string platform) returns Version[
         select version;
 }
 
-# Get all the user configurations for a given user email.
+# Get all the user configurations for a given user UUID.
 #
-# + email - email address of the user
+# + uuid - UUID of the user
 # + return - Array of app configurations or else an error
-public isolated function getUserConfigsByEmail(string email) returns UserConfig[]|error {
+public isolated function getUserConfigs(string uuid) returns UserConfig[]|error {
     stream<UserConfig, sql:Error?> configStream =
-        databaseClient->query(getUserConfigsByEmailQuery(email));
+        databaseClient->query(getUserConfigsQuery(uuid));
     UserConfig[] userConfigs = check from UserConfig userConfig in configStream
         select userConfig;
 
     if userConfigs.length() == 0 {
-        UserConfig userConfig = check addDefaultUserConfig(email, []);
+        UserConfig userConfig = check addDefaultUserConfig(uuid, []);
         userConfigs.push(userConfig);
         return userConfigs;
     }
     foreach UserConfig config in userConfigs {
         string[] configValues = check config.configValue.fromJsonWithType();
-        UserConfig userConfig = check addDefaultUserConfig(email, configValues);
+        UserConfig userConfig = check addDefaultUserConfig(uuid, configValues);
         config.configValue = userConfig.configValue;
     }
     return userConfigs;
 }
 
-# Insert or update user configurations of the logged in user.
+# Insert or update user configurations using UUID.
 #
-# + email - email of the user
+# + uuid - UUID of the user
 # + userConfig - User configurations to be inserted or updated
 # + return - Insert or update result, or an error
-public isolated function updateUserConfigsByEmail(string email, UserConfig userConfig)
+public isolated function updateUserConfigs(string uuid, UserConfig userConfig)
     returns ExecutionSuccessResult|error {
 
-    sql:ParameterizedQuery query = updateUserConfigsByEmailQuery(
-        email,
-        userConfig.configKey,
-        userConfig.configValue.toJsonString(),
-        userConfig.isActive);
+    sql:ParameterizedQuery query = updateUserConfigsQuery(
+            uuid,
+            userConfig.configKey,
+            userConfig.configValue.toJsonString(),
+            userConfig.isActive);
     sql:ExecutionResult result = check databaseClient->execute(query);
     return result.cloneWithType(ExecutionSuccessResult);
 }
 
-# Get FCM tokens for a list of emails with pagination.
+# Get FCM tokens for a list of UUIDs with pagination.
 #
-# + emails - Array of user emails to retrieve tokens for
+# + uuids - Array of user UUIDs to retrieve tokens for
 # + startIndex - Start index for pagination
+# + itemsPerPage - Items per page
 # + return - FCMTokenResponse with tokens and pagination info, or an error.
-public isolated function getFcmTokens(string[] emails, int startIndex) returns FcmTokenResponse|error {
-    FcmTokenCount countRecord = check databaseClient->queryRow(countFcmTokensQuery(emails));
+public isolated function getFcmTokens(string[] uuids, int startIndex, int itemsPerPage = 'limit) 
+    returns FcmTokenResponse|error {
+    FcmTokenCount countRecord = check databaseClient->queryRow(countFcmTokensQuery(uuids));
+    if countRecord.count == 0 {
+        return {
+            fcmTokens: [],
+            totalResults: 0,
+            startIndex,
+            itemsPerPage: 0
+        };
+    }
 
     if startIndex < 0 || startIndex >= countRecord.count {
         return error(string `Invalid start index: ${startIndex}. Total results: ${countRecord.count}`);
     }
 
-    stream<FcmToken, sql:Error?> tokenStream = databaseClient->query(getFcmTokensQuery(emails, startIndex));
+    stream<FcmToken, sql:Error?> tokenStream = databaseClient->query(getFcmTokensQuery(uuids, startIndex, itemsPerPage));
     string[] tokens = check from FcmToken tokenRecord in tokenStream
         where tokenRecord.fcmToken != ""
         select tokenRecord.fcmToken;
@@ -167,17 +177,17 @@ public isolated function getFcmTokens(string[] emails, int startIndex) returns F
         fcmTokens: tokens,
         totalResults: countRecord.count,
         startIndex,
-        itemsPerPage: countRecord.count > 'limit ? 'limit : countRecord.count
+        itemsPerPage: countRecord.count > itemsPerPage ? itemsPerPage : countRecord.count
     };
 }
 
-# Inserts an FCM token into the `device_token` table for the given email.
+# Inserts an FCM token into the `device_token` table for the given UUID.
 #
-# + email - The user email
+# + uuid - The user UUID
 # + fcmToken - The FCM token to be stored
 # + return - `ExecutionSuccessResult` if the insertion succeeds, or `error` if it fails
-public isolated function addFcmToken(string email, string fcmToken) returns ExecutionSuccessResult|error {
-    sql:ExecutionResult result = check databaseClient->execute(addFcmTokenQuery(email, fcmToken));
+public isolated function addFcmToken(string uuid, string fcmToken) returns ExecutionSuccessResult|error {
+    sql:ExecutionResult result = check databaseClient->execute(addFcmTokenQuery(uuid, fcmToken));
     if result.affectedRowCount == 0 {
         return error("Failed to add FCM token.");
     }
@@ -214,18 +224,56 @@ public isolated function getAppConfigs() returns AppConfig[]|error {
     return results;
 }
 
-# Add default user configuration for a new user.
-# 
-# + email - Email of the user
+# Add default user configuration for a new user using UUID.
+#
+# + uuid - UUID of the user
 # + configValues - Initial configuration values
 # + return - UserConfig with default settings, or an error if the operation fails
-public isolated function addDefaultUserConfig(string email, string[] configValues) returns UserConfig|error {
+public isolated function addDefaultUserConfig(string uuid, string[] configValues) returns UserConfig|error {
     string[] defaultMicroAppIds = check getMicroAppIdsByGroups([]);
     configValues.push(...defaultMicroAppIds);
     return {
-        email,
+        uuid,
         configKey: DEFAULT_CONFIG_KEY,
         configValue: configValues.toJson(),
         isActive: 1
+    };
+}
+
+# Get notifications filtered by user groups and user ID.
+#
+# + groups - Array of user groups
+# + userId - User UUID to match against target_users
+# + startIndex - Start index for pagination
+# + itemsPerPage - Items per page
+# + return - Array of Notification or error
+public isolated function getNotifications(string[] groups, string userId, int startIndex, int itemsPerPage)
+    returns NotificationResponse|error? {
+
+    NotificationsCount countRecord = check databaseClient->queryRow(getNotificationsCountQuery(groups, userId));
+
+    if startIndex < 0 || startIndex >= countRecord.count {
+        log:printDebug("Invalid start index", startIndex = startIndex, totalResults = countRecord.count);
+        return;
+    }
+
+    stream<DbNotification, sql:Error?> result =
+        databaseClient->query(getNotificationsQuery(groups, userId, startIndex, itemsPerPage));
+
+    Notification[] notifications = check from DbNotification notification in result
+        select {
+            id: notification.id,
+            title: notification.title,
+            message: notification.message,
+            createdAt: notification.createdAt
+        };
+
+    return {
+        notifications,
+        totalResults: countRecord.count,
+        startIndex,
+        itemsPerPage: startIndex == 1
+            ? (countRecord.count < itemsPerPage ? countRecord.count : itemsPerPage)
+            : notifications.length()
     };
 }

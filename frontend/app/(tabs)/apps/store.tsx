@@ -255,6 +255,7 @@ const Store = () => {
                 webViewUri={item.webViewUri}
                 clientId={item.clientId}
                 exchangedToken={item.exchangedToken}
+                exchangedIdToken={item.exchangedIdToken}
                 versions={item.versions}
                 description={item.description}
                 iconUrl={item.iconUrl}

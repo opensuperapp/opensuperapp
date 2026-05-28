@@ -115,35 +115,35 @@ isolated function getVersionsByPlatformQuery(string platform) returns sql:Parame
         build DESC
 `;
 
-# Query to get user configurations by email
+# Query to get user configurations by UUID
 #
-# + email - User email
-# + return - Generated Query to get user configurations by email
-isolated function getUserConfigsByEmailQuery(string email) returns sql:ParameterizedQuery => `
+# + uuid - User UUID
+# + return - Generated Query to get user configurations by UUID
+isolated function getUserConfigsQuery(string uuid) returns sql:ParameterizedQuery => `
     SELECT
-        email,
+        uuid,
         config_key,
         config_value,
         active
     FROM
         user_config
     WHERE
-        email = ${email}
+        uuid = ${uuid}
     AND
         active = 1
 `;
 
-# Query update configurations by email
+# Query update configurations by UUID
 #
-# + email - User email
+# + uuid - User UUID
 # + configKey - Configuration key
 # + configValue - Configuration value
 # + isActive - status 1 or 0
 # + return - Generated Query to insert/update configurations
-isolated function updateUserConfigsByEmailQuery(string email, string configKey, string configValue, int isActive)
+isolated function updateUserConfigsQuery(string uuid, string configKey, string configValue, int isActive)
     returns sql:ParameterizedQuery => `
         INSERT INTO user_config (
-            email,
+            uuid,
             config_key,
             config_value,
             created_by,
@@ -151,68 +151,70 @@ isolated function updateUserConfigsByEmailQuery(string email, string configKey, 
             active
         )
         VALUES (
-            ${email},
+            ${uuid},
             ${configKey},
             ${configValue},
-            ${email},
-            ${email},
+            ${uuid},
+            ${uuid},
             ${isActive}
         )
         ON DUPLICATE KEY UPDATE
-            updated_by = ${email},
+            updated_by = ${uuid},
             config_value = ${configValue},
             active = ${isActive}
 `;
 
-# Query to get FCM tokens for a given email.
+# Query to get FCM tokens for a given UUID.
 #
-# + emails - Array of user emails to retrieve tokens for
+# + uuids - Array of user UUIDs to retrieve tokens for
 # + startIndex - Start index for pagination
+# + itemsPerPage - Items per page
 # + return - Generated query to get FCM tokens from the `device_token` table
-public isolated function getFcmTokensQuery(string[] emails, int startIndex) returns sql:ParameterizedQuery =>
+public isolated function getFcmTokensQuery(string[] uuids, int startIndex, int itemsPerPage = 'limit)
+    returns sql:ParameterizedQuery =>
     sql:queryConcat(`
-        SELECT 
+        SELECT
             t.fcm_token
-        FROM 
+        FROM
             device_token t
-        INNER JOIN 
+        INNER JOIN
             user_config uc ON t.user_id = uc.id
         WHERE
-            uc.email IN (`, sql:arrayFlattenQuery(emails), `) LIMIT ${'limit} OFFSET ${startIndex}
+            uc.uuid IN (`, sql:arrayFlattenQuery(uuids), `) LIMIT ${itemsPerPage} OFFSET ${startIndex}
     `);
 
-# Query to count FCM tokens for a given list of emails.
+# Query to count FCM tokens for a given list of UUIDs.
 #
-# + emails - Array of user emails to count tokens for
+# + uuids - Array of user UUIDs to count tokens for
 # + return - Generated query to count FCM tokens from the `device_token` table.
-public isolated function countFcmTokensQuery(string[] emails) returns sql:ParameterizedQuery =>
+public isolated function countFcmTokensQuery(string[] uuids) returns sql:ParameterizedQuery =>
     sql:queryConcat(`
-        SELECT 
+        SELECT
             COUNT(*) as count
-        FROM 
+        FROM
             device_token t
-        INNER JOIN 
+        INNER JOIN
             user_config uc ON t.user_id = uc.id
         WHERE
-            uc.email IN (`, sql:arrayFlattenQuery(emails), `) 
+            uc.uuid IN (`, sql:arrayFlattenQuery(uuids), `)
     `);
 
-# Query to insert or update an FCM token.
+# Query to insert or update an FCM token using UUID.
 #
-# + email - The user email used to fetch the corresponding `user_id` from `user_config`
+# + uuid - The user UUID used to fetch the corresponding `user_id` from `user_config`
 # + fcmToken - The FCM token to be inserted or updated
 # + return - Generated query to insert the FCM token into `device_token` table
-public isolated function addFcmTokenQuery(string email, string fcmToken) returns sql:ParameterizedQuery => `
+public isolated function addFcmTokenQuery(string uuid, string fcmToken) returns sql:ParameterizedQuery => `
     INSERT INTO device_token (
-        user_id, 
-        fcm_token, 
+        user_id,
+        fcm_token,
         created_at
-    )VALUES (
-        (SELECT id FROM user_config WHERE email = ${email} AND config_key = ${DEFAULT_CONFIG_KEY}),
+    ) VALUES (
+        (SELECT id FROM user_config WHERE uuid = ${uuid} AND config_key = ${DEFAULT_CONFIG_KEY}),
         ${fcmToken},
         CURRENT_TIMESTAMP
     )
-    ON DUPLICATE KEY UPDATE 
+    ON DUPLICATE KEY UPDATE
         created_at = CURRENT_TIMESTAMP
 `;
 
@@ -234,3 +236,77 @@ public isolated function getAppConfigsQuery() returns sql:ParameterizedQuery => 
     FROM 
         app_configs
 `;
+
+# Query to get the count of notifications filtered by user groups and user ID.
+#
+# + groups - Array of user groups to match against target_roles
+# + userId - User UUID to match against target_users
+# + return - Generated query to count filtered notifications
+public isolated function getNotificationsCountQuery(string[] groups, string userId) returns sql:ParameterizedQuery {
+    sql:ParameterizedQuery usersFilter = generateTargetUsersFilter(userId);
+    if groups.length() == 0 {
+        return sql:queryConcat(`
+            SELECT
+                COUNT(*) as count
+            FROM
+                push_notification
+            WHERE
+                (`, usersFilter, `)
+        `);
+    }
+    sql:ParameterizedQuery rolesFilter = generateTargetRolesFilters(groups);
+    return sql:queryConcat(`
+        SELECT
+            COUNT(*) as count
+        FROM
+            push_notification
+        WHERE
+            (`, rolesFilter, ` OR `, usersFilter, `)
+    `);
+}
+
+# Query to get notifications filtered by user groups and user ID.
+#
+# + groups - Array of user groups to match against target_roles
+# + userId - User UUID to match against target_users
+# + startIndex - Start index for pagination
+# + itemsPerPage - Items per page
+# + return - Generated query to retrieve filtered notifications
+public isolated function getNotificationsQuery(string[] groups, string userId, int startIndex, int itemsPerPage)
+    returns sql:ParameterizedQuery {
+
+    sql:ParameterizedQuery usersFilter = generateTargetUsersFilter(userId);
+    if groups.length() == 0 {
+        return sql:queryConcat(`
+            SELECT DISTINCT
+                id,
+                title,
+                message,
+                created_by,
+                created_at
+            FROM
+                push_notification
+            WHERE
+                (`, usersFilter, `)
+            ORDER BY
+                created_at DESC
+            LIMIT ${itemsPerPage} OFFSET ${startIndex}
+        `);
+    }
+    sql:ParameterizedQuery rolesFilter = generateTargetRolesFilters(groups);
+    return sql:queryConcat(`
+        SELECT DISTINCT
+            id,
+            title,
+            message,
+            created_by,
+            created_at
+        FROM
+            push_notification
+        WHERE
+            (`, rolesFilter, ` OR `, usersFilter, `)
+        ORDER BY
+            created_at DESC
+        LIMIT ${itemsPerPage} OFFSET ${startIndex}
+    `);
+}

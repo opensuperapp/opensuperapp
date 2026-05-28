@@ -23,7 +23,10 @@ import {
   TOKEN_URL,
   USER_INFO,
 } from "@/constants/Constants";
-import { updateExchangedToken } from "@/context/slices/appSlice";
+import {
+  updateExchangedIdToken,
+  updateExchangedToken,
+} from "@/context/slices/appSlice";
 import { AppDispatch } from "@/context/store";
 import { AppScope } from "@/types/appConfig.types";
 import createAuthRequestBody from "@/utils/authBody";
@@ -53,6 +56,7 @@ let refreshPromise: Promise<AuthData | null> | null = null;
 
 export interface DecodedIdToken {
   email?: string;
+  userid?: string;
 }
 
 export interface AuthData {
@@ -60,6 +64,7 @@ export interface AuthData {
   refreshToken: string;
   idToken: string;
   email?: string;
+  userId?: string;
   expiresAt: number;
 }
 
@@ -93,7 +98,8 @@ export const getAccessToken = async (
       const data = await response.json();
 
       if (data.access_token && data.id_token) {
-        const { email } = jwtDecode<DecodedIdToken>(data.id_token);
+        const decodedIdToken = jwtDecode<DecodedIdToken>(data.id_token);
+        const { email, userid: userId } = decodedIdToken;
         const exp = jwtDecode(data.access_token).exp || 0;
 
         const authData: AuthData = {
@@ -101,6 +107,7 @@ export const getAccessToken = async (
           refreshToken: data.refresh_token,
           idToken: data.id_token,
           email,
+          userId,
           expiresAt: exp * MILLISECONDS_IN_A_SECOND,
         };
 
@@ -171,12 +178,14 @@ export const refreshAccessToken = async (
       if (data.access_token && data.id_token) {
         const decodedIdToken = jwtDecode<DecodedIdToken>(data.id_token);
         const exp = jwtDecode<{ exp: number }>(data.access_token).exp || 0;
+        const { email, userid: userId } = decodedIdToken;
 
         const updatedAuthData: AuthData = {
           accessToken: data.access_token,
           refreshToken: data.refresh_token || authData.refreshToken,
           idToken: data.id_token,
-          email: decodedIdToken.email,
+          email,
+          userId,
           expiresAt: exp * MILLISECONDS_IN_A_SECOND,
         };
 
@@ -264,15 +273,21 @@ export const loadAuthData = async (): Promise<AuthData | null> => {
   return secureData ? (secureData as AuthData) : null;
 };
 
+export type TokenExchangeResult = {
+  accessToken?: string;
+  idToken?: string;
+};
+
 // token exchange
 export const tokenExchange = async (
   dispatch: AppDispatch,
   clientId: string,
   exchangedToken: string,
+  exchangedIdToken: string,
   appId: string,
   onLogout: () => Promise<void>,
   appScopes?: AppScope[]
-) => {
+): Promise<TokenExchangeResult | null> => {
   try {
     // Find and append app specific scopes if available
     const appScope = appScopes?.find((scope) => scope.appId === appId);
@@ -280,9 +295,14 @@ export const tokenExchange = async (
 
     if (!clientId || clientId === "CLIENT_ID") return null;
 
-    // Use existing exchanged token if it's still valid
-    if (exchangedToken && !isAccessTokenExpired(exchangedToken)) {
-      return exchangedToken;
+    // Use existing exchanged tokens if they're still valid
+    if (
+      exchangedToken &&
+      !isTokenExpired(exchangedToken) &&
+      exchangedIdToken &&
+      !isTokenExpired(exchangedIdToken)
+    ) {
+      return { accessToken: exchangedToken, idToken: exchangedIdToken };
     }
 
     // Retrieve stored authentication data
@@ -305,10 +325,10 @@ export const tokenExchange = async (
     }
 
     // Refresh access token if expired
-    if (isAccessTokenExpired(accessToken)) {
+    if (isTokenExpired(accessToken)) {
       const newAuthData = await refreshAccessToken(onLogout);
       if (!newAuthData?.accessToken) {
-        return; // Logout is triggered inside refreshAccessToken
+        return null; // Logout is triggered inside refreshAccessToken
       }
       accessToken = newAuthData.accessToken;
     }
@@ -381,7 +401,14 @@ export const tokenExchange = async (
     dispatch(
       updateExchangedToken({ appId, exchangedToken: data.access_token })
     );
-    return data.access_token;
+
+    if (data.id_token) {
+      dispatch(
+        updateExchangedIdToken({ appId, exchangedIdToken: data.id_token })
+      );
+    }
+
+    return { accessToken: data.access_token, idToken: data.id_token };
   } catch (error) {
     console.error("Error during token exchange:", error);
     return null;
@@ -389,12 +416,12 @@ export const tokenExchange = async (
 };
 
 // Helper function to check if the token is expired
-const isAccessTokenExpired = (accessToken: string): boolean => {
+export const isTokenExpired = (token: string): boolean => {
   try {
-    const decoded = jwtDecode<{ exp: number }>(accessToken);
+    const decoded = jwtDecode<{ exp: number }>(token);
     return dayjs.unix(decoded.exp).isBefore(dayjs());
   } catch {
-    return true; // Assume expired if decoding fails
+    return true;
   }
 };
 
@@ -408,13 +435,14 @@ export const processNativeAuthResult = async (
     if (authResult.accessToken && authResult.idToken) {
       const decodedIdToken = jwtDecode<DecodedIdToken>(authResult.idToken);
       const exp = jwtDecode<{ exp: number }>(authResult.accessToken).exp || 0;
-      const { email } = decodedIdToken;
+      const { email, userid: userId } = decodedIdToken;
 
       const authData: AuthData = {
         accessToken: authResult.accessToken,
         refreshToken: authResult.refreshToken,
         idToken: authResult.idToken,
         email: email,
+        userId,
         expiresAt: exp * MILLISECONDS_IN_A_SECOND,
       };
 

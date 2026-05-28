@@ -14,11 +14,12 @@
 // specific language governing permissions and limitations
 // under the License.
 import NotFound from "@/components/NotFound";
-import Scanner from "@/components/Scanner";
+import TextPromptDialog from "@/components/TextPromptDialog";
 import { Colors } from "@/constants/Colors";
 import {
   DEVELOPER_APP_ANDROID_DEFAULT_URL,
   DEVELOPER_APP_IOS_DEFAULT_URL,
+  DOWNLOADED,
   FULL_SCREEN_VIEWING_MODE,
   GOOGLE_ANDROID_CLIENT_ID,
   GOOGLE_IOS_CLIENT_ID,
@@ -27,8 +28,15 @@ import {
   isAndroid,
   isIos,
 } from "@/constants/Constants";
+import { Event } from "@/constants/enums/Event";
+import { ScreenPaths } from "@/constants/ScreenPaths";
 import { RootState } from "@/context/store";
-import { logout, tokenExchange } from "@/services/authService";
+import {
+  isTokenExpired,
+  logout,
+  tokenExchange,
+  TokenExchangeResult,
+} from "@/services/authService";
 import googleAuthenticationService, {
   getGoogleUserInfo,
   isAuthenticatedWithGoogle,
@@ -49,9 +57,11 @@ import {
 } from "@/types/microApp.types";
 import { MicroAppParams } from "@/types/navigation";
 import { injectedJavaScript, TOPIC } from "@/utils/bridge";
+import { qrScannerEmitter } from "@/utils/eventEmitter";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Google from "expo-auth-session/providers/google";
-import { documentDirectory } from "expo-file-system";
+import { File, Paths } from "expo-file-system";
+import * as MailComposer from "expo-mail-composer";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { StatusBar } from "expo-status-bar";
@@ -59,6 +69,8 @@ import * as WebBrowser from "expo-web-browser";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Keyboard,
+  KeyboardAvoidingView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -66,41 +78,39 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import prompt from "react-native-prompt-android";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 import { useDispatch, useSelector } from "react-redux";
-import * as MailComposer from "expo-mail-composer";
-import * as FileSystem from "expo-file-system";
+import * as DocumentPicker from "expo-document-picker";
 
 WebBrowser.maybeCompleteAuthSession();
 
 type NativeLogLevel = "info" | "warn" | "error";
 
 const MicroApp = () => {
-  const [isScannerVisible, setScannerVisible] = useState(false);
-
   const {
     webViewUri,
     appName,
     clientId,
     exchangedToken,
+    exchangedIdToken,
     appId,
     displayMode,
     version,
+    launchData,
   } = useLocalSearchParams<MicroAppParams>();
   const { bottom: bottomSafeArea } = useSafeAreaInsets();
 
   const [hasError, setHasError] = useState(false);
   const webviewRef = useRef<WebView>(null);
-  const [token, setToken] = useState<string | null>();
   const dispatch = useDispatch();
   const router = useRouter();
-  const pendingTokenRequests = useRef<((token: string) => void)[]>([]);
   const [webUri, setWebUri] = useState<string>(
     isIos ? DEVELOPER_APP_IOS_DEFAULT_URL : DEVELOPER_APP_ANDROID_DEFAULT_URL
   );
+  const [appUrlDialogVisible, setAppUrlDialogVisible] = useState(false);
   const colorScheme = useColorScheme();
+  const apps = useSelector((state: RootState) => state.apps.apps);
   const appScopes = useSelector(
     (state: RootState) => state.appConfig.appScopes
   );
@@ -109,6 +119,87 @@ const MicroApp = () => {
   const insets = useSafeAreaInsets();
   const shouldShowHeader: boolean = displayMode !== FULL_SCREEN_VIEWING_MODE;
   const { width, height } = useWindowDimensions();
+
+  // Token and ID token states
+  const [token, setToken] = useState<string | null>();
+  const [idToken, setIdToken] = useState<string | null>();
+
+  // Keyboard Listeners
+  useEffect(() => {
+    const keyboardWillShowSubscription = Keyboard.addListener(
+      "keyboardWillShow",
+      () => sendResponseToWeb("resolveKeyboardWillShow")
+    );
+    const keyboardWillHideSubscription = Keyboard.addListener(
+      "keyboardWillHide",
+      () => sendResponseToWeb("resolveKeyboardWillHide")
+    );
+    const keyboardDidShowSubscription = Keyboard.addListener(
+      "keyboardDidShow",
+      () => sendResponseToWeb("resolveKeyboardDidShow")
+    );
+    const keyboardDidHideSubscription = Keyboard.addListener(
+      "keyboardDidHide",
+      () => sendResponseToWeb("resolveKeyboardDidHide")
+    );
+
+    return () => {
+      keyboardWillShowSubscription.remove();
+      keyboardWillHideSubscription.remove();
+      keyboardDidShowSubscription.remove();
+      keyboardDidHideSubscription.remove();
+    };
+  }, []);
+
+  const pendingTokenRequests = useRef<((token: string) => void)[]>([]);
+  const pendingIdTokenRequests = useRef<((idToken: string) => void)[]>([]);
+  const tokenExchangePromise =
+    useRef<Promise<TokenExchangeResult | null> | null>(null);
+
+  // Function to refresh token(s) if expired
+  const refreshTokenIfExpired =
+    async (): Promise<TokenExchangeResult | null> => {
+      if (tokenExchangePromise.current) {
+        return tokenExchangePromise.current;
+      }
+
+      tokenExchangePromise.current = (async () => {
+        try {
+          const result = await tokenExchange(
+            dispatch,
+            clientId,
+            exchangedToken,
+            exchangedIdToken,
+            appId,
+            logout,
+            appScopes
+          );
+          if (result) {
+            if (result.accessToken) setToken(result.accessToken);
+            if (result.idToken) setIdToken(result.idToken);
+          }
+          return result;
+        } finally {
+          tokenExchangePromise.current = null;
+        }
+      })();
+
+      return tokenExchangePromise.current;
+    };
+
+  // Event listener for QR Code scanned
+  useEffect(() => {
+    const unsubscribe = qrScannerEmitter.on(
+      Event.QrScanned,
+      (qrCode: string) => {
+        sendQrToWebView(qrCode);
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   /**
    * Create styles for the micro app.
@@ -156,17 +247,24 @@ const MicroApp = () => {
   useEffect(() => {
     const fetchToken = async () => {
       try {
-        const token = await tokenExchange(
+        const result = await tokenExchange(
           dispatch,
           clientId,
           exchangedToken,
+          exchangedIdToken,
           appId,
           logout,
           appScopes
         );
-        if (!token) throw new Error("Token exchange failed");
-        setToken(token);
-        sendTokenToWebView(token);
+        if (!result) throw new Error("Token exchange failed");
+        if (result.accessToken) {
+          setToken(result.accessToken);
+          sendTokenToWebView(result.accessToken);
+        }
+        if (result.idToken) {
+          setIdToken(result.idToken);
+          sendIdTokenToWebView(result.idToken);
+        }
       } catch (error) {
         console.error("Token exchange error:", error);
       }
@@ -175,15 +273,36 @@ const MicroApp = () => {
     fetchToken();
   }, [clientId]);
 
+  const openQrScanner = () => {
+    router.navigate({
+      pathname: ScreenPaths.QR_SCANNER,
+      params: {
+        message: isTotp
+          ? "We need access to your camera to scan QR codes for generating one-time passwords (TOTP) for secure authentication. This will allow you to easily log in to your accounts."
+          : undefined,
+      },
+    });
+  };
+
   // Function to send token to WebView
   const sendTokenToWebView = (token: string) => {
     if (!token) return;
     sendResponseToWeb("resolveToken", token);
-
     // Resolve any pending token requests
     while (pendingTokenRequests.current.length > 0) {
       const resolve = pendingTokenRequests.current.shift();
       resolve?.(token);
+    }
+  };
+
+  // Function to send ID token to WebView
+  const sendIdTokenToWebView = (idToken: string) => {
+    if (!idToken) return;
+    sendResponseToWeb("resolveIdToken", idToken);
+
+    while (pendingIdTokenRequests.current.length > 0) {
+      const resolve = pendingIdTokenRequests.current.shift();
+      resolve?.(idToken);
     }
   };
 
@@ -483,17 +602,15 @@ const MicroApp = () => {
   const handleMicroAppVersion = async () => {
     sendResponseToWeb("resolveMicroAppVersion", version || "unknown");
   };
-
   // Function to compose an email
   const handleComposeEmail = async (
-    config?: MailComposer.MailComposerOptions,
+    config?: MailComposer.MailComposerOptions
   ) => {
     try {
       if (!config) {
-        console.error("Missing Required MailComposer configuration.");
         sendResponseToWeb(
           "rejectComposeEmail",
-          "Mail configuration is missing.",
+          "Mail configuration is missing."
         );
         return;
       }
@@ -503,23 +620,11 @@ const MicroApp = () => {
         throw new Error("Mail services are not available on this device");
       }
 
-      // Validate attachments if provided
-      if (config.attachments && config.attachments.length > 0) {
+      if (config.attachments?.length) {
         for (const attachment of config.attachments) {
-          let info;
-
-          try {
-            info = await FileSystem.getInfoAsync(attachment);
-          } catch (error) {
-            throw new Error(
-              `Failed to access attachment metadata: ${attachment}. ${
-                error instanceof Error ? error.message : ""
-              }`,
-            );
-          }
-          
-          if (!info.exists) {
-            throw new Error(`Attachment file not found: ${attachment}`);
+          const attachmentFile = new File(attachment);
+          if (!attachmentFile.exists) {
+            throw new Error(`Attachment not found: ${attachment}`);
           }
         }
       }
@@ -527,10 +632,100 @@ const MicroApp = () => {
       const result = await MailComposer.composeAsync(config);
       sendResponseToWeb("resolveComposeEmail", result);
     } catch (error) {
-      const errMessage =
+      const message =
         error instanceof Error ? error.message : "Failed to compose email";
-      console.error("Error composing email:", errMessage);
-      sendResponseToWeb("rejectComposeEmail", errMessage);
+      sendResponseToWeb("rejectComposeEmail", message);
+    }
+  };
+
+  // Function to open another micro app
+  const handleOpenMicroApp = async (targetAppId: string, data: any) => {
+    const targetApp = apps.find((app) => app.appId === targetAppId);
+
+    if (targetApp?.status === DOWNLOADED) {
+      router.dismissAll();
+      router.push({
+        pathname: ScreenPaths.MICRO_APP,
+        params: {
+          webViewUri: targetApp.webViewUri,
+          appName: targetApp.name,
+          clientId: targetApp.clientId,
+          exchangedToken: targetApp.exchangedToken,
+          exchangedIdToken: targetApp.exchangedIdToken,
+          appId: targetApp.appId,
+          displayMode: targetApp.displayMode,
+          launchData: JSON.stringify(data),
+        },
+      });
+    } else {
+      Alert.alert(
+        "App not installed",
+        "Would you like to install it?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Install",
+            onPress: () => {
+              router.back();
+              router.navigate(ScreenPaths.STORE);
+            },
+          },
+        ],
+        { cancelable: false }
+      );
+    }
+  };
+
+  // Function to get launch data passed to the micro app
+  const handleGetLaunchData = async () => {
+    if (!launchData) {
+      sendResponseToWeb("resolveGetLaunchData", null);
+      return;
+    }
+
+    try {
+      sendResponseToWeb("resolveGetLaunchData", JSON.parse(launchData));
+    } catch {
+      sendResponseToWeb("resolveGetLaunchData", launchData);
+    }
+  };
+
+  const handleGetIdToken = async () => {
+    if (idToken) {
+      sendResponseToWeb("resolveIdToken", idToken);
+    } else {
+      sendResponseToWeb("rejectIdToken", "No exchanged ID token available");
+    }
+  };
+
+  // Function to pick a document from device storage
+  const handlePickDocument = async (
+    config?: DocumentPicker.DocumentPickerOptions,
+  ) => {
+    try {
+      if (!config) {
+        console.error("Missing Required DocumentPicker configuration.");
+        sendResponseToWeb(
+          "rejectPickDocument",
+          "Document picker configuration is missing.",
+        );
+        return;
+      }
+
+      const result = await DocumentPicker.getDocumentAsync(config);
+      if (result.canceled) {
+        sendResponseToWeb(
+          "rejectPickDocument",
+          "Document pick canceled by user.",
+        );
+        return;
+      }
+      sendResponseToWeb("resolvePickDocument", result);
+    } catch (error) {
+      const errMessage =
+        error instanceof Error ? error.message : "Failed to pick document";
+      console.error("Error picking document:", errMessage);
+      sendResponseToWeb("rejectPickDocument", errMessage);
     }
   };
 
@@ -541,12 +736,29 @@ const MicroApp = () => {
       if (!topic) throw new Error("Invalid message format: Missing topic");
       switch (topic) {
         case TOPIC.TOKEN:
-          token
-            ? sendTokenToWebView(token)
-            : pendingTokenRequests.current.push(sendTokenToWebView);
+          if (token && !isTokenExpired(token)) {
+            sendTokenToWebView(token);
+          } else {
+            refreshTokenIfExpired().then((result) => {
+              if (result?.accessToken) {
+                sendTokenToWebView(result.accessToken);
+              }
+            });
+          }
+          break;
+        case TOPIC.ID_TOKEN:
+          if (idToken && !isTokenExpired(idToken)) {
+            sendIdTokenToWebView(idToken);
+          } else {
+            refreshTokenIfExpired().then((result) => {
+              if (result?.idToken) {
+                sendIdTokenToWebView(result.idToken);
+              }
+            });
+          }
           break;
         case TOPIC.QR_REQUEST:
-          setScannerVisible(true);
+          openQrScanner();
           break;
         case TOPIC.SAVE_LOCAL_DATA:
           await handleSaveLocalData(data.key, data.value);
@@ -622,8 +834,17 @@ const MicroApp = () => {
         case TOPIC.MICRO_APP_VERSION:
           handleMicroAppVersion();
           break;
+        case TOPIC.PICK_DOCUMENT:
+          await handlePickDocument(data?.config);
+          break;
         case TOPIC.COMPOSE_EMAIL:
           await handleComposeEmail(data?.config);
+          break;
+        case TOPIC.OPEN_MICRO_APP:
+          await handleOpenMicroApp(data.appId, data.data);
+          break;
+        case TOPIC.GET_LAUNCH_DATA:
+          await handleGetLaunchData();
           break;
         default:
           console.error("Unknown topic:", topic);
@@ -717,7 +938,7 @@ const MicroApp = () => {
             source={{
               uri: isDeveloper
                 ? webViewUri
-                : `${documentDirectory}${webViewUri}`,
+                : `${Paths.document.uri}${webViewUri}`,
             }}
             allowFileAccess
             allowUniversalAccessFromFileURLs
@@ -748,54 +969,7 @@ const MicroApp = () => {
             isDeveloper &&
             shouldShowHeader && (
               <TouchableOpacity
-                onPressIn={() => {
-                  isIos
-                    ? Alert.prompt(
-                        "App URL",
-                        "Enter App URL",
-                        [
-                          {
-                            text: "Cancel",
-                            style: "cancel",
-                          },
-                          {
-                            text: "OK",
-                            onPress: (value) => {
-                              if (value) {
-                                setWebUri(value);
-                              }
-                            },
-                          },
-                        ],
-                        "plain-text",
-                        webUri
-                      )
-                    : prompt(
-                        "App URL",
-                        "Enter App URL",
-                        [
-                          {
-                            text: "Cancel",
-                            onPress: () => {},
-                            style: "cancel",
-                          },
-                          {
-                            text: "OK",
-                            onPress: (value) => {
-                              if (value) {
-                                setWebUri(value);
-                              }
-                            },
-                            style: "default",
-                          },
-                        ],
-                        {
-                          type: "plain-text",
-                          cancelable: false,
-                          defaultValue: webUri,
-                        }
-                      );
-                }}
+                onPressIn={() => setAppUrlDialogVisible(true)}
                 hitSlop={20}
               >
                 <Text style={styles.headerText}>App URL</Text>
@@ -804,31 +978,18 @@ const MicroApp = () => {
         }}
       />
       <View style={styles.container}>
-        {isScannerVisible && (
-          <View style={styles.scannerOverlay}>
-            <Scanner
-              onScan={(qrCode) => {
-                sendQrToWebView(qrCode);
-                setScannerVisible(false);
-              }}
-              message={
-                isTotp
-                  ? "We need access to your camera to scan QR codes for generating one-time passwords (TOTP) for secure authentication. This will allow you to easily log in to your accounts."
-                  : undefined
-              }
-            />
-          </View>
-        )}
-
-        <View
-          style={[
-            styles.webViewContainer,
-            isScannerVisible && styles.webViewHidden,
-          ]}
-        >
+        <View style={styles.webViewContainer}>
           {renderWebView(isDeveloper ? webUri : webViewUri)}
         </View>
       </View>
+      <TextPromptDialog
+        visible={appUrlDialogVisible}
+        title="App URL"
+        message="Enter App URL"
+        defaultValue={webUri}
+        onConfirm={setWebUri}
+        onClose={() => setAppUrlDialogVisible(false)}
+      />
     </>
   );
 };
@@ -840,22 +1001,11 @@ const createStyles = (colorScheme: "light" | "dark", bottomSafeArea: number) =>
     container: {
       flex: 1,
     },
-    scannerOverlay: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-    },
     webViewContainer: {
       flex: 1,
       opacity: 1,
       pointerEvents: "auto",
       paddingBottom: isAndroid ? bottomSafeArea : 0,
-    },
-    webViewHidden: {
-      opacity: 0,
-      pointerEvents: "none",
     },
     headerText: {
       fontWeight: "600",

@@ -25,3 +25,9 @@ replay_pid*
 
 # Node modules
 node_modules/
+
+# AI Agents
+AGENTS.md
+
+# macOS
+.DS_Store

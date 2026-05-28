@@ -94,12 +94,13 @@ let config: ExpoConfig = {
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       UIBackgroundModes: ["remote-notification"],
+      UIDesignRequiresCompatibility: true,
     },
     entitlements: {
       "aps-environment": profile === PRODUCTION ? PRODUCTION : DEVELOPMENT,
     },
     icon: {
-      dark: "./assets/images/ios-light.png",
+      dark: "./assets/images/ios-dark.png",
       light: "./assets/images/ios-light.png",
       tinted: "./assets/images/ios-tinted.png",
     },
@@ -123,10 +124,9 @@ let config: ExpoConfig = {
   },
   plugins: [
     [
-      "@wavemaker/react-native-app-auth-expo-plugin",
+      "react-native-app-auth",
       {
-        redirectScheme: APP_SCHEME,
-        enableUniversalLinks: false,
+        redirectUrls: [`${APP_SCHEME}://`],
       },
     ],
     [

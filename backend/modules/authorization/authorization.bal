@@ -42,14 +42,20 @@ public isolated service class JwtInterceptor {
             return <http:InternalServerError>{body: {message: errorMsg}};
         }
 
-        CustomJwtPayload|error userInfo = result[1].cloneWithType(CustomJwtPayload);
+        JwtPayload|error userInfo = result[1].cloneWithType(JwtPayload);
         if userInfo is error {
             string errorMsg = "Malformed Invoker info object!";
             log:printError(errorMsg, userInfo);
             return <http:InternalServerError>{body: {message: errorMsg}};
         }
 
-        ctx.set(HEADER_USER_INFO, userInfo);
+        CustomJwtPayload customUserInfo = {
+            userId: userInfo.userid,
+            email: userInfo.email,
+            groups: userInfo.groups ?: []
+        };
+
+        ctx.set(HEADER_USER_INFO, customUserInfo);
         return ctx.next();
     }
 }

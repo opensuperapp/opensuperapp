@@ -383,3 +383,44 @@ You can start development by editing the files inside the **app** directory. Thi
 ❌ **Problem**: The build fails with an error caused by a firebase plugin during `npx expo prebuild` or `npx expo prebuild --clean`
 
 ✅ **Solution**: It was noticed that some firebase modules don't need to be added into the plugin list in the `app.config.js`. Remove the package and try re-running the commands
+
+---
+
+## 🤖 AI Chat Agent Integration
+
+The Super App includes an AI-powered chat feature that connects to a [Chat Agent backend](../chat-agent/README.md) built with FastAPI and LangChain.
+
+### Chat Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant C as Chat Screen
+    participant S as Chat Service
+    participant A as Chat Agent (FastAPI)
+    participant L as LangChain + GPT-4o
+    participant T as Asgardeo
+    participant M as Meals Backend
+
+    U->>C: Types message
+    C->>S: sendChatMessage(message)
+    S->>S: Check token expiry & refresh if needed
+    S->>A: POST /chat (Bearer token)
+    A->>L: Process with system prompt
+    L-->>A: Tool call: get_todays_menu
+    A->>T: Token exchange (RFC 8693)
+    T-->>A: Meals-scoped token
+    A->>M: GET /menu (x-jwt-assertion)
+    M-->>A: Menu data
+    A->>L: Tool result
+    L-->>A: Formatted response
+    A-->>S: { reply: "..." }
+    S-->>C: Display with markdown
+    C-->>U: Rendered chat bubble
+```
+
+### Configuration
+
+Set `EXPO_PUBLIC_CHAT_AGENT_URL` in your `.env` file to point to your chat agent instance (e.g., `http://<your-lan-ip>:8000` for local development).
+
+See the [Chat Agent README](../chat-agent/README.md) for backend setup instructions.

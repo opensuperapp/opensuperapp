@@ -1,4 +1,4 @@
-// Copyright (c) 2025 WSO2 LLC. (https://www.wso2.com).
+// Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
@@ -100,6 +100,12 @@ export const REFRESH_TOKEN = "secure_refresh_token";
 export const ID_TOKEN = "secure_id_token";
 export const EXPIRES_AT_KEY = "secure_expires_at";
 export const AUTH_EMAIL_KEY = "secure_auth_email";
+export const USER_ID_KEY = "secure_userid";
+
+// Keys for Async Storage
+export const LAST_NOTIFICATION_OPENED_AT = "last_notification_opened_at";
+export const ALARM_PERMISSION_PROMPTED_KEY = "alarm_permission_prompted";
+export const PENDING_NOTIFICATION_NAVIGATION = "pending_notification_navigation";
 
 // Android Notification Configuration
 export const NOTIFICATION_CHANNEL_ID =
@@ -114,3 +120,17 @@ export const ANDROID_NOTIFICATION_SMALL_ICON_ACCENT_COLOR =
 // Platform
 export const isAndroid = Platform.OS === "android";
 export const isIos = Platform.OS === "ios";
+
+// Query Keys
+export const NOTIFICATIONS_QUERY_KEY = "notifications";
+
+// Chat Agent
+export const CHAT_AGENT_URL = process.env.EXPO_PUBLIC_CHAT_AGENT_URL ?? "";
+export const WSO2_EMAIL_DOMAIN = "@wso2.com";
+
+// Tab Names
+export const FEED_TAB_NAME = "Feed";
+export const LIBRARY_TAB_NAME = "Library";
+export const MY_APPS_TAB_NAME = "My Apps";
+export const CHAT_TAB_NAME = "Chat";
+export const PROFILE_TAB_NAME = "Profile";
