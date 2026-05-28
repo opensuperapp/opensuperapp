@@ -63,6 +63,7 @@ const getMainActivity = (
  * @param config The Expo config object
  * @param props The properties for the plugin
  * @param props.scheme The scheme to remove
+ * @returns The modified Expo config
  */
 const withRemoveIntentScheme: ConfigPlugin<RemoveIntentSchemeProps> = (
   config,
