@@ -26,14 +26,13 @@ import * as SQLite from "expo-sqlite";
 
 const DB_NAME = "chat.db";
 
-let dbInstance: SQLite.SQLiteDatabase | null = null;
-
 interface SessionRow {
   id: string;
   title: string;
   is_pinned: number;
   created_at: number;
   updated_at: number;
+  user_id: string | null;
 }
 
 interface MessageRow {
@@ -45,56 +44,6 @@ interface MessageRow {
   created_at: number;
   updated_at: number;
 }
-
-/**
- * Opens the chat SQLite database and runs schema migrations.
- *
- * @returns {Promise<SQLite.SQLiteDatabase>} The initialized database handle.
- */
-export const initChatDatabase = async (): Promise<SQLite.SQLiteDatabase> => {
-  if (dbInstance) {
-    return dbInstance;
-  }
-
-  const db = await SQLite.openDatabaseAsync(DB_NAME);
-
-  await db.execAsync(`
-    PRAGMA foreign_keys = ON;
-
-    CREATE TABLE IF NOT EXISTS chat_sessions (
-      id TEXT PRIMARY KEY NOT NULL,
-      title TEXT NOT NULL DEFAULT 'New Chat',
-      is_pinned INTEGER NOT NULL DEFAULT 0,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS chat_messages (
-      id TEXT PRIMARY KEY NOT NULL,
-      session_id TEXT NOT NULL,
-      role TEXT NOT NULL CHECK(role IN ('user', 'assistant')),
-      content TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'sent'
-        CHECK(status IN ('pending', 'streaming', 'sent', 'error', 'stopped')),
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL,
-      FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_messages_session
-      ON chat_messages(session_id, created_at);
-  `);
-
-  dbInstance = db;
-  return db;
-};
-
-/**
- * Resets the cached database instance; used for tests.
- */
-export const resetChatDatabase = (): void => {
-  dbInstance = null;
-};
 
 const mapSessionRow = (row: SessionRow): ChatSession => ({
   id: row.id,
@@ -115,235 +64,402 @@ const mapMessageRow = (row: MessageRow): ChatMessage => ({
 });
 
 /**
- * Creates a new chat session.
- *
- * @param {string} [title='New Chat'] - Optional session title.
- * @returns {Promise<ChatSession>} The created session.
+ * Singleton accessor for the local chat SQLite database.
  */
-export const createSession = async (
-  title = CHAT_DEFAULT_SESSION_TITLE
-): Promise<ChatSession> => {
-  const db = await initChatDatabase();
-  const now = Date.now();
-  const id = Crypto.randomUUID();
+export class ChatDatabase {
+  private static instance: ChatDatabase | null = null;
 
-  await db.runAsync(
-    `INSERT INTO chat_sessions (id, title, is_pinned, created_at, updated_at)
-     VALUES (?, ?, 0, ?, ?)`,
-    [id, title, now, now]
-  );
+  private db: SQLite.SQLiteDatabase | null = null;
+  private activeUserId: string | null = null;
 
-  return { id, title, isPinned: false, createdAt: now, updatedAt: now };
+  /**
+   * @returns {ChatDatabase} Shared database instance.
+   */
+  static getInstance(): ChatDatabase {
+    if (!ChatDatabase.instance) {
+      ChatDatabase.instance = new ChatDatabase();
+    }
+
+    return ChatDatabase.instance;
+  }
+
+  /**
+   * Clears the singleton; used for tests.
+   */
+  static resetInstance(): void {
+    ChatDatabase.instance = null;
+  }
+
+  /**
+   * Sets the active user id used to scope chat session queries.
+   *
+   * @param {string | null} userId - Current authenticated user id.
+   */
+  setUserId(userId: string | null): void {
+    this.activeUserId = userId;
+  }
+
+  private requireActiveUserId(): string {
+    if (!this.activeUserId) {
+      throw new Error("Chat user id is not set");
+    }
+
+    return this.activeUserId;
+  }
+
+  private async migrateSchema(database: SQLite.SQLiteDatabase): Promise<void> {
+    const columns = await database.getAllAsync<{ name: string }>(
+      `PRAGMA table_info(chat_sessions)`
+    );
+    const hasUserId = columns.some((column) => column.name === "user_id");
+
+    if (!hasUserId) {
+      await database.execAsync(`
+        ALTER TABLE chat_sessions ADD COLUMN user_id TEXT;
+        CREATE INDEX IF NOT EXISTS idx_sessions_user
+          ON chat_sessions(user_id, updated_at);
+      `);
+    }
+  }
+
+  /**
+   * Opens the database and applies schema migrations.
+   *
+   * @returns {Promise<SQLite.SQLiteDatabase>} Initialized database handle.
+   */
+  async initialize(): Promise<SQLite.SQLiteDatabase> {
+    if (this.db) {
+      return this.db;
+    }
+
+    const database = await SQLite.openDatabaseAsync(DB_NAME);
+
+    await database.execAsync(`
+      PRAGMA foreign_keys = ON;
+
+      CREATE TABLE IF NOT EXISTS chat_sessions (
+        id TEXT PRIMARY KEY NOT NULL,
+        title TEXT NOT NULL DEFAULT 'New Chat',
+        is_pinned INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id TEXT PRIMARY KEY NOT NULL,
+        session_id TEXT NOT NULL,
+        role TEXT NOT NULL CHECK(role IN ('user', 'assistant')),
+        content TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'sent'
+          CHECK(status IN ('pending', 'streaming', 'sent', 'error', 'stopped')),
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_messages_session
+        ON chat_messages(session_id, created_at);
+    `);
+
+    await this.migrateSchema(database);
+    this.db = database;
+    return database;
+  }
+
+  private async getDb(): Promise<SQLite.SQLiteDatabase> {
+    return this.initialize();
+  }
+
+  /**
+   * Creates a new chat session.
+   *
+   * @param {string} [title='New Chat'] - Optional session title.
+   * @returns {Promise<ChatSession>} The created session.
+   */
+  async createSession(title = CHAT_DEFAULT_SESSION_TITLE): Promise<ChatSession> {
+    const database = await this.getDb();
+    const userId = this.requireActiveUserId();
+    const now = Date.now();
+    const id = Crypto.randomUUID();
+
+    await database.runAsync(
+      `INSERT INTO chat_sessions (id, title, is_pinned, created_at, updated_at, user_id)
+       VALUES (?, ?, 0, ?, ?, ?)`,
+      [id, title, now, now, userId]
+    );
+
+    return { id, title, isPinned: false, createdAt: now, updatedAt: now };
+  }
+
+  /**
+   * Lists all chat sessions for the active user.
+   *
+   * @returns {Promise<ChatSession[]>} Ordered session list.
+   */
+  async listSessions(): Promise<ChatSession[]> {
+    const database = await this.getDb();
+    const userId = this.requireActiveUserId();
+    const rows = await database.getAllAsync<SessionRow>(
+      `SELECT id, title, is_pinned, created_at, updated_at, user_id
+       FROM chat_sessions
+       WHERE user_id = ?
+       ORDER BY is_pinned DESC, updated_at DESC`,
+      [userId]
+    );
+
+    return rows.map(mapSessionRow);
+  }
+
+  /**
+   * Retrieves a single session by id.
+   *
+   * @param {string} sessionId - Session identifier.
+   * @returns {Promise<ChatSession | null>} The session or null.
+   */
+  async getSession(sessionId: string): Promise<ChatSession | null> {
+    const database = await this.getDb();
+    const userId = this.requireActiveUserId();
+    const row = await database.getFirstAsync<SessionRow>(
+      `SELECT id, title, is_pinned, created_at, updated_at, user_id
+       FROM chat_sessions WHERE id = ? AND user_id = ?`,
+      [sessionId, userId]
+    );
+
+    return row ? mapSessionRow(row) : null;
+  }
+
+  /**
+   * Updates a session title and updated_at timestamp.
+   *
+   * @param {string} sessionId - Session identifier.
+   * @param {string} title - New title.
+   */
+  async updateSessionTitle(sessionId: string, title: string): Promise<void> {
+    const database = await this.getDb();
+    const userId = this.requireActiveUserId();
+    await database.runAsync(
+      `UPDATE chat_sessions SET title = ?, updated_at = ? WHERE id = ? AND user_id = ?`,
+      [title, Date.now(), sessionId, userId]
+    );
+  }
+
+  /**
+   * Toggles the pinned state of a session.
+   *
+   * @param {string} sessionId - Session identifier.
+   * @param {boolean} isPinned - Whether the session should be pinned.
+   */
+  async setSessionPinned(sessionId: string, isPinned: boolean): Promise<void> {
+    const database = await this.getDb();
+    const userId = this.requireActiveUserId();
+    await database.runAsync(
+      `UPDATE chat_sessions SET is_pinned = ?, updated_at = ? WHERE id = ? AND user_id = ?`,
+      [isPinned ? 1 : 0, Date.now(), sessionId, userId]
+    );
+  }
+
+  /**
+   * Deletes a session and all its messages (cascade).
+   *
+   * @param {string} sessionId - Session identifier.
+   */
+  async deleteSession(sessionId: string): Promise<void> {
+    const database = await this.getDb();
+    const userId = this.requireActiveUserId();
+    await database.runAsync(
+      `DELETE FROM chat_sessions WHERE id = ? AND user_id = ?`,
+      [sessionId, userId]
+    );
+  }
+
+  /**
+   * Touches a session updated_at timestamp.
+   *
+   * @param {string} sessionId - Session identifier.
+   */
+  async touchSession(sessionId: string): Promise<void> {
+    const database = await this.getDb();
+    const userId = this.requireActiveUserId();
+    await database.runAsync(
+      `UPDATE chat_sessions SET updated_at = ? WHERE id = ? AND user_id = ?`,
+      [Date.now(), sessionId, userId]
+    );
+  }
+
+  /**
+   * Inserts a message into a session.
+   *
+   * @param {object} params - Message fields.
+   * @returns {Promise<ChatMessage>} The inserted message.
+   */
+  async insertMessage(params: {
+    sessionId: string;
+    role: ChatRole;
+    content: string;
+    status?: MessageStatus;
+  }): Promise<ChatMessage> {
+    const database = await this.getDb();
+    const now = Date.now();
+    const id = Crypto.randomUUID();
+    const status = params.status ?? MessageStatus.Sent;
+
+    await database.runAsync(
+      `INSERT INTO chat_messages
+         (id, session_id, role, content, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [id, params.sessionId, params.role, params.content, status, now, now]
+    );
+
+    await this.touchSession(params.sessionId);
+
+    return {
+      id,
+      sessionId: params.sessionId,
+      role: params.role,
+      content: params.content,
+      status,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
+  /**
+   * Lists messages for a session ordered by creation time.
+   *
+   * @param {string} sessionId - Session identifier.
+   * @returns {Promise<ChatMessage[]>} Messages in chronological order.
+   */
+  async listMessages(sessionId: string): Promise<ChatMessage[]> {
+    const database = await this.getDb();
+    const rows = await database.getAllAsync<MessageRow>(
+      `SELECT id, session_id, role, content, status, created_at, updated_at
+       FROM chat_messages
+       WHERE session_id = ?
+       ORDER BY created_at ASC`,
+      [sessionId]
+    );
+
+    return rows.map(mapMessageRow);
+  }
+
+  /**
+   * Updates a message's content and status.
+   *
+   * @param {string} messageId - Message identifier.
+   * @param {object} updates - Fields to update.
+   */
+  async updateMessage(
+    messageId: string,
+    updates: { content?: string; status?: MessageStatus }
+  ): Promise<void> {
+    const database = await this.getDb();
+    const sets: string[] = ["updated_at = ?"];
+    const values: (string | number)[] = [Date.now()];
+
+    if (updates.content !== undefined) {
+      sets.push("content = ?");
+      values.push(updates.content);
+    }
+    if (updates.status !== undefined) {
+      sets.push("status = ?");
+      values.push(updates.status);
+    }
+
+    values.push(messageId);
+    await database.runAsync(
+      `UPDATE chat_messages SET ${sets.join(", ")} WHERE id = ?`,
+      values
+    );
+  }
+
+  /**
+   * Deletes a message and all subsequent messages in the same session.
+   *
+   * @param {string} sessionId - Session identifier.
+   * @param {string} messageId - Message from which to truncate (inclusive).
+   */
+  async truncateMessagesFrom(
+    sessionId: string,
+    messageId: string
+  ): Promise<void> {
+    const database = await this.getDb();
+    const target = await database.getFirstAsync<{ created_at: number }>(
+      `SELECT created_at FROM chat_messages WHERE id = ? AND session_id = ?`,
+      [messageId, sessionId]
+    );
+
+    if (!target) {
+      return;
+    }
+
+    await database.runAsync(
+      `DELETE FROM chat_messages
+       WHERE session_id = ? AND created_at >= ?`,
+      [sessionId, target.created_at]
+    );
+
+    await this.touchSession(sessionId);
+  }
+}
+
+/** Shared chat database singleton. */
+export const chatDatabase = ChatDatabase.getInstance();
+
+export const setChatUserId = (userId: string | null): void => {
+  chatDatabase.setUserId(userId);
 };
 
-/**
- * Lists all chat sessions, pinned first then by most recently updated.
- *
- * @returns {Promise<ChatSession[]>} Ordered session list.
- */
-export const listSessions = async (): Promise<ChatSession[]> => {
-  const db = await initChatDatabase();
-  const rows = await db.getAllAsync<SessionRow>(
-    `SELECT id, title, is_pinned, created_at, updated_at
-     FROM chat_sessions
-     ORDER BY is_pinned DESC, updated_at DESC`
-  );
+export const initChatDatabase = (): Promise<SQLite.SQLiteDatabase> =>
+  chatDatabase.initialize();
 
-  return rows.map(mapSessionRow);
+export const resetChatDatabase = (): void => {
+  ChatDatabase.resetInstance();
 };
 
-/**
- * Retrieves a single session by id.
- *
- * @param {string} sessionId - Session identifier.
- * @returns {Promise<ChatSession | null>} The session or null.
- */
-export const getSession = async (
-  sessionId: string
-): Promise<ChatSession | null> => {
-  const db = await initChatDatabase();
-  const row = await db.getFirstAsync<SessionRow>(
-    `SELECT id, title, is_pinned, created_at, updated_at
-     FROM chat_sessions WHERE id = ?`,
-    [sessionId]
-  );
+export const createSession = (title?: string): Promise<ChatSession> =>
+  chatDatabase.createSession(title);
 
-  return row ? mapSessionRow(row) : null;
-};
+export const listSessions = (): Promise<ChatSession[]> =>
+  chatDatabase.listSessions();
 
-/**
- * Updates a session title and updated_at timestamp.
- *
- * @param {string} sessionId - Session identifier.
- * @param {string} title - New title.
- */
-export const updateSessionTitle = async (
+export const getSession = (sessionId: string): Promise<ChatSession | null> =>
+  chatDatabase.getSession(sessionId);
+
+export const updateSessionTitle = (
   sessionId: string,
   title: string
-): Promise<void> => {
-  const db = await initChatDatabase();
-  await db.runAsync(
-    `UPDATE chat_sessions SET title = ?, updated_at = ? WHERE id = ?`,
-    [title, Date.now(), sessionId]
-  );
-};
+): Promise<void> => chatDatabase.updateSessionTitle(sessionId, title);
 
-/**
- * Toggles the pinned state of a session.
- *
- * @param {string} sessionId - Session identifier.
- * @param {boolean} isPinned - Whether the session should be pinned.
- */
-export const setSessionPinned = async (
+export const setSessionPinned = (
   sessionId: string,
   isPinned: boolean
-): Promise<void> => {
-  const db = await initChatDatabase();
-  await db.runAsync(
-    `UPDATE chat_sessions SET is_pinned = ?, updated_at = ? WHERE id = ?`,
-    [isPinned ? 1 : 0, Date.now(), sessionId]
-  );
-};
+): Promise<void> => chatDatabase.setSessionPinned(sessionId, isPinned);
 
-/**
- * Deletes a session and all its messages (cascade).
- *
- * @param {string} sessionId - Session identifier.
- */
-export const deleteSession = async (sessionId: string): Promise<void> => {
-  const db = await initChatDatabase();
-  await db.runAsync(`DELETE FROM chat_sessions WHERE id = ?`, [sessionId]);
-};
+export const deleteSession = (sessionId: string): Promise<void> =>
+  chatDatabase.deleteSession(sessionId);
 
-/**
- * Touches a session updated_at timestamp.
- *
- * @param {string} sessionId - Session identifier.
- */
-export const touchSession = async (sessionId: string): Promise<void> => {
-  const db = await initChatDatabase();
-  await db.runAsync(`UPDATE chat_sessions SET updated_at = ? WHERE id = ?`, [
-    Date.now(),
-    sessionId,
-  ]);
-};
+export const touchSession = (sessionId: string): Promise<void> =>
+  chatDatabase.touchSession(sessionId);
 
-/**
- * Inserts a message into a session.
- *
- * @param {object} params - Message fields.
- * @returns {Promise<ChatMessage>} The inserted message.
- */
-export const insertMessage = async (params: {
+export const insertMessage = (params: {
   sessionId: string;
   role: ChatRole;
   content: string;
   status?: MessageStatus;
-}): Promise<ChatMessage> => {
-  const db = await initChatDatabase();
-  const now = Date.now();
-  const id = Crypto.randomUUID();
-  const status = params.status ?? MessageStatus.Sent;
+}): Promise<ChatMessage> => chatDatabase.insertMessage(params);
 
-  await db.runAsync(
-    `INSERT INTO chat_messages
-       (id, session_id, role, content, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [id, params.sessionId, params.role, params.content, status, now, now]
-  );
+export const listMessages = (sessionId: string): Promise<ChatMessage[]> =>
+  chatDatabase.listMessages(sessionId);
 
-  await touchSession(params.sessionId);
-
-  return {
-    id,
-    sessionId: params.sessionId,
-    role: params.role,
-    content: params.content,
-    status,
-    createdAt: now,
-    updatedAt: now,
-  };
-};
-
-/**
- * Lists messages for a session ordered by creation time.
- *
- * @param {string} sessionId - Session identifier.
- * @returns {Promise<ChatMessage[]>} Messages in chronological order.
- */
-export const listMessages = async (
-  sessionId: string
-): Promise<ChatMessage[]> => {
-  const db = await initChatDatabase();
-  const rows = await db.getAllAsync<MessageRow>(
-    `SELECT id, session_id, role, content, status, created_at, updated_at
-     FROM chat_messages
-     WHERE session_id = ?
-     ORDER BY created_at ASC`,
-    [sessionId]
-  );
-
-  return rows.map(mapMessageRow);
-};
-
-/**
- * Updates a message's content and status.
- *
- * @param {string} messageId - Message identifier.
- * @param {object} updates - Fields to update.
- */
-export const updateMessage = async (
+export const updateMessage = (
   messageId: string,
   updates: { content?: string; status?: MessageStatus }
-): Promise<void> => {
-  const db = await initChatDatabase();
-  const sets: string[] = ["updated_at = ?"];
-  const values: (string | number)[] = [Date.now()];
+): Promise<void> => chatDatabase.updateMessage(messageId, updates);
 
-  if (updates.content !== undefined) {
-    sets.push("content = ?");
-    values.push(updates.content);
-  }
-  if (updates.status !== undefined) {
-    sets.push("status = ?");
-    values.push(updates.status);
-  }
-
-  values.push(messageId);
-  await db.runAsync(
-    `UPDATE chat_messages SET ${sets.join(", ")} WHERE id = ?`,
-    values
-  );
-};
-
-/**
- * Deletes a message and all subsequent messages in the same session.
- *
- * @param {string} sessionId - Session identifier.
- * @param {string} messageId - Message from which to truncate (inclusive).
- */
-export const truncateMessagesFrom = async (
+export const truncateMessagesFrom = (
   sessionId: string,
   messageId: string
-): Promise<void> => {
-  const db = await initChatDatabase();
-  const target = await db.getFirstAsync<{ created_at: number }>(
-    `SELECT created_at FROM chat_messages WHERE id = ? AND session_id = ?`,
-    [messageId, sessionId]
-  );
-
-  if (!target) {
-    return;
-  }
-
-  await db.runAsync(
-    `DELETE FROM chat_messages
-     WHERE session_id = ? AND created_at >= ?`,
-    [sessionId, target.created_at]
-  );
-
-  await touchSession(sessionId);
-};
+): Promise<void> => chatDatabase.truncateMessagesFrom(sessionId, messageId);
 
 /**
  * Derives a session title from the first user message (truncated).
