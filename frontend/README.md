@@ -410,7 +410,7 @@ sequenceDiagram
     L-->>A: Tool call: get_todays_menu
     A->>T: Token exchange (RFC 8693)
     T-->>A: Meals-scoped token
-    A->>M: GET /menu (x-jwt-assertion)
+    A->>M: GET /menu (Bearer token)
     M-->>A: Menu data
     A->>L: Tool result
     L-->>A: Formatted response
