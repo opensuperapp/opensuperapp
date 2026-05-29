@@ -334,7 +334,7 @@ export class ChatDatabase {
       `SELECT id, session_id, role, content, status, created_at, updated_at
        FROM chat_messages
        WHERE session_id = ?
-       ORDER BY created_at ASC`,
+       ORDER BY created_at ASC, rowid ASC`,
       [sessionId]
     );
 

@@ -93,6 +93,15 @@ const ChatSessionDrawer = ({
   useEffect(() => {
     if (visible) {
       setMounted(true);
+    }
+  }, [visible]);
+
+  useEffect(() => {
+    if (!mounted) {
+      return;
+    }
+
+    if (visible) {
       Animated.parallel([
         Animated.timing(slideX, {
           toValue: 0,
@@ -105,10 +114,6 @@ const ChatSessionDrawer = ({
           useNativeDriver: true,
         }),
       ]).start();
-      return;
-    }
-
-    if (!mounted) {
       return;
     }
 
@@ -195,7 +200,7 @@ const ChatSessionDrawer = ({
           <ChatMenuButton
             theme={theme}
             onPress={onClose}
-            accessibilityLabel="close_chat_menu"
+            accessibilityLabel="Close chat history"
           />
 
           <View
@@ -227,14 +232,14 @@ const ChatSessionDrawer = ({
               autoCorrect={false}
               returnKeyType="search"
               clearButtonMode={isAndroid ? "never" : "while-editing"}
-              accessibilityLabel="search_chats"
+              accessibilityLabel="Search chats"
             />
 
             {isAndroid && searchQuery.length > 0 ? (
               <TouchableOpacity
                 onPress={() => setSearchQuery("")}
                 hitSlop={8}
-                accessibilityLabel="clear_search"
+                accessibilityLabel="Clear search"
               >
                 <Ionicons
                   name="close-circle"
@@ -292,7 +297,9 @@ const ChatSessionDrawer = ({
                   onClose();
                 }}
                 onLongPress={() => showSessionOptions(item)}
-                accessibilityLabel={`open_chat_${item.id}`}
+                accessibilityLabel={
+                  item.isPinned ? `${item.title}, pinned` : item.title
+                }
               >
                 <Text
                   style={[styles.rowTitle, { color: theme.assistantText }]}

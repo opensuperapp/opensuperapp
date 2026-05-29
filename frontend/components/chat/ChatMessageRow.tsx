@@ -15,6 +15,9 @@
 // under the License.
 import AssistantMessageContent from "@/components/chat/AssistantMessageContent";
 import ChatTypingIndicator from "@/components/chat/ChatTypingIndicator";
+import UserMessageContextMenu, {
+  MessageContextMenuAnchor,
+} from "@/components/chat/UserMessageContextMenu";
 import {
   CHAT_ERROR_GENERIC,
   CHAT_ERROR_STOPPED,
@@ -23,7 +26,7 @@ import { ChatThemePalette } from "@/constants/ChatTheme";
 import { ChatRole, MessageStatus } from "@/constants/enums/Chat";
 import { ChatMessage } from "@/types/chat.types";
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import React, { useRef, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export interface ChatMessageRowProps {
@@ -31,6 +34,7 @@ export interface ChatMessageRowProps {
   theme: ChatThemePalette;
   showRegenerate?: boolean;
   onRegenerate?: () => void;
+  onEdit?: () => void;
   onCopyMessage?: (content: string) => void;
   onCopy: (value: string, label: string) => void;
 }
@@ -46,9 +50,16 @@ const ChatMessageRow = ({
   theme,
   showRegenerate = false,
   onRegenerate,
+  onEdit,
   onCopyMessage,
   onCopy,
 }: ChatMessageRowProps): JSX.Element => {
+  const bubbleRef = useRef<View>(null);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [menuAnchor, setMenuAnchor] = useState<MessageContextMenuAnchor | null>(
+    null
+  );
+
   const isUser = message.role === ChatRole.User;
   const isStreaming =
     message.role === ChatRole.Assistant &&
@@ -57,13 +68,52 @@ const ChatMessageRow = ({
     !message.content;
 
   if (isUser) {
+    const canShowMenu = Boolean(onEdit || onCopyMessage);
+
+    const handleLongPress = () => {
+      if (!canShowMenu) {
+        return;
+      }
+      bubbleRef.current?.measureInWindow((x, y, width, height) => {
+        setMenuAnchor({ x, y, width, height });
+        setMenuVisible(true);
+      });
+    };
+
+    const dismissMenu = () => {
+      setMenuVisible(false);
+      setMenuAnchor(null);
+    };
+
     return (
       <View style={styles.userRow}>
-        <View style={[styles.userBubble, { backgroundColor: theme.userBubble }]}>
-          <Text style={[styles.userText, { color: theme.userText }]}>
-            {message.content}
-          </Text>
-        </View>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onLongPress={handleLongPress}
+          disabled={!canShowMenu}
+          delayLongPress={400}
+        >
+          <View
+            ref={bubbleRef}
+            collapsable={false}
+            style={[styles.userBubble, { backgroundColor: theme.userBubble }]}
+          >
+            <Text style={[styles.userText, { color: theme.userText }]}>
+              {message.content}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        <UserMessageContextMenu
+          visible={menuVisible}
+          anchor={menuAnchor}
+          theme={theme}
+          onEdit={onEdit}
+          onCopy={
+            onCopyMessage ? () => onCopyMessage(message.content) : undefined
+          }
+          onDismiss={dismissMenu}
+        />
       </View>
     );
   }
@@ -100,7 +150,7 @@ const ChatMessageRow = ({
             <TouchableOpacity
               onPress={onRegenerate}
               hitSlop={8}
-              accessibilityLabel="regenerate_message"
+              accessibilityLabel="Regenerate response"
               accessibilityRole="button"
             >
               <Ionicons name="refresh" size={20} color={theme.muted} />
@@ -110,7 +160,7 @@ const ChatMessageRow = ({
             <TouchableOpacity
               onPress={() => onCopyMessage(message.content)}
               hitSlop={8}
-              accessibilityLabel="copy_message"
+              accessibilityLabel="Copy message"
               accessibilityRole="button"
             >
               <Ionicons name="copy-outline" size={20} color={theme.muted} />

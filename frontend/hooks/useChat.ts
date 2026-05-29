@@ -20,8 +20,10 @@ import {
 } from "@/services/chatDatabase";
 import { buildHistoryPayload, sendChatMessage } from "@/services/chatService";
 import { ChatMessage } from "@/types/chat.types";
-import axios from "axios";
 import { useCallback, useEffect, useRef, useState } from "react";
+
+const isAbortError = (err: unknown): boolean =>
+  err instanceof Error && err.name === "AbortError";
 
 /**
  * Manages messages and agent interactions for a single chat session.
@@ -128,7 +130,7 @@ export const useChat = (sessionId: string | null) => {
 
         setMessages(await chatDatabase.listMessages(sessionId));
       } catch (err) {
-        if (axios.isCancel(err)) {
+        if (isAbortError(err)) {
           await chatDatabase.updateMessage(assistantMessage.id, {
             content: "Generation stopped.",
             status: MessageStatus.Stopped,

@@ -54,7 +54,7 @@ const ChatHeader = ({
       <ChatMenuButton
         theme={theme}
         onPress={onOpenHistory}
-        accessibilityLabel="open_chat_history"
+        accessibilityLabel="Open chat history"
       />
     </View>
   );

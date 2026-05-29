@@ -14,15 +14,21 @@
 // specific language governing permissions and limitations
 // under the License.
 import { ChatThemePalette } from "@/constants/ChatTheme";
+import { isIos } from "@/constants/Constants";
+import { MAX_MESSAGE_LENGTH } from "@/types/chat.types";
+import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export interface EditMessageModalProps {
   visible: boolean;
@@ -33,7 +39,7 @@ export interface EditMessageModalProps {
 }
 
 /**
- * Modal for editing a previously sent user message.
+ * Full-screen modal for editing a previously sent user message.
  *
  * @param {EditMessageModalProps} props - Visibility, content, and handlers.
  * @returns {JSX.Element} Edit message modal.
@@ -46,6 +52,8 @@ const EditMessageModal = ({
   onClose,
 }: EditMessageModalProps): JSX.Element => {
   const [content, setContent] = useState(initialContent);
+  const insets = useSafeAreaInsets();
+  const canSend = content.trim().length > 0;
 
   useEffect(() => {
     if (visible) {
@@ -53,7 +61,7 @@ const EditMessageModal = ({
     }
   }, [visible, initialContent]);
 
-  const handleSave = () => {
+  const handleSend = () => {
     const trimmed = content.trim();
     if (trimmed) {
       onSave(trimmed);
@@ -64,51 +72,76 @@ const EditMessageModal = ({
   return (
     <Modal
       visible={visible}
-      transparent
-      animationType="fade"
+      animationType="slide"
+      presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
-      <View style={[styles.overlay, { backgroundColor: "rgba(0,0,0,0.45)" }]}>
-        <View
-          style={[
-            styles.dialog,
-            {
-              backgroundColor: theme.background,
-              borderColor: theme.border,
-            },
-          ]}
-        >
-          <Text style={[styles.title, { color: theme.assistantText }]}>
-            Edit message
-          </Text>
-          <TextInput
+      <View style={[styles.screen, { backgroundColor: theme.background }]}>
+        <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+          <TouchableOpacity
+            onPress={onClose}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={[
-              styles.input,
+              styles.dismissBtn,
               {
-                color: theme.assistantText,
-                backgroundColor: theme.surface,
-                borderColor: theme.border,
+                backgroundColor: theme.inputSurface,
+                borderColor: theme.inputBorder,
               },
             ]}
+            accessibilityLabel="Dismiss edit"
+            accessibilityRole="button"
+          >
+            <Ionicons
+              name="close"
+              size={20}
+              color={theme.assistantText}
+            />
+            <Text style={[styles.dismissText, { color: theme.assistantText }]}>
+              Dismiss edit
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={isIos ? "padding" : undefined}
+          keyboardVerticalOffset={insets.top}
+        >
+          <TextInput
+            style={[styles.input, { color: theme.assistantText }]}
             value={content}
             onChangeText={setContent}
             multiline
-            maxLength={5000}
+            maxLength={MAX_MESSAGE_LENGTH}
             autoFocus
+            textAlignVertical="top"
+            placeholderTextColor={theme.muted}
           />
-          <View style={styles.actions}>
-            <TouchableOpacity onPress={onClose} style={styles.textBtn}>
-              <Text style={[styles.cancelText, { color: theme.muted }]}>
-                Cancel
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleSave}
-              style={[styles.saveBtn, { backgroundColor: theme.accentMuted }]}
-            >
-              <Text style={styles.saveText}>Save & resend</Text>
-            </TouchableOpacity>
-          </View>
+        </KeyboardAvoidingView>
+
+        <View
+          style={[
+            styles.footer,
+            { paddingBottom: Math.max(insets.bottom, 16) },
+          ]}
+        >
+          <TouchableOpacity
+            onPress={handleSend}
+            disabled={!canSend}
+            style={[
+              styles.sendBtn,
+              { backgroundColor: canSend ? theme.accent : theme.surface },
+            ]}
+            accessibilityLabel="Send message"
+            accessibilityRole="button"
+          >
+            <Ionicons
+              name="send"
+              size={20}
+              color={canSend ? "#fff" : theme.muted}
+            />
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -118,52 +151,51 @@ const EditMessageModal = ({
 export default EditMessageModal;
 
 const styles = StyleSheet.create({
-  overlay: {
+  screen: {
     flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: 24,
   },
-  dialog: {
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
+  flex: {
+    flex: 1,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: "500",
-    marginBottom: 14,
+  header: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
   },
-  input: {
-    minHeight: 100,
-    maxHeight: 200,
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 14,
-    fontSize: 16,
-    textAlignVertical: "top",
-  },
-  actions: {
+  dismissBtn: {
     flexDirection: "row",
-    justifyContent: "flex-end",
     alignItems: "center",
-    gap: 12,
-    marginTop: 16,
-  },
-  textBtn: {
+    alignSelf: "flex-start",
+    gap: 6,
+    minHeight: 44,
     paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderRadius: 22,
   },
-  cancelText: {
-    fontSize: 15,
-  },
-  saveBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 20,
-  },
-  saveText: {
+  dismissText: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#fff",
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    lineHeight: 24,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    ...Platform.select({
+      android: { paddingBottom: 8 },
+    }),
+  },
+  footer: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    alignItems: "flex-end",
+  },
+  sendBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

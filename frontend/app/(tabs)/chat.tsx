@@ -222,7 +222,17 @@ export default function ChatScreen(): JSX.Element {
           showRegenerate && prev ? () => retryMessage(prev.id) : undefined
         }
         onCopyMessage={
-          item.role === ChatRole.Assistant ? handleCopyMessage : undefined
+          item.status === MessageStatus.Sent &&
+          (item.role === ChatRole.Assistant || item.role === ChatRole.User)
+            ? handleCopyMessage
+            : undefined
+        }
+        onEdit={
+          item.role === ChatRole.User &&
+          item.status === MessageStatus.Sent &&
+          !isGenerating
+            ? () => setEditTarget({ id: item.id, content: item.content })
+            : undefined
         }
         onCopy={handleCopy}
       />

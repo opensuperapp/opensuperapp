@@ -195,8 +195,8 @@ export const CHAT_SUGGESTIONS: ChatSuggestion[] = [
   },
   {
     id: "add-leave",
-    label: "Add leave",
-    prompt: "I want to add a leave request",
+    label: "Request leave",
+    prompt: "I want to request leave",
     category: ChatSuggestionCategory.Leave,
   },
   {

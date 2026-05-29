@@ -105,6 +105,8 @@ const AssistantMessageContent = ({
           <TouchableOpacity
             style={[styles.copyBtn, { backgroundColor: theme.accentMuted }]}
             onPress={() => onCopy(value, label)}
+            accessibilityLabel={`Copy ${label}`}
+            accessibilityRole="button"
           >
             <Ionicons name="copy-outline" size={16} color="#fff" />
           </TouchableOpacity>
