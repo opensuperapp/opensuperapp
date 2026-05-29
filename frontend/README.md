@@ -236,6 +236,7 @@ cp .env.example .env
 
 - This will create a `.env` file. Make sure to update the values according to your project requirements.
 - Please note that the authenticator app–related URL in `.env` is required only for the WSO2 Super App. If your app does not need it, you can safely remove those variables.
+- For **EAS Build** and **over-the-air updates**, set `EAS_PROJECT_ID` and, for local native builds, `EXPO_PUBLIC_UPDATES_CHANNEL` (`development` or `production`). See [Over-the-air (OTA) updates](#over-the-air-ota-updates-eas-update).
 
 #### 1.1. (Optional) How to add/remove Firebase plugins if you are using Firebase.
 
@@ -348,6 +349,91 @@ You can start development by editing the files inside the **app** directory. Thi
 2. Follow the official Expo documentation for the next steps.
 
    - https://docs.expo.dev/build/setup/
+
+---
+
+## Over-the-air (OTA) updates (EAS Update)
+
+> **Developer guide (Word):** [docs/Super-App-Over-the-Air-Updates-Developer-Guide.docx](docs/Super-App-Over-the-Air-Updates-Developer-Guide.docx) — end-to-end OTA setup, channels, workflows, diagrams, and troubleshooting. Regenerate with `python scripts/generate-ota-guide-docx.py` (requires `python-docx` and `matplotlib`).
+
+The Super App shell (JavaScript bundle and assets) can be updated **without** resubmitting to the App Store or Play Store using [EAS Update](https://docs.expo.dev/eas-update/introduction/). This is separate from:
+
+- **Micro-app updates** — web bundles re-downloaded from your backend store.
+- **Native force update** — the `update` screen that sends users to the store when a new native binary is required.
+
+### Channels and build profiles
+
+OTA updates use **two channels only**, defined in `eas.json`:
+
+| EAS build profile | Update channel   | Typical use                          |
+| ----------------- | ---------------- | ------------------------------------ |
+| `development`     | `development`    | Internal builds, dev client, testing |
+| `production`      | `production`     | Store / production releases          |
+
+A binary only receives updates published to **its** channel. A `development` build never sees `production` updates, and vice versa.
+
+### Required environment variables
+
+Set these in `.env` (see `.env.example`):
+
+| Variable | Purpose |
+| -------- | ------- |
+| `EAS_PROJECT_ID` | Links the app to your Expo project; used in `app.config.ts` for the updates URL (`https://u.expo.dev/<project-id>`). |
+| `EXPO_PUBLIC_UPDATES_CHANNEL` | **`development`** or **`production`**. Required for **local** native builds so `plugins/withUpdatesChannel.ts` embeds the correct channel in the binary. EAS cloud builds set the channel from `eas.json` automatically. |
+
+`runtimeVersion` uses the **`appVersion`** policy (from `APP_VERSION` in `.env`). OTA updates only apply to binaries whose runtime version matches the update. Bump `APP_VERSION` and ship a new native build when you change native code or dependencies that require a rebuild.
+
+### Build native binaries
+
+Use EAS Build with the matching profile (channel is applied automatically):
+
+```bash
+# Development (dev client, internal distribution)
+npx --yes @dotenvx/dotenvx run -f .env -- eas build --profile development --platform android
+npx --yes @dotenvx/dotenvx run -f .env -- eas build --profile development --platform ios
+
+# Production
+npx --yes @dotenvx/dotenvx run -f .env -- eas build --profile production --platform android
+npx --yes @dotenvx/dotenvx run -f .env -- eas build --profile production --platform ios
+```
+
+**Local builds:** set `EXPO_PUBLIC_UPDATES_CHANNEL` to the same channel as the profile (`development` or `production`), then run prebuild/build. Example npm scripts:
+
+```bash
+npm run build:android:development:apk   # development channel
+npm run build:ios:development
+npm run build:ios:production
+```
+
+### Publish an OTA update
+
+Publish JavaScript/asset changes to a channel (both platforms):
+
+```bash
+# Development channel
+MESSAGE="Fix login redirect" npm run update:development
+
+# Production channel
+MESSAGE="1.0.1 bug fixes" npm run update:production
+```
+
+`MESSAGE` is required and describes the update in the Expo dashboard.
+
+The app checks for updates **on load** (`checkAutomatically: "ON_LOAD"` in `app.config.ts`). Users get the new bundle on the next cold start after the update is downloaded.
+
+### When you need a new native build (not OTA)
+
+Publish a new **EAS Build** (and store submission if applicable) when you change:
+
+- Native modules, `app.config.ts` plugins, or permissions
+- `APP_VERSION` / runtime version (if you want OTA to target only new binaries)
+- Anything that is not delivered as JS/assets via EAS Update
+
+### Further reading
+
+- [EAS Update — Getting started](https://docs.expo.dev/eas-update/getting-started/)
+- [Runtime versions](https://docs.expo.dev/eas-update/runtime-versions/)
+- [Deploy updates](https://docs.expo.dev/eas-update/deployment/)
 
 ---
 

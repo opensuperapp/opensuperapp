@@ -18,7 +18,11 @@
     "write-firebase-files": "npx --yes @dotenvx/dotenvx run -f .env -- node ./scripts/writeFirebaseFiles.ts",
     "postinstall": "npm run write-firebase-files || true && npm install --prefix ..",
     "build:android:local": "npx --yes @dotenvx/dotenvx run -f .env -- eas build --platform android --local",
-    "build:android:development:apk": "npx --yes @dotenvx/dotenvx run -f .env -- eas build -p android --profile development --local"
+    "build:android:development:apk": "npx --yes @dotenvx/dotenvx run -f .env -- eas build -p android --profile development --local",
+    "build:ios:development": "npx --yes @dotenvx/dotenvx run -f .env -- eas build --platform ios --profile development --local",
+    "build:ios:production": "npx --yes @dotenvx/dotenvx run -f .env -- eas build --platform ios --profile production --local",
+    "update:development": "npx --yes @dotenvx/dotenvx run -f .env -- eas update --platform android --channel development --message $MESSAGE && npx --yes @dotenvx/dotenvx run -f .env -- eas update --platform ios --channel development --message $MESSAGE",
+    "update:production": "npx --yes @dotenvx/dotenvx run -f .env -- eas update --platform android --channel production --message $MESSAGE && npx --yes @dotenvx/dotenvx run -f .env -- eas update --platform ios --channel production --message $MESSAGE"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": "eslint --fix --max-warnings=0"
@@ -62,6 +66,7 @@
     "expo-secure-store": "~15.0.8",
     "expo-splash-screen": "~31.0.13",
     "expo-status-bar": "~3.0.9",
+    "expo-updates": "~29.0.17",
     "expo-web-browser": "~15.0.11",
     "fast-xml-parser": "^5.2.3",
     "jszip": "^3.10.1",
