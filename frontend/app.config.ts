@@ -23,6 +23,9 @@ import { withFirebase } from "./integrations/firebase/withFirebase";
 /* Custom plugin to configure Android notification small icon */
 import withAndroidNotificationIconConfiguration from "./integrations/android-notifications/withAndroidNotificationIconConfiguration";
 
+/* Plugin to set expo-updates channel for locally built APKs */
+import withUpdatesChannel from "./plugins/withUpdatesChannel";
+
 const PRODUCTION = "production";
 const DEVELOPMENT = "development";
 const TRUE = "true";
@@ -45,6 +48,7 @@ const ENABLE_FIREBASE = process.env.EXPO_PUBLIC_ENABLE_FIREBASE ?? FALSE;
 const ADD_ANDROID_NOTIFICATION_ICON =
   process.env.EXPO_PUBLIC_ADD_ANDROID_NOTIFICATION_ICON ?? FALSE;
 const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID ?? ""; // Comment this if EAS is not used
+const UPDATES_CHANNEL = process.env.EXPO_PUBLIC_UPDATES_CHANNEL ?? ""; // Comment this if EAS is not used
 
 /* =============== Firebase Configuration ===============
  *
@@ -74,6 +78,15 @@ let config: ExpoConfig = {
   owner: APP_OWNER,
   newArchEnabled: true,
   userInterfaceStyle: "automatic",
+  updates: {
+    url: `https://u.expo.dev/${EAS_PROJECT_ID}`,
+    enabled: true,
+    checkAutomatically: "ON_LOAD",
+    fallbackToCacheTimeout: 0,
+  },
+   runtimeVersion: {
+    policy: "appVersion",
+  },
   ios: {
     supportsTablet: true,
     requireFullScreen: true,
@@ -104,17 +117,11 @@ let config: ExpoConfig = {
       backgroundColor: "#476481",
     },
   },
-  web: {
-    bundler: "metro",
-    output: "static",
-    favicon: "./assets/images/favicon.png",
-  },
   plugins: [
     [
-      "@wavemaker/react-native-app-auth-expo-plugin",
+      "react-native-app-auth",
       {
-        redirectScheme: APP_SCHEME,
-        enableUniversalLinks: false,
+        redirectUrls: [`${APP_SCHEME}://`],
       },
     ],
     [
@@ -152,6 +159,12 @@ let config: ExpoConfig = {
       },
     ],
     "expo-router",
+    [
+      "expo-updates",
+      {
+        username: APP_OWNER,
+      },
+    ],
     [
       "expo-secure-store",
       {
@@ -204,6 +217,10 @@ if (ENABLE_FIREBASE === TRUE) {
  */
 if (ADD_ANDROID_NOTIFICATION_ICON === TRUE) {
   config = withAndroidNotificationIconConfiguration(config);
+}
+
+if (UPDATES_CHANNEL) {
+  config = withUpdatesChannel(config, { channel: UPDATES_CHANNEL });
 }
 
 export default config;
