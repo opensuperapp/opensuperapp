@@ -13,7 +13,6 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-
 import { ChatThemePalette } from "@/constants/ChatTheme";
 import { Ionicons } from "@expo/vector-icons";
 import React, { ReactNode } from "react";

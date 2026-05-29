@@ -13,7 +13,6 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-
 import { CHAT_INPUT_PLACEHOLDER } from "@/constants/Constants";
 import { ChatThemePalette } from "@/constants/ChatTheme";
 import { MAX_MESSAGE_LENGTH } from "@/types/chat.types";

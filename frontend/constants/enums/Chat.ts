@@ -13,7 +13,6 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-
 export enum ChatRole {
   User = "user",
   Assistant = "assistant",

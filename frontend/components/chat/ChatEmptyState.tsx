@@ -13,7 +13,6 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-
 import ChatSuggestionChip from "@/components/chat/ChatSuggestionChip";
 import SuperAppAgentIcon from "@/components/chat/SuperAppAgentIcon";
 import { CHAT_EMPTY_HINT, CHAT_SUGGESTIONS } from "@/constants/Constants";

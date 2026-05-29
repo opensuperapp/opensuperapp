@@ -13,7 +13,6 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-
 import {
   CHAT_MENU_BUTTON_SIZE,
   CHAT_MENU_ICON_SIZE,
