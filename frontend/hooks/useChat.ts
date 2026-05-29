@@ -14,15 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import {
-  deriveSessionTitle,
-  insertMessage,
-  listMessages,
-  truncateMessagesFrom,
-  updateMessage,
-  updateSessionTitle,
-} from "@/services/chatDatabase";
 import { ChatRole, MessageStatus } from "@/constants/enums/Chat";
+import {
+  chatDatabase,
+  deriveSessionTitle,
+} from "@/services/chatDatabase";
 import { buildHistoryPayload, sendChatMessage } from "@/services/chatService";
 import { ChatMessage } from "@/types/chat.types";
 import axios from "axios";
@@ -45,8 +41,17 @@ export const useChat = (sessionId: string | null) => {
       setMessages([]);
       return;
     }
-    const loaded = await listMessages(sessionId);
-    setMessages(loaded);
+
+    try {
+      const loaded = await chatDatabase.listMessages(sessionId);
+      setMessages(loaded);
+      setError(null);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to load messages"
+      );
+      setMessages([]);
+    }
   }, [sessionId]);
 
   useEffect(() => {
@@ -71,25 +76,40 @@ export const useChat = (sessionId: string | null) => {
       const controller = new AbortController();
       abortRef.current = controller;
 
-      const userMessage = await insertMessage({
-        sessionId,
-        role: ChatRole.User,
-        content: userContent,
-        status: MessageStatus.Sent,
-      });
+      let userMessage: ChatMessage;
+      let assistantMessage: ChatMessage;
 
-      const isFirstUserMessage =
-        priorMessages.filter((m) => m.role === ChatRole.User).length === 0;
-      if (isFirstUserMessage) {
-        await updateSessionTitle(sessionId, deriveSessionTitle(userContent));
+      try {
+        userMessage = await chatDatabase.insertMessage({
+          sessionId,
+          role: ChatRole.User,
+          content: userContent,
+          status: MessageStatus.Sent,
+        });
+
+        const isFirstUserMessage =
+          priorMessages.filter((m) => m.role === ChatRole.User).length === 0;
+        if (isFirstUserMessage) {
+          await chatDatabase.updateSessionTitle(
+            sessionId,
+            deriveSessionTitle(userContent)
+          );
+        }
+
+        assistantMessage = await chatDatabase.insertMessage({
+          sessionId,
+          role: ChatRole.Assistant,
+          content: "",
+          status: MessageStatus.Streaming,
+        });
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Failed to save message";
+        setError(message);
+        setIsGenerating(false);
+        abortRef.current = null;
+        return;
       }
-
-      const assistantMessage = await insertMessage({
-        sessionId,
-        role: ChatRole.Assistant,
-        content: "",
-        status: MessageStatus.Streaming,
-      });
 
       const withUser = [...priorMessages, userMessage];
       setMessages([...withUser, assistantMessage]);
@@ -102,15 +122,15 @@ export const useChat = (sessionId: string | null) => {
           signal: controller.signal,
         });
 
-        await updateMessage(assistantMessage.id, {
+        await chatDatabase.updateMessage(assistantMessage.id, {
           content: reply,
           status: MessageStatus.Sent,
         });
 
-        setMessages(await listMessages(sessionId));
+        setMessages(await chatDatabase.listMessages(sessionId));
       } catch (err) {
         if (axios.isCancel(err)) {
-          await updateMessage(assistantMessage.id, {
+          await chatDatabase.updateMessage(assistantMessage.id, {
             content: "Generation stopped.",
             status: MessageStatus.Stopped,
           });
@@ -118,12 +138,21 @@ export const useChat = (sessionId: string | null) => {
           const detail =
             err instanceof Error ? err.message : "Failed to get a response.";
           setError(detail);
-          await updateMessage(assistantMessage.id, {
+          await chatDatabase.updateMessage(assistantMessage.id, {
             content: detail,
             status: MessageStatus.Error,
           });
         }
-        setMessages(await listMessages(sessionId));
+
+        try {
+          setMessages(await chatDatabase.listMessages(sessionId));
+        } catch (reloadErr) {
+          setError(
+            reloadErr instanceof Error
+              ? reloadErr.message
+              : "Failed to load messages"
+          );
+        }
       } finally {
         abortRef.current = null;
         setIsGenerating(false);
@@ -154,13 +183,19 @@ export const useChat = (sessionId: string | null) => {
         return;
       }
 
-      await truncateMessagesFrom(sessionId, messageId);
-      const prior = messages.filter(
-        (m) =>
-          m.createdAt < target.createdAt && m.status === MessageStatus.Sent
-      );
-      setMessages(prior);
-      await runAgentTurn(target.content, prior);
+      try {
+        await chatDatabase.truncateMessagesFrom(sessionId, messageId);
+        const prior = messages.filter(
+          (m) =>
+            m.createdAt < target.createdAt && m.status === MessageStatus.Sent
+        );
+        setMessages(prior);
+        await runAgentTurn(target.content, prior);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to retry message"
+        );
+      }
     },
     [isGenerating, sessionId, messages, runAgentTurn]
   );
@@ -177,10 +212,16 @@ export const useChat = (sessionId: string | null) => {
         return;
       }
 
-      await truncateMessagesFrom(sessionId, messageId);
-      const prior = messages.filter((m) => m.createdAt < target.createdAt);
-      setMessages(prior);
-      await runAgentTurn(trimmed, prior);
+      try {
+        await chatDatabase.truncateMessagesFrom(sessionId, messageId);
+        const prior = messages.filter((m) => m.createdAt < target.createdAt);
+        setMessages(prior);
+        await runAgentTurn(trimmed, prior);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to edit message"
+        );
+      }
     },
     [isGenerating, sessionId, messages, runAgentTurn]
   );
