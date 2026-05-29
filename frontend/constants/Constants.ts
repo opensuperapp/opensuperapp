@@ -194,9 +194,9 @@ export const CHAT_SUGGESTIONS: ChatSuggestion[] = [
     category: ChatSuggestionCategory.Wifi,
   },
   {
-    id: "view-leaves",
-    label: "View leaves",
-    prompt: "Show my upcoming leave requests",
+    id: "add-leave",
+    label: "Add leave",
+    prompt: "I want to add a leave request",
     category: ChatSuggestionCategory.Leave,
   },
   {
