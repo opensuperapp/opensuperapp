@@ -28,6 +28,7 @@ import { RootState } from "@/context/store";
 import { useChat } from "@/hooks/useChat";
 import { useChatSessions } from "@/hooks/useChatSessions";
 import { useTrackActiveScreen } from "@/hooks/useTrackActiveScreen";
+import { resolveChatUserId } from "@/utils/resolveChatUserId";
 import { ChatMessage } from "@/types/chat.types";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "@react-navigation/native";
@@ -59,21 +60,30 @@ export default function ChatScreen(): JSX.Element {
   const tabBarHeight = useBottomTabBarHeight();
   const navigation = useNavigation();
   const { userInfo } = useSelector((state: RootState) => state.userInfo);
+  const { userId: authUserId, accessToken } = useSelector(
+    (state: RootState) => state.auth
+  );
+  const chatUserId = resolveChatUserId({
+    userId: authUserId,
+    accessToken,
+  });
 
   const {
     sessions,
     activeSessionId,
     isLoading: sessionsLoading,
+    error: sessionsError,
     selectSession,
     createNewSession,
     removeSession,
     togglePinSession,
     renameSession,
-  } = useChatSessions();
+  } = useChatSessions(chatUserId);
 
   const {
     messages,
     isGenerating,
+    error: chatError,
     sendMessage,
     stopGeneration,
     retryMessage,
@@ -160,6 +170,13 @@ export default function ChatScreen(): JSX.Element {
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 80);
     }
   }, [messages, activeSessionId]);
+
+  useEffect(() => {
+    const message = sessionsError ?? chatError;
+    if (message) {
+      showSnackbar(message);
+    }
+  }, [sessionsError, chatError, showSnackbar]);
 
   const handleSend = useCallback(async () => {
     const trimmed = inputText.trim();
