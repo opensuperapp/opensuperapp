@@ -14,81 +14,138 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import {
-  createSession,
-  deleteSession,
-  initChatDatabase,
-  listSessions,
-  setSessionPinned,
-  updateSessionTitle,
-} from "@/services/chatDatabase";
+import { chatDatabase } from "@/services/chatDatabase";
 import { ChatSession } from "@/types/chat.types";
 import { useCallback, useEffect, useState } from "react";
 
 /**
- * Manages chat session list: load, create, delete, pin, and active selection.
+ * Manages chat session list scoped to the authenticated user.
  *
+ * @param {string | null} userId - Current user id from auth; sessions reload when it changes.
  * @returns Session state and mutation handlers.
  */
-export const useChatSessions = () => {
+export const useChatSessions = (userId: string | null) => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const refreshSessions = useCallback(async () => {
-    const loaded = await listSessions();
-    setSessions(loaded);
-    return loaded;
-  }, []);
+    if (!userId) {
+      setSessions([]);
+      return [];
+    }
+
+    try {
+      const loaded = await chatDatabase.listSessions();
+      setSessions(loaded);
+      setError(null);
+      return loaded;
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to load chat sessions";
+      setError(message);
+      throw err;
+    }
+  }, [userId]);
 
   useEffect(() => {
+    let cancelled = false;
+
     const bootstrap = async () => {
+      setIsLoading(true);
+      setSessions([]);
+      setActiveSessionId(null);
+      setError(null);
+      chatDatabase.setUserId(userId);
+
+      if (!userId) {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+        return;
+      }
+
       try {
-        await initChatDatabase();
-        const loaded = await refreshSessions();
+        await chatDatabase.initialize();
+        const loaded = await chatDatabase.listSessions();
+
+        if (cancelled) {
+          return;
+        }
 
         if (loaded.length === 0) {
-          const session = await createSession();
+          const session = await chatDatabase.createSession();
           setSessions([session]);
           setActiveSessionId(session.id);
         } else {
+          setSessions(loaded);
           setActiveSessionId(loaded[0].id);
         }
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err instanceof Error ? err.message : "Failed to load chats"
+          );
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
     bootstrap();
-  }, [refreshSessions]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   const selectSession = useCallback((sessionId: string) => {
     setActiveSessionId(sessionId);
   }, []);
 
   const createNewSession = useCallback(async () => {
-    const session = await createSession();
-    await refreshSessions();
-    setActiveSessionId(session.id);
-    return session;
-  }, [refreshSessions]);
+    if (!userId) {
+      return null;
+    }
+
+    try {
+      const session = await chatDatabase.createSession();
+      await refreshSessions();
+      setActiveSessionId(session.id);
+      return session;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create chat");
+      return null;
+    }
+  }, [refreshSessions, userId]);
 
   const removeSession = useCallback(
     async (sessionId: string) => {
-      await deleteSession(sessionId);
-      const remaining = await refreshSessions();
+      if (!userId) {
+        return;
+      }
 
-      if (activeSessionId === sessionId) {
-        if (remaining.length === 0) {
-          const session = await createSession();
-          setSessions([session]);
-          setActiveSessionId(session.id);
-        } else {
-          setActiveSessionId(remaining[0].id);
+      try {
+        await chatDatabase.deleteSession(sessionId);
+        const remaining = await refreshSessions();
+
+        if (activeSessionId === sessionId) {
+          if (remaining.length === 0) {
+            const session = await chatDatabase.createSession();
+            setSessions([session]);
+            setActiveSessionId(session.id);
+          } else {
+            setActiveSessionId(remaining[0].id);
+          }
         }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to delete chat");
       }
     },
-    [activeSessionId, refreshSessions]
+    [activeSessionId, refreshSessions, userId]
   );
 
   const togglePinSession = useCallback(
@@ -97,8 +154,13 @@ export const useChatSessions = () => {
       if (!session) {
         return;
       }
-      await setSessionPinned(sessionId, !session.isPinned);
-      await refreshSessions();
+
+      try {
+        await chatDatabase.setSessionPinned(sessionId, !session.isPinned);
+        await refreshSessions();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to update chat");
+      }
     },
     [sessions, refreshSessions]
   );
@@ -109,8 +171,13 @@ export const useChatSessions = () => {
       if (!trimmed) {
         return;
       }
-      await updateSessionTitle(sessionId, trimmed);
-      await refreshSessions();
+
+      try {
+        await chatDatabase.updateSessionTitle(sessionId, trimmed);
+        await refreshSessions();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to rename chat");
+      }
     },
     [refreshSessions]
   );
@@ -119,6 +186,7 @@ export const useChatSessions = () => {
     sessions,
     activeSessionId,
     isLoading,
+    error,
     selectSession,
     createNewSession,
     removeSession,
