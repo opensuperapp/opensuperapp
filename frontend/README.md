@@ -354,8 +354,6 @@ You can start development by editing the files inside the **app** directory. Thi
 
 ## Over-the-air (OTA) updates (EAS Update)
 
-> **Developer guide (Word):** [docs/Super-App-Over-the-Air-Updates-Developer-Guide.docx](docs/Super-App-Over-the-Air-Updates-Developer-Guide.docx) — end-to-end OTA setup, channels, workflows, diagrams, and troubleshooting. Regenerate with `python scripts/generate-ota-guide-docx.py` (requires `python-docx` and `matplotlib`).
-
 The Super App shell (JavaScript bundle and assets) can be updated **without** resubmitting to the App Store or Play Store using [EAS Update](https://docs.expo.dev/eas-update/introduction/). This is separate from:
 
 - **Micro-app updates** — web bundles re-downloaded from your backend store.
