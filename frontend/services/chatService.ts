@@ -117,7 +117,6 @@ export const sendChatMessage = async ({
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
-        "x-jwt-assertion": token,
         "x-user-assertion": token,
       },
       body: JSON.stringify({ message: trimmed, history }),
