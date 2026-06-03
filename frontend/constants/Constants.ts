@@ -13,6 +13,8 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import { ChatSuggestionCategory } from "@/constants/enums/Chat";
+import { ChatSuggestion } from "@/types/chat.types";
 import { Platform } from "react-native";
 
 // Environment flags
@@ -127,6 +129,83 @@ export const NOTIFICATIONS_QUERY_KEY = "notifications";
 // Chat Agent
 export const CHAT_AGENT_URL = process.env.EXPO_PUBLIC_CHAT_AGENT_URL ?? "";
 export const WSO2_EMAIL_DOMAIN = "@wso2.com";
+
+export const CHAT_BRAND_NAME = "Super App AI";
+
+export const CHAT_INPUT_PLACEHOLDER = "Type a message…";
+
+export const CHAT_SEARCH_PLACEHOLDER = "Search chats";
+
+export const CHAT_NEW_SESSION_LABEL = "New chat";
+
+export const CHAT_RECENT_SECTION_LABEL = "Recent";
+
+export const CHAT_EMPTY_HINT = "Or choose a quick action";
+
+export const CHAT_EMPTY_DEFAULT_MESSAGE = "What can I help you with today?";
+
+export const CHAT_EMPTY_SESSIONS_LABEL = "No chats yet";
+
+export const CHAT_EMPTY_SEARCH_LABEL = "No chats match your search";
+
+export const CHAT_RENAME_MODAL_TITLE = "Rename chat";
+
+export const CHAT_RENAME_PLACEHOLDER = "Chat name";
+
+export const CHAT_ERROR_STOPPED = "Stopped";
+
+export const CHAT_ERROR_GENERIC = "Something went wrong";
+
+export const CHAT_DRAWER_WIDTH_RATIO = 0.88;
+
+export const CHAT_DRAWER_ANIMATION_MS = 260;
+
+export const CHAT_DEFAULT_SESSION_TITLE = "New Chat";
+
+export const CHAT_SESSION_TITLE_MAX_LENGTH = 120;
+
+export const CHAT_SCREEN_HORIZONTAL_PADDING = 12;
+
+export const CHAT_HEADER_TOP_OFFSET = 6;
+
+export const CHAT_HEADER_BOTTOM_PADDING = 8;
+
+export const CHAT_MENU_ICON_SIZE = 28;
+
+export const CHAT_MENU_BUTTON_SIZE = 44;
+
+export const CHAT_SUGGESTIONS: ChatSuggestion[] = [
+  {
+    id: "menu-today",
+    label: "Menu today",
+    prompt: "What's on the menu today?",
+    category: ChatSuggestionCategory.Meals,
+  },
+  {
+    id: "wifi-create",
+    label: "Create guest Wi-Fi account",
+    prompt: "Create a guest Wi-Fi account for my visitor",
+    category: ChatSuggestionCategory.Wifi,
+  },
+  {
+    id: "wifi-delete",
+    label: "Delete guest Wi-Fi account",
+    prompt: "Delete my guest Wi-Fi account",
+    category: ChatSuggestionCategory.Wifi,
+  },
+  {
+    id: "add-leave",
+    label: "Add leave",
+    prompt: "I want to add leave",
+    category: ChatSuggestionCategory.Leave,
+  },
+  {
+    id: "cancel-leave",
+    label: "Cancel leave",
+    prompt: "I want to cancel a leave request",
+    category: ChatSuggestionCategory.Leave,
+  },
+];
 
 // Tab Names
 export const FEED_TAB_NAME = "Feed";

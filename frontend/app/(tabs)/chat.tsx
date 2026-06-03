@@ -13,557 +13,381 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-
-import { useState, useRef, useCallback, useEffect, ReactNode } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  FlatList,
-  StyleSheet,
-  KeyboardAvoidingView,
-  useColorScheme,
-  ActivityIndicator,
-  Keyboard,
-  Animated,
-} from "react-native";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { Ionicons } from "@expo/vector-icons";
-import Markdown from "react-native-markdown-display";
-import { Colors } from "@/constants/Colors";
+import ChatSessionDrawer from "@/components/chat/ChatSessionDrawer";
+import EditMessageModal from "@/components/chat/EditMessageModal";
+import ChatComposer from "@/components/chat/ChatComposer";
+import ChatEmptyState from "@/components/chat/ChatEmptyState";
+import ChatHeader from "@/components/chat/ChatHeader";
+import ChatMessageRow from "@/components/chat/ChatMessageRow";
+import { getChatTheme } from "@/constants/ChatTheme";
+import { ChatRole, MessageStatus } from "@/constants/enums/Chat";
 import { isIos } from "@/constants/Constants";
-import { sendChatMessage, ChatMessage } from "@/services/chatService";
-import { Image } from "expo-image";
+import { ScreenPaths } from "@/constants/ScreenPaths";
+import { RootState } from "@/context/store";
+import { useChat } from "@/hooks/useChat";
+import { useChatSessions } from "@/hooks/useChatSessions";
+import { useTrackActiveScreen } from "@/hooks/useTrackActiveScreen";
+import { resolveChatUserId } from "@/utils/resolveChatUserId";
+import { ChatMessage } from "@/types/chat.types";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useNavigation } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Animated,
+  FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
+  StyleSheet,
+  Text,
+  useColorScheme,
+  View,
+} from "react-native";
+import { useSelector } from "react-redux";
 
-export default function ChatScreen() {
+/**
+ * AI Agent chat screen with Super App branding and SQLite-backed sessions.
+ *
+ * @returns {JSX.Element} Chat screen.
+ */
+export default function ChatScreen(): JSX.Element {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const theme = getChatTheme(isDark);
   const tabBarHeight = useBottomTabBarHeight();
+  const navigation = useNavigation();
+  const { userInfo } = useSelector((state: RootState) => state.userInfo);
+  const { userId: authUserId, accessToken } = useSelector(
+    (state: RootState) => state.auth
+  );
+  const chatUserId = resolveChatUserId({
+    userId: authUserId,
+    accessToken,
+  });
 
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const {
+    sessions,
+    activeSessionId,
+    isLoading: sessionsLoading,
+    error: sessionsError,
+    selectSession,
+    createNewSession,
+    removeSession,
+    togglePinSession,
+    renameSession,
+  } = useChatSessions(chatUserId);
+
+  const {
+    messages,
+    isGenerating,
+    error: chatError,
+    sendMessage,
+    stopGeneration,
+    retryMessage,
+    editMessage,
+  } = useChat(activeSessionId);
+
   const [inputText, setInputText] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
-  const [snackbarText, setSnackbarText] = useState("Copied!");
+  const [snackbarText, setSnackbarText] = useState("");
+  const [drawerVisible, setDrawerVisible] = useState(false);
+  const [editTarget, setEditTarget] = useState<{
+    id: string;
+    content: string;
+  } | null>(null);
+
   const snackbarOpacity = useRef(new Animated.Value(0)).current;
-  const flatListRef = useRef<FlatList>(null);
+  const flatListRef = useRef<FlatList<ChatMessage>>(null);
+
+  useTrackActiveScreen(ScreenPaths.CHAT);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ headerShown: false });
+  }, [navigation]);
 
   const showSnackbar = useCallback(
-    (label: string) => {
-      setSnackbarText(`${label} copied!`);
+    (text: string) => {
+      setSnackbarText(text);
       setSnackbarVisible(true);
       snackbarOpacity.setValue(1);
       Animated.sequence([
-        Animated.delay(1500),
+        Animated.delay(1600),
         Animated.timing(snackbarOpacity, {
           toValue: 0,
-          duration: 300,
+          duration: 280,
           useNativeDriver: true,
         }),
       ]).start(() => setSnackbarVisible(false));
     },
-    [snackbarOpacity],
+    [snackbarOpacity]
   );
 
   const handleCopy = useCallback(
     async (value: string, label: string) => {
       try {
         await Clipboard.setStringAsync(value);
-        showSnackbar(label);
-      } catch (error) {
-        console.error("Failed to copy to clipboard:", error);
-        showSnackbar("Failed to copy");
+        showSnackbar(`${label} copied`);
+      } catch {
+        showSnackbar("Copy failed");
       }
     },
-    [showSnackbar],
+    [showSnackbar]
+  );
+
+  const handleCopyMessage = useCallback(
+    async (content: string) => {
+      try {
+        await Clipboard.setStringAsync(content);
+        showSnackbar("Copied to clipboard");
+      } catch {
+        showSnackbar("Copy failed");
+      }
+    },
+    [showSnackbar]
   );
 
   useEffect(() => {
-    const showSubscription = Keyboard.addListener(
+    const show = Keyboard.addListener(
       isIos ? "keyboardWillShow" : "keyboardDidShow",
-      () => setKeyboardVisible(true),
+      () => setKeyboardVisible(true)
     );
-    const hideSubscription = Keyboard.addListener(
+    const hide = Keyboard.addListener(
       isIos ? "keyboardWillHide" : "keyboardDidHide",
-      () => setKeyboardVisible(false),
+      () => setKeyboardVisible(false)
     );
-
     return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
+      show.remove();
+      hide.remove();
     };
   }, []);
 
   useEffect(() => {
     if (messages.length > 0) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: false });
-      }, 100);
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 80);
     }
-  }, [messages]);
+  }, [messages, activeSessionId]);
 
   useEffect(() => {
-    if (isKeyboardVisible && messages.length > 0) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 500);
+    const message = sessionsError ?? chatError;
+    if (message) {
+      showSnackbar(message);
     }
-  }, [isKeyboardVisible, messages]);
-
-  const theme = {
-    bg: isDark ? "#000" : "#fff",
-    inputBg: isDark ? "#1c1c1e" : "#f2f2f7",
-    userBubble: Colors.companyOrange,
-    assistantBubble: isDark ? "#1c1c1e" : "#e9e9eb",
-    userText: "#fff",
-    assistantText: isDark ? "#fff" : "#000",
-    inputText: isDark ? "#fff" : "#000",
-    placeholder: isDark ? "#8e8e93" : "#8e8e93",
-    border: isDark ? "#2c2c2e" : "#e0e0e0",
-    emptyText: isDark ? "#8e8e93" : "#8e8e93",
-  };
+  }, [sessionsError, chatError, showSnackbar]);
 
   const handleSend = useCallback(async () => {
     const trimmed = inputText.trim();
-    if (!trimmed || isLoading) return;
-
-    const userMsg: ChatMessage = {
-      id: Date.now().toString(),
-      role: "user",
-      content: trimmed,
-    };
-
-    setMessages((prev) => [...prev, userMsg]);
-    setInputText("");
-    setIsLoading(true);
-
-    try {
-      const reply = await sendChatMessage(trimmed, messages);
-      const assistantMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: reply,
-      };
-      setMessages((prev) => [...prev, assistantMsg]);
-    } catch {
-      const errorMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: "Sorry, something went wrong. Please try again.",
-      };
-      setMessages((prev) => [...prev, errorMsg]);
-    } finally {
-      setIsLoading(false);
+    if (!trimmed || isGenerating) {
+      return;
     }
-  }, [inputText, isLoading, messages]);
+    setInputText("");
+    await sendMessage(trimmed);
+  }, [inputText, isGenerating, sendMessage]);
 
-  const markdownStyles = {
-    body: {
-      color: theme.assistantText,
-      fontSize: 16,
-      lineHeight: 22,
+  const handleSuggestionPress = useCallback(
+    async (prompt: string) => {
+      if (isGenerating) {
+        return;
+      }
+      setInputText("");
+      await sendMessage(prompt);
     },
-    strong: {
-      fontWeight: "700" as const,
-    },
-    heading1: {
-      fontSize: 22,
-      fontWeight: "700" as const,
-      color: theme.assistantText,
-      marginBottom: 4,
-    },
-    heading2: {
-      fontSize: 20,
-      fontWeight: "700" as const,
-      color: theme.assistantText,
-      marginBottom: 4,
-    },
-    heading3: {
-      fontSize: 18,
-      fontWeight: "600" as const,
-      color: theme.assistantText,
-      marginBottom: 2,
-    },
-    bullet_list: {
-      marginVertical: 4,
-    },
-    list_item: {
-      marginVertical: 2,
-    },
+    [isGenerating, sendMessage]
+  );
+
+  const bottomInset = isKeyboardVisible ? (isIos ? 12 : 16) : tabBarHeight + 8;
+  const hasMessages = messages.length > 0;
+
+  const renderMessage = ({
+    item,
+    index,
+  }: {
+    item: ChatMessage;
+    index: number;
+  }) => {
+    const prev = messages[index - 1];
+    const showRegenerate =
+      item.role === ChatRole.Assistant &&
+      item.status === MessageStatus.Sent &&
+      prev?.role === ChatRole.User;
+
+    return (
+      <ChatMessageRow
+        message={item}
+        theme={theme}
+        showRegenerate={showRegenerate}
+        onRegenerate={
+          showRegenerate && prev ? () => retryMessage(prev.id) : undefined
+        }
+        onCopyMessage={
+          item.status === MessageStatus.Sent &&
+          (item.role === ChatRole.Assistant || item.role === ChatRole.User)
+            ? handleCopyMessage
+            : undefined
+        }
+        onEdit={
+          item.role === ChatRole.User &&
+          item.status === MessageStatus.Sent &&
+          !isGenerating
+            ? () => setEditTarget({ id: item.id, content: item.content })
+            : undefined
+        }
+        onCopy={handleCopy}
+      />
+    );
   };
 
-  // Renders assistant content, replacing #(value) patterns with inline copy chips
-  const renderAssistantContent = (content: string) => {
-    const COPYABLE_PATTERN = /#\(([^)]+)\)/g;
-    const parts: ReactNode[] = [];
-    let lastIndex = 0;
-    let match: RegExpExecArray | null;
-    let partKey = 0;
+  if (sessionsLoading) {
+    return (
+      <View style={[styles.loading, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.accentMuted} />
+      </View>
+    );
+  }
 
-    while ((match = COPYABLE_PATTERN.exec(content)) !== null) {
-      const precedingRaw = content.slice(lastIndex, match.index);
-      const preceding = precedingRaw.toLowerCase();
-      if (match.index > lastIndex) {
-        const stripped = precedingRaw.replace(/\n-[^\n]*$/, "").trimEnd();
-        if (stripped) {
-          parts.push(
-            <Markdown key={partKey++} style={markdownStyles}>
-              {stripped}
-            </Markdown>,
-          );
-        }
-      }
-      const value = match[1];
-      const label = preceding.includes("password")
-        ? "Password"
-        : preceding.includes("username") || preceding.includes("user")
-          ? "Username"
-          : "Value";
-      parts.push(
-        <View key={partKey++} style={styles.copyChipWrapper}>
-          <Text
-            style={[styles.copyChipLabel, { color: isDark ? "#fff" : "#000" }]}
-          >
-            {label}
-          </Text>
-          <View
+  return (
+    <>
+      <View style={[styles.screen, { backgroundColor: theme.background }]}>
+        {!isDark && (
+          <LinearGradient
+            colors={["rgba(255,255,255,0)", theme.gradientBottom]}
+            style={styles.bottomGradient}
+            pointerEvents="none"
+          />
+        )}
+
+        <ChatHeader
+          theme={theme}
+          onOpenHistory={() => setDrawerVisible(true)}
+        />
+
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={isIos ? "padding" : undefined}
+          keyboardVerticalOffset={0}
+        >
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            renderItem={renderMessage}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={[
+              styles.list,
+              !hasMessages && styles.listEmpty,
+            ]}
+            onContentSizeChange={() =>
+              flatListRef.current?.scrollToEnd({ animated: true })
+            }
+            ListEmptyComponent={
+              <ChatEmptyState
+                theme={theme}
+                firstName={userInfo?.firstName}
+                onSuggestionPress={handleSuggestionPress}
+                suggestionsDisabled={isGenerating}
+              />
+            }
+            showsVerticalScrollIndicator={false}
+          />
+
+          <ChatComposer
+            theme={theme}
+            value={inputText}
+            onChangeText={setInputText}
+            onSend={handleSend}
+            onStop={stopGeneration}
+            isGenerating={isGenerating}
+            bottomInset={bottomInset}
+          />
+        </KeyboardAvoidingView>
+
+        {snackbarVisible && (
+          <Animated.View
             style={[
-              styles.copyChip,
+              styles.snackbar,
               {
-                backgroundColor: isDark ? "#3a3a3c" : "#f2f2f7",
-                borderColor: isDark ? "#48484a" : "#ccc",
+                opacity: snackbarOpacity,
+                backgroundColor: isDark ? "#e3e3e3" : "#303030",
               },
             ]}
           >
             <Text
-              style={[styles.copyChipText, { color: isDark ? "#fff" : "#000" }]}
-              numberOfLines={1}
+              style={[
+                styles.snackbarText,
+                { color: isDark ? "#131314" : "#fff" },
+              ]}
             >
-              {value}
+              {snackbarText}
             </Text>
-            <View
-              style={[
-                styles.copyChipDivider,
-                { backgroundColor: isDark ? "transparent" : "#000" },
-              ]}
-            />
-            <TouchableOpacity
-              style={styles.copyChipButton}
-              onPress={() => handleCopy(value, label)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Ionicons name="copy-outline" size={16} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        </View>,
-      );
-      lastIndex = match.index + match[0].length;
-    }
-
-    if (lastIndex < content.length) {
-      parts.push(
-        <Markdown key={partKey++} style={markdownStyles}>
-          {content.slice(lastIndex)}
-        </Markdown>,
-      );
-    }
-
-    return parts;
-  };
-
-  const renderMessage = ({ item }: { item: ChatMessage }) => {
-    const isUser = item.role === "user";
-    return (
-      <View
-        style={[
-          styles.messageBubble,
-          isUser
-            ? [styles.userBubble, { backgroundColor: theme.userBubble }]
-            : [
-                styles.assistantBubble,
-                { backgroundColor: theme.assistantBubble },
-              ],
-        ]}
-      >
-        {isUser ? (
-          <Text style={[styles.messageText, { color: theme.userText }]}>
-            {item.content}
-          </Text>
-        ) : (
-          <>{renderAssistantContent(item.content)}</>
+          </Animated.View>
         )}
-      </View>
-    );
-  };
 
-  const renderEmpty = () => (
-    <View style={styles.emptyContainer}>
-      <Ionicons
-        name="chatbubble-ellipses-outline"
-        size={64}
-        color={theme.emptyText}
-      />
-      <View style={styles.titleContainer}>
-        <Text style={[styles.emptyTitle, { color: theme.emptyText }]}>
-          Hi there!
-        </Text>
-        <Image
-          source={require("@/assets/icons/waving-hand.svg")}
-          style={{ width: 26, height: 26 }}
+        <ChatSessionDrawer
+          visible={drawerVisible}
+          sessions={sessions}
+          activeSessionId={activeSessionId}
+          theme={theme}
+          onClose={() => setDrawerVisible(false)}
+          onSelect={selectSession}
+          onCreate={createNewSession}
+          onDelete={removeSession}
+          onTogglePin={togglePinSession}
+          onRename={renameSession}
         />
       </View>
-      <Text style={[styles.emptySubtitle, { color: theme.emptyText }]}>
-        Ask me about today&apos;s menu, or anything about the super app!
-      </Text>
-    </View>
-  );
 
-  return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: theme.bg }]}
-      behavior="padding"
-      keyboardVerticalOffset={90}
-    >
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        renderItem={renderMessage}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[
-          styles.messageList,
-          messages.length === 0 && styles.emptyList,
-        ]}
-        style={{ flex: 1 }}
-        onContentSizeChange={() =>
-          flatListRef.current?.scrollToEnd({ animated: true })
-        }
-        ListEmptyComponent={renderEmpty}
-        ListFooterComponent={
-          isLoading ? (
-            <View
-              style={[
-                styles.typingContainer,
-                { backgroundColor: theme.assistantBubble },
-              ]}
-            >
-              <ActivityIndicator size="small" color={Colors.companyOrange} />
-              <Text style={[styles.typingText, { color: theme.placeholder }]}>
-                Thinking...
-              </Text>
-            </View>
-          ) : null
-        }
+      <EditMessageModal
+        visible={editTarget !== null}
+        initialContent={editTarget?.content ?? ""}
+        theme={theme}
+        onSave={(content) => {
+          if (editTarget) {
+            editMessage(editTarget.id, content);
+          }
+        }}
+        onClose={() => setEditTarget(null)}
       />
-
-      <View
-        style={[
-          styles.inputContainer,
-          {
-            backgroundColor: theme.bg,
-            borderTopColor: theme.border,
-            paddingBottom: isKeyboardVisible
-              ? isIos
-                ? 24
-                : 32
-              : isIos
-                ? tabBarHeight + 16
-                : 16,
-          },
-        ]}
-      >
-        <TextInput
-          style={[
-            styles.input,
-            {
-              backgroundColor: theme.inputBg,
-              color: theme.inputText,
-            },
-          ]}
-          value={inputText}
-          onChangeText={setInputText}
-          placeholder="Ask me anything..."
-          placeholderTextColor={theme.placeholder}
-          multiline
-          maxLength={1000}
-          onSubmitEditing={handleSend}
-          editable={!isLoading}
-        />
-        <TouchableOpacity
-          style={[
-            styles.sendButton,
-            {
-              backgroundColor:
-                inputText.trim() && !isLoading
-                  ? Colors.companyOrange
-                  : theme.inputBg,
-            },
-          ]}
-          onPress={handleSend}
-          disabled={!inputText.trim() || isLoading}
-        >
-          <Ionicons
-            name="send"
-            size={20}
-            color={inputText.trim() && !isLoading ? "#fff" : theme.placeholder}
-          />
-        </TouchableOpacity>
-      </View>
-
-      {snackbarVisible && (
-        <Animated.View
-          style={[styles.snackbar, { opacity: snackbarOpacity }]}
-          accessible={true}
-          accessibilityRole="alert"
-          accessibilityLiveRegion="polite"
-        >
-          <Text style={styles.snackbarText} accessibilityLabel={snackbarText}>
-            {snackbarText}
-          </Text>
-        </Animated.View>
-      )}
-    </KeyboardAvoidingView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
   },
-  messageList: {
-    padding: 16,
-    paddingBottom: 8,
-  },
-  emptyList: {
+  flex: {
     flex: 1,
-    justifyContent: "center",
   },
-  messageBubble: {
-    maxWidth: "80%",
-    padding: 12,
-    borderRadius: 16,
-    marginBottom: 8,
-  },
-  userBubble: {
-    alignSelf: "flex-end",
-    borderBottomRightRadius: 4,
-  },
-  assistantBubble: {
-    alignSelf: "flex-start",
-    borderBottomLeftRadius: 4,
-  },
-  messageText: {
-    fontSize: 16,
-    lineHeight: 22,
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    gap: 8,
-  },
-  input: {
+  loading: {
     flex: 1,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 16,
-    maxHeight: 100,
-    minHeight: 40,
-  },
-  sendButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  typingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    padding: 12,
-    borderRadius: 16,
-    borderBottomLeftRadius: 4,
-    marginBottom: 8,
-    gap: 8,
-  },
-  typingText: {
-    fontSize: 14,
-  },
-  emptyContainer: {
     alignItems: "center",
     justifyContent: "center",
-    gap: 12,
   },
-  emptyTitle: {
-    fontSize: 22,
-    fontWeight: "600",
+  bottomGradient: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: "45%",
   },
-  emptySubtitle: {
-    fontSize: 16,
-    textAlign: "center",
-    paddingHorizontal: 40,
+  list: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 16,
   },
-  titleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  copyChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "stretch",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    overflow: "hidden",
-    backgroundColor: "#f2f2f7",
-  },
-  copyChipText: {
-    flex: 1,
-    fontSize: 14,
-    fontFamily: "monospace",
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-  },
-  copyChipWrapper: {
-    alignSelf: "stretch",
-    marginVertical: 4,
-  },
-  copyChipLabel: {
-    fontSize: 14,
-    lineHeight: 29,
-    marginBottom: 4,
-    marginLeft: 2,
-  },
-  copyChipDivider: {
-    width: 1,
-    alignSelf: "stretch",
-  },
-  copyChipButton: {
-    backgroundColor: "#858181",
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    justifyContent: "center",
-    alignItems: "center",
+  listEmpty: {
+    flexGrow: 1,
   },
   snackbar: {
     position: "absolute",
-    bottom: 100,
+    bottom: 120,
     alignSelf: "center",
-    backgroundColor: "#333",
-    paddingHorizontal: 20,
+    paddingHorizontal: 18,
     paddingVertical: 10,
-    borderRadius: 24,
-    elevation: 4,
+    borderRadius: 20,
   },
   snackbarText: {
-    color: "#fff",
     fontSize: 14,
   },
 });
