@@ -13,26 +13,36 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-
 import { CHAT_AGENT_URL } from "@/constants/Constants";
+import { MessageStatus } from "@/constants/enums/Chat";
 import {
   isTokenExpired,
   loadAuthData,
   logout,
   refreshAccessToken,
 } from "@/services/authService";
+import {
+  ChatMessage,
+  HistoryMessage,
+  MAX_HISTORY_ITEM_LENGTH,
+  MAX_HISTORY_LENGTH,
+  MAX_MESSAGE_LENGTH,
+  SendMessageParams,
+} from "@/types/chat.types";
 
 /**
  * Returns a valid (non-expired) access token, refreshing if necessary.
+ *
+ * @returns {Promise<string | null>} Access token or null when unauthenticated.
  */
 const getValidAccessToken = async (): Promise<string | null> => {
   const authData = await loadAuthData();
 
-  if (!authData?.accessToken) return null;
+  if (!authData?.accessToken) {
+    return null;
+  }
 
-  // Refresh if the token is expired (or about to expire)
   if (isTokenExpired(authData.accessToken)) {
-    // Wrap refresh in a timeout to avoid indefinite hang
     const refreshed = await Promise.race([
       refreshAccessToken(logout),
       new Promise<null>((resolve) => {
@@ -45,33 +55,60 @@ const getValidAccessToken = async (): Promise<string | null> => {
   return authData.accessToken;
 };
 
-export interface ChatMessage {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-}
+/**
+ * Builds the history payload for the chat-agent API from stored messages.
+ *
+ * @param {ChatMessage[]} messages - All messages in the current session.
+ * @returns {HistoryMessage[]} Truncated history for the API request.
+ */
+export const buildHistoryPayload = (
+  messages: ChatMessage[]
+): HistoryMessage[] => {
+  const completed = messages.filter(
+    (m) => m.status === MessageStatus.Sent && m.content.trim().length > 0
+  );
+
+  const recent = completed.slice(-MAX_HISTORY_LENGTH);
+
+  return recent.map((m) => ({
+    role: m.role,
+    content: m.content.slice(0, MAX_HISTORY_ITEM_LENGTH),
+  }));
+};
 
 /**
- * Send a chat message to the AI agent backend.
- * Automatically refreshes the access token if expired.
- * Includes conversation history for multi-turn context.
+ * Sends a chat message to the chat-agent service.
+ *
+ * @param {SendMessageParams} params - Message, history, and abort signal.
+ * @returns {Promise<string>} The assistant reply text.
  */
-export const sendChatMessage = async (
-  message: string,
-  history?: ChatMessage[]
-): Promise<string> => {
+export const sendChatMessage = async ({
+  message,
+  history,
+  signal,
+}: SendMessageParams): Promise<string> => {
   if (!CHAT_AGENT_URL) {
     throw new Error("Chat agent URL is not configured");
   }
 
   const token = await getValidAccessToken();
-
   if (!token) {
     throw new Error("Not authenticated");
   }
 
+  const trimmed = message.trim();
+  if (!trimmed) {
+    throw new Error("Message cannot be empty.");
+  }
+  if (trimmed.length > MAX_MESSAGE_LENGTH) {
+    throw new Error(`Message exceeds ${MAX_MESSAGE_LENGTH} characters.`);
+  }
+
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30_000);
+  const timeoutId = setTimeout(() => controller.abort(), 120_000);
+
+  const onExternalAbort = () => controller.abort();
+  signal?.addEventListener("abort", onExternalAbort);
 
   try {
     const response = await fetch(`${CHAT_AGENT_URL}/chat`, {
@@ -81,14 +118,9 @@ export const sendChatMessage = async (
         Authorization: `Bearer ${token}`,
         "x-user-assertion": token,
       },
-      body: JSON.stringify({
-        message,
-        history: history?.map(({ role, content }) => ({ role, content })),
-      }),
+      body: JSON.stringify({ message: trimmed, history }),
       signal: controller.signal,
     });
-
-    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(`Chat request failed: ${response.status}`);
@@ -102,10 +134,12 @@ export const sendChatMessage = async (
 
     return data.reply;
   } catch (error: unknown) {
-    clearTimeout(timeoutId);
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("Chat request timed out. Please try again.");
+      throw error;
     }
     throw error;
+  } finally {
+    clearTimeout(timeoutId);
+    signal?.removeEventListener("abort", onExternalAbort);
   }
 };
