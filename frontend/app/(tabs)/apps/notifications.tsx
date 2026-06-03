@@ -18,6 +18,7 @@ import { NotificationItem } from "@/components/notifications/NotificationItem";
 import { NotificationsFooter } from "@/components/notifications/NotificationsFooter";
 import { Colors } from "@/constants/Colors";
 import { Styles } from "@/constants/Styles";
+import { useLocalNotifications } from "@/hooks/useLocalNotifications";
 import { Notification, useNotifications } from "@/hooks/useNotifications";
 import { logout } from "@/services/authService";
 import { convertToUtc } from "@/utils/date";
@@ -25,7 +26,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useIsFocused } from "@react-navigation/native";
 import { useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -40,7 +41,7 @@ export default function Notifications() {
   const tabbarHeight = useBottomTabBarHeight();
 
   const {
-    notifications,
+    notifications: serverNotifications,
     isLoading,
     refresh,
     loadMore,
@@ -50,6 +51,21 @@ export default function Notifications() {
     lastOpenedAt,
     markAsRead,
   } = useNotifications(logout);
+
+  const { localNotifications } = useLocalNotifications();
+
+  const allNotifications = useMemo(() => {
+    const localMapped: Notification[] = localNotifications.map((ln, index) => ({
+      id: -(index + 1),
+      title: ln.title,
+      message: ln.body,
+      createdAt: ln.triggeredAt.slice(0, 19).replace("T", " "),
+    }));
+    return [...serverNotifications, ...localMapped].sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }, [serverNotifications, localNotifications]);
 
   const [highlightTime, setHighlightTime] = useState<number | null>(null);
   const processedRef = useRef(false);
@@ -89,9 +105,9 @@ export default function Notifications() {
         backgroundColor: Colors[colorScheme].primaryBackgroundColor,
       }}
     >
-      {notifications.length > 0 ? (
+      {allNotifications.length > 0 ? (
         <FlatList
-          data={notifications}
+          data={allNotifications}
           renderItem={renderItem}
           keyExtractor={(item) => item.id.toString()}
           refreshControl={

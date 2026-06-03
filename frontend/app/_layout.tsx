@@ -16,7 +16,7 @@
 import AppProviders from "@/components/contexts/AppProviders";
 import CloseButton from "@/components/headers/CloseButton";
 import SplashModal from "@/components/SplashModal";
-import { APPS, isAndroid, USER_INFO } from "@/constants/Constants";
+import { APPS, isAndroid, NOTIFICATIONS_QUERY_KEY, USER_INFO } from "@/constants/Constants";
 import { setApps } from "@/context/slices/appSlice";
 import { restoreAuth } from "@/context/slices/authSlice";
 import { getUserConfigurations } from "@/context/slices/userConfigSlice";
@@ -25,7 +25,6 @@ import { getVersions } from "@/context/slices/versionSlice";
 import { AppDispatch, persistor, store } from "@/context/store";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { useNotificationNavigation } from "@/hooks/useNotificationNavigation";
-import { useNotifications } from "@/hooks/useNotifications";
 import { usePushNotificationHandler } from "@/hooks/usePushNotificationHandler";
 import { runMigrations } from "@/migrations/migrator";
 import {
@@ -46,7 +45,7 @@ import {
   DefaultTheme,
   ThemeProvider,
 } from "@react-navigation/native";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { lockAsync, OrientationLock } from "expo-screen-orientation";
@@ -54,6 +53,7 @@ import { getItemAsync } from "expo-secure-store";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
+import { AppState } from "react-native";
 import { Provider, useDispatch } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
 
@@ -69,15 +69,21 @@ function AppInitializer({ onReady }: { onReady: () => void }) {
    */
   usePushNotificationHandler({ onLogout: handleLogout });
 
-  /**
-   * Prefetch notifications on app mount
-   */
-  useNotifications(handleLogout);
-
-  /**
-   * Handle notification tap navigation
-   */
   useNotificationNavigation();
+
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      if (nextAppState === "active") {
+        queryClient.invalidateQueries({
+          queryKey: [NOTIFICATIONS_QUERY_KEY],
+        });
+      }
+    });
+
+    return () => subscription.remove();
+  }, [queryClient]);
 
   useEffect(() => {
     const initialize = async () => {
