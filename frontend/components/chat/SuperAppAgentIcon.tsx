@@ -14,8 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 import { Colors } from "@/constants/Colors";
-import { Bot } from "lucide-react-native";
-import React from "react";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import React, { JSX } from "react";
 import { StyleSheet, View, ViewStyle } from "react-native";
 
 export interface SuperAppAgentIconProps {
@@ -49,7 +49,11 @@ const SuperAppAgentIcon = ({
       ]}
       accessibilityLabel="Super App AI bot"
     >
-      <Bot size={iconSize} color="#ffffff" strokeWidth={2} />
+      <MaterialCommunityIcons
+        name="robot-excited"
+        size={iconSize}
+        color="#ffffff"
+      />
     </View>
   );
 };

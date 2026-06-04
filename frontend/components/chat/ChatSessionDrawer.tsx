@@ -15,6 +15,7 @@
 // under the License.
 import ChatMenuButton from "@/components/chat/ChatMenuButton";
 import RenameSessionModal from "@/components/chat/RenameSessionModal";
+import { ChatThemePalette } from "@/constants/ChatTheme";
 import {
   CHAT_DRAWER_ANIMATION_MS,
   CHAT_DRAWER_WIDTH_RATIO,
@@ -26,14 +27,13 @@ import {
   CHAT_RECENT_SECTION_LABEL,
   CHAT_SCREEN_HORIZONTAL_PADDING,
   CHAT_SEARCH_PLACEHOLDER,
+  isAndroid,
 } from "@/constants/Constants";
-import { ChatThemePalette } from "@/constants/ChatTheme";
 import { ChatSessionAction } from "@/constants/enums/Chat";
-import { isAndroid } from "@/constants/Constants";
 import { ChatSession } from "@/types/chat.types";
 import { Ionicons } from "@expo/vector-icons";
-import { Pin } from "lucide-react-native";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import React, { JSX, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Animated,
@@ -174,154 +174,145 @@ const ChatSessionDrawer = ({
 
   return (
     <>
-      <View
-      style={styles.root}
-      pointerEvents={visible ? "auto" : "none"}
-    >
-      <Animated.View
-        style={[styles.overlay, { opacity: overlayOpacity }]}
-      >
-        <Pressable style={styles.overlayPressable} onPress={onClose} />
-      </Animated.View>
+      <View style={styles.root} pointerEvents={visible ? "auto" : "none"}>
+        <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
+          <Pressable style={styles.overlayPressable} onPress={onClose} />
+        </Animated.View>
 
-      <Animated.View
-        style={[
-          styles.panel,
-          {
-            width: DRAWER_WIDTH,
-            paddingTop: insets.top + CHAT_HEADER_TOP_OFFSET,
-            paddingBottom: CHAT_HEADER_BOTTOM_PADDING,
-            backgroundColor: theme.background,
-            transform: [{ translateX: slideX }],
-          },
-        ]}
-      >
-        <View style={styles.header}>
-          <ChatMenuButton
-            theme={theme}
-            onPress={onClose}
-            accessibilityLabel="Close chat history"
-          />
-
-          <View
-            style={[
-              styles.searchPill,
-              {
-                backgroundColor: theme.inputSurface,
-                borderColor: theme.inputBorder,
-                ...Platform.select({
-                  ios: {
-                    shadowColor: theme.shadow,
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: 0.12,
-                    shadowRadius: 4,
-                  },
-                  android: { elevation: 3 },
-                }),
-              },
-            ]}
-          >
-            <Ionicons name="search-outline" size={20} color={theme.muted} />
-
-            <TextInput
-              style={[styles.searchInput, { color: theme.assistantText }]}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder={CHAT_SEARCH_PLACEHOLDER}
-              placeholderTextColor={theme.muted}
-              autoCorrect={false}
-              returnKeyType="search"
-              clearButtonMode={isAndroid ? "never" : "while-editing"}
-              accessibilityLabel="Search chats"
+        <Animated.View
+          style={[
+            styles.panel,
+            {
+              width: DRAWER_WIDTH,
+              paddingTop: insets.top + CHAT_HEADER_TOP_OFFSET,
+              paddingBottom: CHAT_HEADER_BOTTOM_PADDING,
+              backgroundColor: theme.background,
+              transform: [{ translateX: slideX }],
+            },
+          ]}
+        >
+          <View style={styles.header}>
+            <ChatMenuButton
+              theme={theme}
+              onPress={onClose}
+              accessibilityLabel="Close chat history"
             />
 
-            {isAndroid && searchQuery.length > 0 ? (
-              <TouchableOpacity
-                onPress={() => setSearchQuery("")}
-                hitSlop={8}
-                accessibilityLabel="Clear search"
-              >
-                <Ionicons
-                  name="close-circle"
-                  size={20}
-                  color={theme.muted}
-                />
-              </TouchableOpacity>
-            ) : null}
-          </View>
-        </View>
+            <View
+              style={[
+                styles.searchPill,
+                {
+                  backgroundColor: theme.inputSurface,
+                  borderColor: theme.inputBorder,
+                  ...Platform.select({
+                    ios: {
+                      shadowColor: theme.shadow,
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.12,
+                      shadowRadius: 4,
+                    },
+                    android: { elevation: 3 },
+                  }),
+                },
+              ]}
+            >
+              <Ionicons name="search-outline" size={20} color={theme.muted} />
 
-        <TouchableOpacity
-          style={[
-            styles.newChat,
-            { backgroundColor: theme.newChatButton },
-          ]}
-          onPress={() => {
-            onCreate();
-            onClose();
-          }}
-        >
-          <Ionicons name="create-outline" size={20} color={theme.assistantText} />
-          <Text style={[styles.newChatText, { color: theme.assistantText }]}>
-            {CHAT_NEW_SESSION_LABEL}
-          </Text>
-        </TouchableOpacity>
+              <TextInput
+                style={[styles.searchInput, { color: theme.assistantText }]}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder={CHAT_SEARCH_PLACEHOLDER}
+                placeholderTextColor={theme.muted}
+                autoCorrect={false}
+                returnKeyType="search"
+                clearButtonMode={isAndroid ? "never" : "while-editing"}
+                accessibilityLabel="Search chats"
+              />
 
-        <Text style={[styles.sectionLabel, { color: theme.muted }]}>
-          {CHAT_RECENT_SECTION_LABEL}
-        </Text>
-
-        <FlatList
-          data={filteredSessions}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          ListEmptyComponent={
-            <Text style={[styles.emptyList, { color: theme.muted }]}>
-              {searchQuery.trim()
-                ? CHAT_EMPTY_SEARCH_LABEL
-                : CHAT_EMPTY_SESSIONS_LABEL}
-            </Text>
-          }
-          renderItem={({ item }) => {
-            const isActive = item.id === activeSessionId;
-            return (
-              <TouchableOpacity
-                style={[
-                  styles.row,
-                  isActive && { backgroundColor: theme.drawerActive },
-                ]}
-                onPress={() => {
-                  onSelect(item.id);
-                  onClose();
-                }}
-                onLongPress={() => showSessionOptions(item)}
-                accessibilityLabel={
-                  item.isPinned ? `${item.title}, pinned` : item.title
-                }
-              >
-                <Text
-                  style={[styles.rowTitle, { color: theme.assistantText }]}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
+              {isAndroid && searchQuery.length > 0 ? (
+                <TouchableOpacity
+                  onPress={() => setSearchQuery("")}
+                  hitSlop={8}
+                  accessibilityLabel="Clear search"
                 >
-                  {item.title}
-                </Text>
-                {item.isPinned ? (
-                  <Pin
-                    size={16}
-                    color={theme.accent}
-                    strokeWidth={2}
-                    fill={theme.accent}
-                  />
-                ) : null}
-              </TouchableOpacity>
-            );
-          }}
-        />
-      </Animated.View>
-    </View>
+                  <Ionicons name="close-circle" size={20} color={theme.muted} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.newChat, { backgroundColor: theme.newChatButton }]}
+            onPress={() => {
+              onCreate();
+              onClose();
+            }}
+          >
+            <Ionicons
+              name="create-outline"
+              size={20}
+              color={theme.assistantText}
+            />
+            <Text style={[styles.newChatText, { color: theme.assistantText }]}>
+              {CHAT_NEW_SESSION_LABEL}
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={[styles.sectionLabel, { color: theme.muted }]}>
+            {CHAT_RECENT_SECTION_LABEL}
+          </Text>
+
+          <FlatList
+            data={filteredSessions}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            ListEmptyComponent={
+              <Text style={[styles.emptyList, { color: theme.muted }]}>
+                {searchQuery.trim()
+                  ? CHAT_EMPTY_SEARCH_LABEL
+                  : CHAT_EMPTY_SESSIONS_LABEL}
+              </Text>
+            }
+            renderItem={({ item }) => {
+              const isActive = item.id === activeSessionId;
+              return (
+                <TouchableOpacity
+                  style={[
+                    styles.row,
+                    isActive && { backgroundColor: theme.drawerActive },
+                  ]}
+                  onPress={() => {
+                    onSelect(item.id);
+                    onClose();
+                  }}
+                  onLongPress={() => showSessionOptions(item)}
+                  accessibilityLabel={
+                    item.isPinned ? `${item.title}, pinned` : item.title
+                  }
+                >
+                  <Text
+                    style={[styles.rowTitle, { color: theme.assistantText }]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {item.title}
+                  </Text>
+                  {item.isPinned ? (
+                    <MaterialIcons
+                      name="push-pin"
+                      size={16}
+                      color={theme.accent}
+                    />
+                  ) : null}
+                </TouchableOpacity>
+              );
+            }}
+          />
+        </Animated.View>
+      </View>
 
       <RenameSessionModal
         visible={renameTarget !== null}
