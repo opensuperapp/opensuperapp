@@ -13,7 +13,6 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { BasicUserInfo } from "@/types/basicUserInfo.types";
 import { DEFAULT_TAB_CONFIG, TabVisibilityConfig, TabRule } from "@/types/remoteConfig.types";
 
 const extractDomain = (email: string | undefined): string | null => {
@@ -32,10 +31,10 @@ const extractDomain = (email: string | undefined): string | null => {
 
 const evaluateRule = (
   rule: TabRule,
-  user: BasicUserInfo | null,
+  email: string | null | undefined,
   isAuthenticated: boolean
 ): boolean => {
-  const userDomain = extractDomain(user?.workEmail);
+  const userDomain = extractDomain(email ?? undefined);
 
   switch (rule.mode) {
     case "public":
@@ -79,7 +78,7 @@ const evaluateRule = (
 
 export const shouldShowTab = (
   tabName: string,
-  user: BasicUserInfo | null,
+  email: string | null | undefined,
   isAuthenticated: boolean,
   rules: TabVisibilityConfig | null | undefined
 ): boolean => {
@@ -90,5 +89,5 @@ export const shouldShowTab = (
     return true;
   }
 
-  return evaluateRule(rule, user, isAuthenticated);
+  return evaluateRule(rule, email, isAuthenticated);
 };
