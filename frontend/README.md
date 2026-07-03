@@ -1,6 +1,8 @@
 # 🚀 Super App Mobile (React Native \+ Expo)
 
-The **Mobile App** is an all-in-one platform designed to bring essential tools and services to your fingertips for a seamless mobile experience. Built with **React Native + Expo**, **TypeScript**, and **Redux**, this Super App integrates secure authentication via **Asgardeo**, a micro-app architecture, and a dynamic app store for downloading and managing features.
+The **Mobile App** is an all-in-one platform designed to bring essential tools and services to your fingertips for a seamless mobile experience. Built with **React Native + Expo**, **TypeScript**, and **Redux**, this Super App integrates secure authentication via an **IAM provider**, a micro-app architecture, and a dynamic app store for downloading and managing features.
+
+> **Note on product choices:** At WSO2, we use **Asgardeo** as our IAM provider and **WSO2 Developer Platform** as our API Gateway. These are configurable — consumers of this architecture are free to swap in any OAuth2/OIDC-compliant IAM provider or API gateway of their choice.
 
 ---
 
@@ -8,7 +10,7 @@ The **Mobile App** is an all-in-one platform designed to bring essential tools a
 
 This Super App serves as a **container** for multiple micro-apps. It:
 
-- Authenticates users using **Asgardeo IAM**.
+- Authenticates users using an **IAM provider**.
 - Fetches and downloads **micro-apps** from a store.
 - Handles **micro-app authentication and token exchange**.
 - Manages state using **Redux** with **Redux Thunk**.
@@ -33,7 +35,7 @@ This Super App serves as a **container** for multiple micro-apps. It:
 
 4. If user signs in:
 
-   - Retrieve **access_token & refresh_token** via **Asgardeo IAM**.
+   - Retrieve **access_token & refresh_token** via the **IAM provider**.
    - Fetch **user configurations** and **profile info**.
    - Align locally installed apps with server-side configurations (install/uninstall accordingly).
 
@@ -57,14 +59,14 @@ This Super App serves as a **container** for multiple micro-apps. It:
 sequenceDiagram
     actor User
     participant Super App
-    participant IAM as Identity and Access Management (IAM) - Asgardeo
-    participant Choreo as API Gateway - Choreo
+    participant IAM as Identity and Access Management (IAM) Provider
+    participant Gateway as API Gateway
 
     User ->> Super App: Open Mobile Application
     Super App ->> IAM: Authorize using client_id of Super App
-    IAM -->> Super App: Asgardeo access_token + refresh_token
-    Super App ->> Choreo: Resource Access (using IAM access_token)
-    Choreo -->> Super App: Resource data
+    IAM -->> Super App: IAM access_token + refresh_token
+    Super App ->> Gateway: Resource Access (using IAM access_token)
+    Gateway -->> Super App: Resource data
     Super App -->> User: Application loads
 ```
 
@@ -76,7 +78,7 @@ sequenceDiagram
 2. Users can download micro-apps from the store.
 3. Downloaded micro-apps are stored using AsyncStorage.
 4. When launched, authentication tokens are exchanged for access.
-5. The micro-app uses IAM access tokens to communicate with the Choreo API Gateway.
+5. The micro-app uses IAM access tokens to communicate with the API Gateway.
 
 ### How Micro-App Updates Work
 
@@ -90,8 +92,8 @@ sequenceDiagram
     actor User
     participant Super App
     participant Micro App
-    participant IAM as Identity Access Management (IAM) - Asgardeo
-    participant Choreo as API Gateway - Choreo
+    participant IAM as Identity Access Management (IAM) Provider
+    participant Gateway as API Gateway
 
     User ->> Super App: Open Micro App
     Super App ->> Micro App: Initiate Micro App loading
@@ -99,8 +101,8 @@ sequenceDiagram
     Super App ->> IAM: Token exchange (client_id of Micro App + IAM access_token)
     IAM -->> Super App: API access_token
     Super App -->> Micro App: Provide IAM access_token
-    Micro App ->> Choreo: Resource Access (using IAM access_token)
-    Choreo -->> Micro App: Resource data
+    Micro App ->> Gateway: Resource Access (using IAM access_token)
+    Gateway -->> Micro App: Resource data
     Micro App -->> User: Loads Micro App
 ```
 
@@ -235,7 +237,7 @@ cp .env.example .env
 ```
 
 - This will create a `.env` file. Make sure to update the values according to your project requirements.
-- Please note that the authenticator app–related URL in `.env` is required only for the WSO2 Super App. If your app does not need it, you can safely remove those variables.
+- Please note that the authenticator app–related URL in `.env` is only required if your IAM provider needs it for the authenticator app flow. If your app does not need it, you can safely remove those variables.
 
 #### 1.1. (Optional) How to add/remove Firebase plugins if you are using Firebase.
 
@@ -359,7 +361,7 @@ You can start development by editing the files inside the **app** directory. Thi
 ✅ **Solution**:
 
 - Ensure `EXPO_PUBLIC_CLIENT_ID` and `EXPO_PUBLIC_REDIRECT_URI` are correct.
-- Check Asgardeo configurations (Redirect URIs & OAuth settings).
+- Check your IAM provider's configurations (Redirect URIs & OAuth settings).
 
 ### Micro-App Download Fails
 
