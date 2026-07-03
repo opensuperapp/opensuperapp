@@ -2,6 +2,8 @@
 
 The **Mobile App** is an all-in-one platform designed to bring essential tools and services to your fingertips for a seamless mobile experience. Built with **React Native + Expo**, **TypeScript**, and **Redux**, this Super App integrates secure authentication via an **IAM provider**, a micro-app architecture, and a dynamic app store for downloading and managing features.
 
+> **Note on product choices:** At WSO2, we use **Asgardeo** as our IAM provider and **WSO2 Developer Platform** as our API Gateway. These are configurable — consumers of this architecture are free to swap in any OAuth2/OIDC-compliant IAM provider or API gateway of their choice.
+
 ---
 
 ## 📌 Super App Mobile Overview
