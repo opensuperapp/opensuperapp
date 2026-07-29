@@ -85,6 +85,7 @@
     "react-redux": "^9.2.0",
     "redux-persist": "^6.0.0",
     "redux-thunk": "^3.1.0",
+    "expo-document-picker": "~13.0.1"
     "expo-mail-composer": "~14.0.2"
   },
   "devDependencies": {

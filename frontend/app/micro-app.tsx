@@ -51,6 +51,7 @@ import { MicroAppParams } from "@/types/navigation";
 import { injectedJavaScript, TOPIC } from "@/utils/bridge";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Google from "expo-auth-session/providers/google";
+import * as FileSystem from "expo-file-system";
 import { documentDirectory } from "expo-file-system";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
@@ -70,8 +71,8 @@ import prompt from "react-native-prompt-android";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 import { useDispatch, useSelector } from "react-redux";
+import * as DocumentPicker from "expo-document-picker";
 import * as MailComposer from "expo-mail-composer";
-import * as FileSystem from "expo-file-system";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -484,7 +485,31 @@ const MicroApp = () => {
     sendResponseToWeb("resolveMicroAppVersion", version || "unknown");
   };
 
-  // Function to compose an email
+  // Document Picker integration
+  const handlePickDocument = async (
+    config?: DocumentPicker.DocumentPickerOptions,
+  ) => {
+    try {
+      if (!config) {
+        console.error("Missing Required DocumentPicker configuration.");
+        sendResponseToWeb(
+          "rejectPickDocument",
+          "Document picker configuration is missing.",
+        );
+        return;
+      }
+
+      const result = await DocumentPicker.getDocumentAsync(config);
+      sendResponseToWeb("resolvePickDocument", result);
+    } catch (error) {
+      const errMessage =
+        error instanceof Error ? error.message : "Failed to pick document";
+      console.error("Error picking document:", errMessage);
+      sendResponseToWeb("rejectPickDocument", errMessage);
+    }
+  };
+
+  // Mail Composer integration
   const handleComposeEmail = async (
     config?: MailComposer.MailComposerOptions,
   ) => {
@@ -507,7 +532,6 @@ const MicroApp = () => {
       if (config.attachments && config.attachments.length > 0) {
         for (const attachment of config.attachments) {
           let info;
-
           try {
             info = await FileSystem.getInfoAsync(attachment);
           } catch (error) {
@@ -517,7 +541,7 @@ const MicroApp = () => {
               }`,
             );
           }
-          
+
           if (!info.exists) {
             throw new Error(`Attachment file not found: ${attachment}`);
           }
@@ -621,6 +645,9 @@ const MicroApp = () => {
           break;
         case TOPIC.MICRO_APP_VERSION:
           handleMicroAppVersion();
+          break;
+        case TOPIC.PICK_DOCUMENT:
+          await handlePickDocument(data?.config);
           break;
         case TOPIC.COMPOSE_EMAIL:
           await handleComposeEmail(data?.config);
