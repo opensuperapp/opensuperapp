@@ -90,6 +90,7 @@ export const NEWS_URL = process.env.EXPO_PUBLIC_NEWS_URL ?? "";
 export const NEWS_STORAGE_KEY = "cached_news_feed";
 export const NEWS_TIMESTAMP_KEY = "cached_news_timestamp";
 export const APP_UPDATE_CHECK_TIMESTAMP_KEY = "app_update_check_timestamp";
+export const ALARM_PERMISSION_PROMPTED_KEY = "alarm_permission_prompted";
 export const FULL_SCREEN_VIEWING_MODE = "fullscreen";
 export const DEFAULT_VIEWING_MODE = "default";
 
