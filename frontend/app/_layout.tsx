@@ -23,6 +23,7 @@ import { getVersions } from "@/context/slices/versionSlice";
 import { AppDispatch, persistor, store } from "@/context/store";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { usePushNotificationHandler } from "@/hooks/usePushNotificationHandler";
+import { useRefreshTokenOnForeground } from "@/hooks/useRefreshTokenOnForeground";
 import { runMigrations } from "@/migrations/migrator";
 import { buildAppsWithTokens } from "@/utils/exchangedTokenRehydrator";
 import { handleFreshInstall } from "@/utils/freshInstall";
@@ -58,6 +59,11 @@ function AppInitializer({ onReady }: { onReady: () => void }) {
    * Handles push notification token lifecycle.
    */
   usePushNotificationHandler({ onLogout: handleLogout });
+
+  /**
+   * Refreshes an expired access token when the app returns to the foreground.
+   */
+  useRefreshTokenOnForeground({ onLogout: handleLogout });
 
   useEffect(() => {
     const initialize = async () => {
