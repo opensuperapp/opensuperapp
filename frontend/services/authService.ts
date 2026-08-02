@@ -50,6 +50,15 @@ const REQUESTED_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token";
 const MILLISECONDS_IN_A_SECOND = 1000;
 const SCOPE = "openid email groups profile";
 let refreshPromise: Promise<AuthData | null> | null = null;
+let authSessionGeneration = 0;
+
+/** Invalidates any in-flight auth flows (e.g. on logout). */
+export const invalidateAuthSession = () => {
+  authSessionGeneration += 1;
+};
+
+/** Returns the current auth session generation for stale-write detection. */
+export const getAuthSessionGeneration = () => authSessionGeneration;
 
 export interface DecodedIdToken {
   email?: string;
@@ -124,6 +133,7 @@ export const refreshAccessToken = async (
 
   refreshPromise = (async () => {
     try {
+      const generation = authSessionGeneration;
       const storedData = await loadAuthDataFromSecureStore();
       if (!storedData) {
         refreshPromise = null;
@@ -180,6 +190,13 @@ export const refreshAccessToken = async (
           expiresAt: exp * MILLISECONDS_IN_A_SECOND,
         };
 
+        if (authSessionGeneration !== generation) {
+          // Session was invalidated (e.g. logout) while the refresh was
+          // in flight. Do not write the stale session back to storage.
+          refreshPromise = null;
+          return null;
+        }
+
         await saveAuthDataToSecureStore(updatedAuthData as SecureAuthData);
 
         refreshPromise = null;
@@ -210,6 +227,7 @@ export const refreshAccessToken = async (
 };
 
 export const logout = async () => {
+  invalidateAuthSession(); // Invalidate any in-flight refresh flows
   try {
     // Retrieve stored authentication data
     const secureData = await loadAuthDataFromSecureStore();

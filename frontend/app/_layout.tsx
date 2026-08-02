@@ -51,6 +51,7 @@ import { PersistGate } from "redux-persist/integration/react";
 // Component to handle app initialization
 function AppInitializer({ onReady }: { onReady: () => void }) {
   const dispatch = useDispatch<AppDispatch>(); // Ensure correct typing for async actions
+  const [isInitialized, setIsInitialized] = useState(false);
   const handleLogout = async () => {
     await dispatch(performLogout()).unwrap(); // Ensure the logout action is dispatched properly
   };
@@ -63,7 +64,10 @@ function AppInitializer({ onReady }: { onReady: () => void }) {
   /**
    * Refreshes an expired access token when the app returns to the foreground.
    */
-  useRefreshTokenOnForeground({ onLogout: handleLogout });
+  useRefreshTokenOnForeground({
+    enabled: isInitialized,
+    onLogout: handleLogout,
+  });
 
   useEffect(() => {
     const initialize = async () => {
@@ -89,6 +93,7 @@ function AppInitializer({ onReady }: { onReady: () => void }) {
       } catch (error) {
         console.error("Initialization error:", error);
       } finally {
+        setIsInitialized(true);
         onReady();
       }
     };

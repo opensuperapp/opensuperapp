@@ -15,7 +15,10 @@
 // under the License.
 import { setAuth } from "@/context/slices/authSlice";
 import { AppDispatch } from "@/context/store";
-import { refreshAccessToken } from "@/services/authService";
+import {
+  getAuthSessionGeneration,
+  refreshAccessToken,
+} from "@/services/authService";
 import { loadAuthDataFromSecureStore } from "@/utils/authTokenStore";
 import { useEffect, useRef } from "react";
 import { AppState } from "react-native";
@@ -29,11 +32,15 @@ import dayjs from "dayjs";
  * from failing with an expired token (or triggering a force logout) when the
  * token expires while the app is backgrounded.
  *
+ * @param enabled - When false, the listener is not registered (e.g. until app
+ * initialization has completed).
  * @param onLogout - The logout function to pass to the refresh for handling auth errors.
  */
 export const useRefreshTokenOnForeground = ({
+  enabled,
   onLogout,
 }: {
+  enabled: boolean;
   onLogout: () => Promise<void>;
 }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -42,6 +49,8 @@ export const useRefreshTokenOnForeground = ({
   onLogoutRef.current = onLogout;
 
   useEffect(() => {
+    if (!enabled) return;
+
     const subscription = AppState.addEventListener("change", (nextAppState) => {
       if (
         appState.current.match(/inactive|background/) &&
@@ -54,8 +63,12 @@ export const useRefreshTokenOnForeground = ({
 
             if (!isAccessTokenExpired(storedData.accessToken)) return;
 
+            const generation = getAuthSessionGeneration();
             const newAuthData = await refreshAccessToken(onLogoutRef.current);
-            if (newAuthData) {
+            if (
+              newAuthData &&
+              getAuthSessionGeneration() === generation
+            ) {
               dispatch(setAuth(newAuthData));
             }
           } catch (error) {
@@ -74,14 +87,16 @@ export const useRefreshTokenOnForeground = ({
     return () => {
       subscription.remove();
     };
-  }, [dispatch]);
+  }, [dispatch, enabled]);
 };
 
 // Helper function to check if the token is expired
 const isAccessTokenExpired = (accessToken: string): boolean => {
   try {
-    const decoded = jwtDecode<{ exp: number }>(accessToken);
-    return dayjs.unix(decoded.exp).isBefore(dayjs());
+    const decoded = jwtDecode<{ exp?: unknown }>(accessToken);
+    const exp = decoded.exp;
+    if (typeof exp !== "number" || !Number.isFinite(exp)) return true;
+    return dayjs.unix(exp).isBefore(dayjs());
   } catch {
     return true; // Assume expired if decoding fails
   }
