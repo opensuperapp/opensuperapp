@@ -23,6 +23,7 @@ import { getVersions } from "@/context/slices/versionSlice";
 import { AppDispatch, persistor, store } from "@/context/store";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { usePushNotificationHandler } from "@/hooks/usePushNotificationHandler";
+import { useRefreshTokenOnForeground } from "@/hooks/useRefreshTokenOnForeground";
 import { runMigrations } from "@/migrations/migrator";
 import { buildAppsWithTokens } from "@/utils/exchangedTokenRehydrator";
 import { handleFreshInstall } from "@/utils/freshInstall";
@@ -50,6 +51,7 @@ import { PersistGate } from "redux-persist/integration/react";
 // Component to handle app initialization
 function AppInitializer({ onReady }: { onReady: () => void }) {
   const dispatch = useDispatch<AppDispatch>(); // Ensure correct typing for async actions
+  const [isInitialized, setIsInitialized] = useState(false);
   const handleLogout = async () => {
     await dispatch(performLogout()).unwrap(); // Ensure the logout action is dispatched properly
   };
@@ -58,6 +60,14 @@ function AppInitializer({ onReady }: { onReady: () => void }) {
    * Handles push notification token lifecycle.
    */
   usePushNotificationHandler({ onLogout: handleLogout });
+
+  /**
+   * Refreshes an expired access token when the app returns to the foreground.
+   */
+  useRefreshTokenOnForeground({
+    enabled: isInitialized,
+    onLogout: handleLogout,
+  });
 
   useEffect(() => {
     const initialize = async () => {
@@ -83,6 +93,7 @@ function AppInitializer({ onReady }: { onReady: () => void }) {
       } catch (error) {
         console.error("Initialization error:", error);
       } finally {
+        setIsInitialized(true);
         onReady();
       }
     };
