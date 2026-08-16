@@ -85,8 +85,8 @@ export const setAuthWithCheck = createAsyncThunk(
 
     await setItemAsync("authMail", JSON.stringify(authPayload.email));
 
-    if (authPayload.email) {
-      await syncMicroAppCacheForUser(dispatch, authPayload.email);
+    if (authPayload.userId) {
+      await syncMicroAppCacheForUser(dispatch, authPayload.userId);
     }
 
     dispatch(setAuth(authPayload));

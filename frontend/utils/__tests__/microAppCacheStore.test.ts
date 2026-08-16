@@ -41,7 +41,7 @@ jest.mock("expo-file-system", () => {
   return { Directory, Paths: { document: "file:///doc/" } };
 });
 
-import { APPS, LAST_LOGGED_IN_EMAIL_KEY } from "@/constants/Constants";
+import { APPS, LAST_LOGGED_IN_USER_ID_KEY } from "@/constants/Constants";
 import { setApps } from "@/context/slices/appSlice";
 import { syncMicroAppCacheForUser } from "@/utils/microAppCacheStore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -53,27 +53,27 @@ describe("syncMicroAppCacheForUser", () => {
     mockDirectoryExists.mockClear().mockReturnValue(true);
   });
 
-  it("first login on this device (no stored email): saves the email, clears nothing", async () => {
+  it("first login on this device (no stored userId): saves the userId, clears nothing", async () => {
     const dispatch = jest.fn();
 
-    await syncMicroAppCacheForUser(dispatch, "alice@wso2.com");
+    await syncMicroAppCacheForUser(dispatch, "user-alice");
 
-    expect(await AsyncStorage.getItem(LAST_LOGGED_IN_EMAIL_KEY)).toBe(
-      "alice@wso2.com"
+    expect(await AsyncStorage.getItem(LAST_LOGGED_IN_USER_ID_KEY)).toBe(
+      "user-alice"
     );
     expect(mockDirectoryDelete).not.toHaveBeenCalled();
     expect(dispatch).not.toHaveBeenCalled();
   });
 
   it("same user re-logging in: keeps the cache, doesn't clear downloaded apps", async () => {
-    await AsyncStorage.setItem(LAST_LOGGED_IN_EMAIL_KEY, "alice@wso2.com");
+    await AsyncStorage.setItem(LAST_LOGGED_IN_USER_ID_KEY, "user-alice");
     await AsyncStorage.setItem(APPS, JSON.stringify([{ appId: "app-1" }]));
     const dispatch = jest.fn();
 
-    await syncMicroAppCacheForUser(dispatch, "alice@wso2.com");
+    await syncMicroAppCacheForUser(dispatch, "user-alice");
 
-    expect(await AsyncStorage.getItem(LAST_LOGGED_IN_EMAIL_KEY)).toBe(
-      "alice@wso2.com"
+    expect(await AsyncStorage.getItem(LAST_LOGGED_IN_USER_ID_KEY)).toBe(
+      "user-alice"
     );
     expect(await AsyncStorage.getItem(APPS)).not.toBeNull();
     expect(mockDirectoryDelete).not.toHaveBeenCalled();
@@ -81,29 +81,49 @@ describe("syncMicroAppCacheForUser", () => {
   });
 
   it("different user logging in: clears the previous user's downloaded apps", async () => {
-    await AsyncStorage.setItem(LAST_LOGGED_IN_EMAIL_KEY, "alice@wso2.com");
+    await AsyncStorage.setItem(LAST_LOGGED_IN_USER_ID_KEY, "user-alice");
     await AsyncStorage.setItem(APPS, JSON.stringify([{ appId: "app-1" }]));
     const dispatch = jest.fn();
 
-    await syncMicroAppCacheForUser(dispatch, "bob@wso2.com");
+    await syncMicroAppCacheForUser(dispatch, "user-bob");
 
-    expect(await AsyncStorage.getItem(LAST_LOGGED_IN_EMAIL_KEY)).toBe(
-      "bob@wso2.com"
+    expect(await AsyncStorage.getItem(LAST_LOGGED_IN_USER_ID_KEY)).toBe(
+      "user-bob"
     );
     expect(await AsyncStorage.getItem(APPS)).toBeNull();
     expect(mockDirectoryDelete).toHaveBeenCalledTimes(1);
     expect(dispatch).toHaveBeenCalledWith(setApps([]));
   });
 
-  it("never throws, even if storage access fails", async () => {
+  it("never throws, even if storage access fails — and fails closed by clearing the cache", async () => {
+    await AsyncStorage.setItem(LAST_LOGGED_IN_USER_ID_KEY, "user-alice");
+    await AsyncStorage.setItem(APPS, JSON.stringify([{ appId: "app-1" }]));
     jest
       .spyOn(AsyncStorage, "getItem")
       .mockRejectedValueOnce(new Error("storage unavailable"));
     const dispatch = jest.fn();
 
     await expect(
-      syncMicroAppCacheForUser(dispatch, "alice@wso2.com")
+      syncMicroAppCacheForUser(dispatch, "user-bob")
     ).resolves.toBeUndefined();
-    expect(dispatch).not.toHaveBeenCalled();
+
+    // Can't verify whose cache this is, so it fails closed: clear rather
+    // than risk showing a previous user's downloaded apps.
+    expect(mockDirectoryDelete).toHaveBeenCalledTimes(1);
+    expect(dispatch).toHaveBeenCalledWith(setApps([]));
+  });
+
+  it("does not throw even when the fail-closed cleanup itself fails", async () => {
+    jest
+      .spyOn(AsyncStorage, "getItem")
+      .mockRejectedValueOnce(new Error("storage unavailable"));
+    mockDirectoryDelete.mockImplementationOnce(() => {
+      throw new Error("delete failed");
+    });
+    const dispatch = jest.fn();
+
+    await expect(
+      syncMicroAppCacheForUser(dispatch, "user-bob")
+    ).resolves.toBeUndefined();
   });
 });

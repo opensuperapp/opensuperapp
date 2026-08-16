@@ -15,7 +15,7 @@
 // under the License.
 import {
   APPS,
-  LAST_LOGGED_IN_EMAIL_KEY,
+  LAST_LOGGED_IN_USER_ID_KEY,
   MICRO_APP_STORAGE_DIR,
 } from "@/constants/Constants";
 import { setApps } from "@/context/slices/appSlice";
@@ -42,23 +42,34 @@ const clearDownloadedMicroApps = async (dispatch: Dispatch<UnknownAction>) => {
 // Keeps a signed-in user's downloaded micro-apps across logout/login so the
 // same user isn't forced to re-download every app on every sign-in. If a
 // different user signs in on this device, the previous user's cached apps
-// are cleared instead of being shown under "My Apps".
+// are cleared instead of being shown under "My Apps". Keyed by the token's
+// stable userId rather than email, since an email can be reassigned/changed
+// while the userId stays fixed for the account.
 export const syncMicroAppCacheForUser = async (
   dispatch: Dispatch<UnknownAction>,
-  email: string
+  userId: string
 ) => {
   try {
-    const lastLoggedInEmail = await AsyncStorage.getItem(
-      LAST_LOGGED_IN_EMAIL_KEY
+    const lastLoggedInUserId = await AsyncStorage.getItem(
+      LAST_LOGGED_IN_USER_ID_KEY
     );
 
-    if (lastLoggedInEmail && lastLoggedInEmail !== email) {
+    if (lastLoggedInUserId && lastLoggedInUserId !== userId) {
       await clearDownloadedMicroApps(dispatch);
     }
 
-    await AsyncStorage.setItem(LAST_LOGGED_IN_EMAIL_KEY, email);
+    await AsyncStorage.setItem(LAST_LOGGED_IN_USER_ID_KEY, userId);
   } catch (error) {
-    // Never let a cache-sync failure block sign-in.
     console.error("Error syncing micro-app cache for user:", error);
+    // Fail closed: if we can't verify whose cache this is, don't risk
+    // exposing a previous user's downloaded apps to the new session.
+    try {
+      await clearDownloadedMicroApps(dispatch);
+    } catch (cleanupError) {
+      console.error(
+        "Error clearing micro-app cache after a sync failure:",
+        cleanupError
+      );
+    }
   }
 };
