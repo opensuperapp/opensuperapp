@@ -48,6 +48,14 @@ type ListItemProps = {
   onRemove: () => void;
   displayMode?: DisplayMode;
   isDefaultApp?: boolean;
+  requiredPermissions?: string[];
+};
+
+// Human readable labels for the capabilities a micro app can declare. An unknown
+// capability falls back to its raw id rather than being hidden - the user should see
+// everything the app asked for.
+const PERMISSION_LABELS: Record<string, string> = {
+  location: "Location",
 };
 
 const ListItem = React.memo(
@@ -67,6 +75,7 @@ const ListItem = React.memo(
     onRemove,
     displayMode,
     isDefaultApp = false,
+    requiredPermissions,
   }: ListItemProps) => {
     const screenWidth = Dimensions.get("window").width;
     const colorScheme = useColorScheme() ?? "light";
@@ -124,6 +133,17 @@ const ListItem = React.memo(
               {versions.length > 0 && (
                 <Text style={styles.versionText} allowFontScaling={false}>
                   Version {versions[0].version}
+                </Text>
+              )}
+              {!!requiredPermissions?.length && (
+                <Text style={styles.permissionsText} allowFontScaling={false}>
+                  Uses:{" "}
+                  {requiredPermissions
+                    .map(
+                      (permission) =>
+                        PERMISSION_LABELS[permission] ?? permission
+                    )
+                    .join(", ")}
                 </Text>
               )}
               {downloading && (
@@ -235,6 +255,11 @@ const createStyles = (colorScheme: "light" | "dark") =>
     versionText: {
       color: Colors[colorScheme].primaryTextColor,
       fontSize: 10,
+    },
+    permissionsText: {
+      color: Colors[colorScheme].secondaryTextColor,
+      fontSize: 10,
+      marginTop: 2,
     },
     defaultAppText: {
       fontSize: 14,
