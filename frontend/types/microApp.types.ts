@@ -72,6 +72,41 @@ export const mapToWebBrowserPresentationStyle = (
   }
 };
 
+// Requested fidelity of a location stream. "balanced" is the default because the
+// bridge is a generic super app capability; a consumer that needs navigation grade
+// fixes (e.g. a geofence engine) must ask for "high" explicitly.
+export type LocationAccuracy = "high" | "balanced";
+
+// Options a micro app passes to nativebridge.requestLocationUpdates()
+export interface LocationRequestOptions {
+  accuracy?: LocationAccuracy;
+  distanceIntervalM?: number;
+  timeIntervalMs?: number;
+  // Keep the stream alive while the super app is backgrounded. Fixes taken while
+  // backgrounded are buffered and flushed with `buffered: true` on resume.
+  background?: boolean;
+}
+
+// A single position fix delivered to nativebridge.resolveLocationUpdate()
+export interface LocationFix {
+  lat: number;
+  lng: number;
+  accuracy: number;
+  // ISO 8601, the instant the fix was TAKEN - not the instant it was delivered.
+  // A buffered fix flushed minutes later still carries its original timestamp, so a
+  // consumer can tell a replay from a teleport.
+  ts: string;
+  // Present and true only on fixes that were recorded while backgrounded.
+  buffered?: boolean;
+}
+
+// Why a location stream could not be opened.
+export type LocationRejectReason =
+  | "permission_denied"
+  | "services_disabled"
+  | "not_declared"
+  | "unavailable";
+
 // Interface for ScheduledNotificationIdentifiable
 export interface ScheduledNotificationIdentifiable {
   id: string;

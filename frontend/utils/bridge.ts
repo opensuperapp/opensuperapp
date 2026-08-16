@@ -50,6 +50,10 @@ export const TOPIC = {
   KEYBOARD_WILL_HIDE: "keyboard_will_hide",
   KEYBOARD_DID_SHOW: "keyboard_did_show",
   KEYBOARD_DID_HIDE: "keyboard_did_hide",
+  // Location is a subscription, not a one-shot: LOCATION_START opens a stream that
+  // pushes many resolveLocationUpdate callbacks until LOCATION_STOP closes it.
+  LOCATION_START: "location_start",
+  LOCATION_STOP: "location_stop",
 };
 
 // JavaScript code injected into the WebView to enable communication between
@@ -156,4 +160,9 @@ export const injectedJavaScript = `window.nativebridge = {
     requestKeyboardDidHide: () => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "keyboard_did_hide" })),
     resolveKeyboardDidHide: () => console.log("Keyboard did hide"),
     rejectKeyboardDidHide: (err) => console.error("Keyboard did hide failed:", err),
+    requestLocationUpdates: (options) => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "location_start", data: options })),
+    requestStopLocationUpdates: () => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "location_stop" })),
+    // Fires repeatedly until requestStopLocationUpdates - a subscription, not a one-shot.
+    resolveLocationUpdate: (fix) => console.log("Location fix:", fix),
+    rejectLocationUpdates: (err) => console.error("Location updates failed:", err)
   };`;

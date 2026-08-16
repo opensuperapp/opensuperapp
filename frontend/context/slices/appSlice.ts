@@ -46,6 +46,10 @@ export type MicroApp = {
   exchangedToken?: string | "";
   exchangedIdToken?: string | "";
   displayMode?: DisplayMode;
+  // Capabilities the micro app declared in its microapp.json. Native capabilities
+  // that carry privacy weight (currently "location") are refused unless listed here,
+  // so granting the host an OS permission does not hand it to every micro app.
+  requiredPermissions?: string[];
 };
 
 interface AppsState {
@@ -93,6 +97,7 @@ const appsSlice = createSlice({
         exchangedToken?: string;
         exchangedIdToken?: string;
         displayMode?: DisplayMode;
+        requiredPermissions?: string[];
       }>
     ) => {
       const {
@@ -103,6 +108,7 @@ const appsSlice = createSlice({
         exchangedToken,
         exchangedIdToken,
         displayMode,
+        requiredPermissions,
       } = action.payload;
       const app = state.apps.find((app) => app.appId === appId);
       if (app) {
@@ -110,6 +116,7 @@ const appsSlice = createSlice({
         app.webViewUri = webViewUri;
         app.clientId = clientId;
         app.displayMode = displayMode ?? app.displayMode;
+        app.requiredPermissions = requiredPermissions ?? [];
         if (exchangedToken !== undefined) {
           app.exchangedToken = exchangedToken;
           void (exchangedToken
