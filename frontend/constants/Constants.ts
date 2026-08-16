@@ -82,6 +82,7 @@ export const NOT_DOWNLOADED = "not-downloaded";
 export const USER_CONFIGURATIONS = "user-configurations";
 export const APP_LIST_CONFIG_KEY = "superapp.apps.list";
 export const USER_INFO = "user-info";
+export const LAST_LOGGED_IN_EMAIL_KEY = "last-logged-in-email";
 export const LAST_ACTIVE_PATH_KEY = "last-active-path";
 export const LIBRARY_STORAGE_KEY = "cached_library_feed";
 export const LIBRARY_TIMESTAMP_KEY = "cached_library_timestamp";

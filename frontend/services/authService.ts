@@ -227,7 +227,7 @@ export const logout = async () => {
       return;
     }
     const idToken = secureData?.idToken;
-    const appsJson = await AsyncStorage.getItem(APPS); // capture appIds BEFORE clearing APPS
+    const appsJson = await AsyncStorage.getItem(APPS); // used to clear each app's exchanged token below
     const appIds = appsJson
       ? (JSON.parse(appsJson) as { appId: string }[]).map((a) => a.appId)
       : [];
@@ -243,7 +243,6 @@ export const logout = async () => {
       console.warn("No idToken found. Performing local logout only.");
       await clearAllExchangedTokens(appIds);
       await clearAuthDataFromSecureStore();
-      await AsyncStorage.removeItem(APPS);
       await AsyncStorage.removeItem(USER_INFO);
       return;
     }
@@ -255,7 +254,6 @@ export const logout = async () => {
     });
     await clearAllExchangedTokens(appIds);
     await clearAuthDataFromSecureStore();
-    await AsyncStorage.removeItem(APPS);
     await AsyncStorage.removeItem(USER_INFO);
   } catch (error) {
     console.error("Error logging out from Asgardeo:", error);
