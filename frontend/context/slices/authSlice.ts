@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 import { removeGoogleAuthState } from "@/services/googleService";
+import { syncMicroAppCacheForUser } from "@/utils/microAppCacheStore";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { getItemAsync, setItemAsync } from "expo-secure-store";
 import {
@@ -83,6 +84,11 @@ export const setAuthWithCheck = createAsyncThunk(
     }
 
     await setItemAsync("authMail", JSON.stringify(authPayload.email));
+
+    if (authPayload.userId) {
+      await syncMicroAppCacheForUser(dispatch, authPayload.userId);
+    }
+
     dispatch(setAuth(authPayload));
   }
 );
