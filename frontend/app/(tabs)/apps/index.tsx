@@ -165,6 +165,8 @@ export default function HomeScreen() {
   // Load micro apps and user configurations if they haven't been initialized yet
   useEffect(() => {
     const initializeApp = async () => {
+      if (!email) return; // Prevent loading micro apps into UI when logged out
+
       try {
         if (!apps || apps.length === 0) {
           await loadMicroAppDetails(

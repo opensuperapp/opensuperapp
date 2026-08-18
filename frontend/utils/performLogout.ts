@@ -15,6 +15,7 @@
 // under the License.
 import { USER_INFO } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
+import { setApps } from "@/context/slices/appSlice";
 import { resetAll } from "@/context/slices/authSlice";
 import {
   clearDeviceState,
@@ -37,7 +38,8 @@ export const performLogout = createAsyncThunk(
       await logout(); // Call Asgardeo logout
       await clearAuthDataFromSecureStore();
       await persistor.purge(); // Clear redux-persist storage
-      dispatch(resetAll()); // Reset Redux state completely
+      dispatch(resetAll()); // Reset auth Redux state completely
+      dispatch(setApps([])); // Hide all downloaded apps from the UI
       dispatch(clearDeviceState()); // Reset device state
       dispatch(clearLastSentFcmToken()); // Clear last sent FCM token
 
