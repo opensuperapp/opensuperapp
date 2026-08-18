@@ -315,7 +315,7 @@ export const loadMicroAppDetails = async (
     const storedApps = await loadStoredApps();
 
     // Abort if the user logged out during the async operation
-    if (!store.getState().auth.email) return;
+    if (!store.getState().auth.userId) return;
 
     // Dispatch stored apps initially
     dispatch(setApps(storedApps));
@@ -347,7 +347,7 @@ export const loadMicroAppDetails = async (
       });
 
       // Abort if the user logged out during the API fetch
-      if (!store.getState().auth.email) return;
+      if (!store.getState().auth.userId) return;
 
       // Update Redux and AsyncStorage
       dispatch(setApps(await buildAppsWithTokens(apps)));

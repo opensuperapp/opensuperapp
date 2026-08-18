@@ -58,7 +58,7 @@ export default function HomeScreen() {
   const downloadProgress = useSelector(
     (state: RootState) => state.apps.downloadProgress
   );
-  const { email } = useSelector((state: RootState) => state.auth);
+  const { userId } = useSelector((state: RootState) => state.auth);
   const isForceUpdate = useSelector(
     (state: RootState) =>
       state.appConfig.configs.find(
@@ -115,7 +115,7 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       const checkForUpdates = async () => {
-        if (isCheckingUpdates.current || !email || !isForceUpdate) {
+        if (isCheckingUpdates.current || !userId || !isForceUpdate) {
           return;
         }
 
@@ -159,13 +159,13 @@ export default function HomeScreen() {
       return () => {
         isCheckingUpdates.current = false;
       };
-    }, [dispatch, email, isForceUpdate, updateCheckIntervalMs])
+    }, [dispatch, userId, isForceUpdate, updateCheckIntervalMs])
   );
 
   // Load micro apps and user configurations if they haven't been initialized yet
   useEffect(() => {
     const initializeApp = async () => {
-      if (!email) return; // Prevent loading micro apps into UI when logged out
+      if (!userId) return; // Prevent loading micro apps into UI when logged out
 
       try {
         if (!apps || apps.length === 0) {
@@ -193,7 +193,7 @@ export default function HomeScreen() {
     };
 
     initializeApp();
-  }, [email]);
+  }, [userId]);
 
   // Load saved app order from AsyncStorage on mount
   useEffect(() => {
