@@ -23,6 +23,7 @@ import { getUserConfigurations } from "@/context/slices/userConfigSlice";
 import { setUserInfo } from "@/context/slices/userInfoSlice";
 import { getVersions } from "@/context/slices/versionSlice";
 import { AppDispatch, persistor, store } from "@/context/store";
+import { useAuthLogoutListener } from "@/hooks/useAuthLogoutListener";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { useNotificationNavigation } from "@/hooks/useNotificationNavigation";
 import { usePushNotificationHandler } from "@/hooks/usePushNotificationHandler";
@@ -70,6 +71,8 @@ function AppInitializer({ onReady }: { onReady: () => void }) {
   usePushNotificationHandler({ onLogout: handleLogout });
 
   useNotificationNavigation();
+
+  useAuthLogoutListener();
 
   const queryClient = useQueryClient();
 

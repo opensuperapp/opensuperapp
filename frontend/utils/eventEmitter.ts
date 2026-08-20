@@ -80,5 +80,6 @@ class EventEmitter<T> {
 }
 
 const qrScannerEmitter = new EventEmitter<string>();
+const authEmitter = new EventEmitter<void>();
 
-export { qrScannerEmitter };
+export { authEmitter, qrScannerEmitter };
