@@ -23,6 +23,7 @@ import {
   TOKEN_URL,
   USER_INFO,
 } from "@/constants/Constants";
+import { Event } from "@/constants/enums/Event";
 import {
   updateExchangedIdToken,
   updateExchangedToken,
@@ -36,6 +37,7 @@ import {
   saveAuthDataToSecureStore,
   SecureAuthData,
 } from "@/utils/authTokenStore";
+import { authEmitter } from "@/utils/eventEmitter";
 import { clearAllExchangedTokens } from "@/utils/exchangedTokenStore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
@@ -244,6 +246,7 @@ export const logout = async () => {
       await clearAllExchangedTokens(appIds);
       await clearAuthDataFromSecureStore();
       await AsyncStorage.removeItem(USER_INFO);
+      authEmitter.emit(Event.AuthLoggedOut, undefined);
       return;
     }
 
@@ -255,6 +258,7 @@ export const logout = async () => {
     await clearAllExchangedTokens(appIds);
     await clearAuthDataFromSecureStore();
     await AsyncStorage.removeItem(USER_INFO);
+    authEmitter.emit(Event.AuthLoggedOut, undefined);
   } catch (error) {
     console.error("Error logging out from Asgardeo:", error);
     Alert.alert(

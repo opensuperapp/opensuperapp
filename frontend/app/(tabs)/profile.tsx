@@ -17,6 +17,7 @@ import Avatar from "@/components/Avatar";
 import ProfileListItem from "@/components/ProfileListItem";
 import SignInMessage from "@/components/SignInMessage";
 import { Colors } from "@/constants/Colors";
+import { SUPER_APP_DEVELOPER_GROUP } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { disableFCMToken } from "@/context/slices/deviceSlice";
 import { getUserInfo } from "@/context/slices/userInfoSlice";
@@ -29,7 +30,7 @@ import { performLogout } from "@/utils/performLogout";
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import { jwtDecode } from "jwt-decode";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Image,
@@ -61,6 +62,16 @@ const SettingsScreen = () => {
   });
 
   useTrackActiveScreen(ScreenPaths.PROFILE);
+
+  const isSuperAppDeveloper = useMemo(() => {
+    if (!accessToken || !SUPER_APP_DEVELOPER_GROUP) return false;
+    try {
+      const decoded = jwtDecode<DecodedAccessToken>(accessToken);
+      return decoded.groups?.includes(SUPER_APP_DEVELOPER_GROUP) ?? false;
+    } catch {
+      return false;
+    }
+  }, [accessToken]);
 
   useEffect(() => {
     if (userInfo) {
@@ -114,6 +125,21 @@ const SettingsScreen = () => {
       ]
     );
   }, [dispatch]);
+
+  /**
+   * Dev-only: fires the same onLogout callback that refreshAccessToken()/
+   * apiRequest() invoke when a refresh-token exchange comes back 400, or an
+   * API call still 401's after a refresh retry (see services/authService.ts,
+   * utils/requestHandler.ts). Lets us verify the silent-logout UI reacts
+   * correctly without waiting for a real token to expire.
+   */
+  const handleSimulateSilentLogout = useCallback(async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Error simulating silent logout:", error);
+    }
+  }, []);
 
   if (!accessToken) {
     return (
@@ -187,6 +213,18 @@ const SettingsScreen = () => {
             <Text style={styles.logoutText}>Sign Out</Text>
           </View>
         </TouchableOpacity>
+
+        {__DEV__ && isSuperAppDeveloper && (
+          <TouchableOpacity
+            activeOpacity={0.5}
+            style={styles.debugLogoutButton}
+            onPress={handleSimulateSilentLogout}
+          >
+            <Text style={styles.debugLogoutText}>
+              DEV: Simulate Silent Logout (401)
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -263,6 +301,21 @@ const createStyles = (colorScheme: "light" | "dark") =>
       fontSize: 16,
       lineHeight: 20,
       color: Colors[colorScheme].primaryBackgroundColor,
+      fontWeight: "600",
+    },
+    debugLogoutButton: {
+      marginHorizontal: 60,
+      paddingVertical: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: Colors[colorScheme].borderColor,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    debugLogoutText: {
+      fontSize: 13,
+      lineHeight: 18,
+      color: Colors[colorScheme].mutedTextColor,
       fontWeight: "600",
     },
   });

@@ -50,6 +50,9 @@ export const DEVELOPER_APP_IOS_DEFAULT_URL =
 export const DEVELOPER_APP_ANDROID_DEFAULT_URL =
   process.env.EXPO_PUBLIC_DEVELOPER_APP_ANDROID_DEFAULT_URL ?? "";
 export const ENABLE_FIREBASE = process.env.EXPO_PUBLIC_ENABLE_FIREBASE === TRUE;
+// Gates dev-only features 
+export const SUPER_APP_DEVELOPER_GROUP =
+  process.env.EXPO_PUBLIC_SUPER_APP_DEVELOPER_GROUP ?? "";
 export const GOOGLE_SCOPES = [
   "openid",
   "profile",

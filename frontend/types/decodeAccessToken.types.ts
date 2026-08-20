@@ -18,4 +18,5 @@ export type DecodedAccessToken = {
   given_name?: string;
   family_name?: string;
   userid?: string;
+  groups?: string[];
 };
