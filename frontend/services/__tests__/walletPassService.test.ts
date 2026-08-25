@@ -137,6 +137,24 @@ describe("addToAppleWallet", () => {
     expect(result).toBe(false);
   });
 
+  // An empty ArrayBuffer is truthy, so a 200 carrying no bytes used to reach
+  // the file write; the share sheet would then report success for a zero-byte
+  // .pkpass that Apple Wallet refuses to install.
+  it("does not write a file or open the share sheet on a 200 with an empty body", async () => {
+    (apiRequest as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: new ArrayBuffer(0),
+    });
+
+    const result = await addToAppleWallet(true, onLogout);
+
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockWrite).not.toHaveBeenCalled();
+    expect(Sharing.shareAsync).not.toHaveBeenCalled();
+    expect(Alert.alert).toHaveBeenCalled();
+    expect(result).toBe(false);
+  });
+
   it("makes no request when the wallet_pass_enabled flag is off", async () => {
     const result = await addToAppleWallet(false, onLogout);
 

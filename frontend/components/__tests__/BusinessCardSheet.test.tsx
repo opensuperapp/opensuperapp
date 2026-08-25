@@ -66,6 +66,7 @@ jest.mock("@/hooks/useWalletPassEnabled", () => ({
 }));
 
 jest.mock("expo-brightness", () => ({
+  getBrightnessAsync: jest.fn().mockResolvedValue(0.5),
   setBrightnessAsync: jest.fn().mockResolvedValue(undefined),
   restoreSystemBrightnessAsync: jest.fn().mockResolvedValue(undefined),
 }));
@@ -107,6 +108,10 @@ const allText = (root: ReturnType<typeof create>): string[] =>
     .flat()
     .filter((value): value is string => typeof value === "string");
 
+// Modal[0] is the sheet itself; the QR overlay is the one nested inside it.
+const qrModal = (root: ReturnType<typeof create>) =>
+  root.root.findAllByType(Modal)[1];
+
 describe("BusinessCardSheet", () => {
   it("presents as a sheet rather than a pushed screen", () => {
     const { root } = render(true);
@@ -145,5 +150,50 @@ describe("BusinessCardSheet", () => {
     expect(
       root.root.findByProps({ accessibilityLabel: "save_business_card" })
     ).toBeDefined();
+  });
+
+  it("drops the QR overlay when the sheet is hidden, so reopening starts clean", () => {
+    const { root, onClose } = render(true);
+
+    act(() => {
+      root.root.findByProps({ accessibilityLabel: "pass_barcode" }).props
+        .onPress();
+    });
+    expect(qrModal(root).props.visible).toBe(true);
+
+    // The sheet stays mounted while hidden. This is the iOS swipe-to-dismiss
+    // path too: no onRequestClose, the parent just flips `visible`.
+    act(() => {
+      root.update(<BusinessCardSheet visible={false} onClose={onClose} />);
+    });
+    act(() => {
+      root.update(<BusinessCardSheet visible onClose={onClose} />);
+    });
+
+    expect(qrModal(root).props.visible).toBe(false);
+  });
+
+  it("logs card_viewed only when the sheet becomes visible", () => {
+    const log = jest.spyOn(console, "log").mockImplementation(() => {});
+    const onClose = jest.fn();
+    let root: ReturnType<typeof create>;
+
+    act(() => {
+      root = create(<BusinessCardSheet visible onClose={onClose} />);
+    });
+    act(() => {
+      root!.update(<BusinessCardSheet visible={false} onClose={onClose} />);
+    });
+    act(() => {
+      root!.update(<BusinessCardSheet visible onClose={onClose} />);
+    });
+
+    expect(
+      log.mock.calls.filter(
+        ([tag, event]) => tag === "[analytics]" && event === "card_viewed"
+      )
+    ).toHaveLength(2);
+
+    log.mockRestore();
   });
 });

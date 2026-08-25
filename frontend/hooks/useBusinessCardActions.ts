@@ -50,7 +50,15 @@ export const useBusinessCardActions = (visible: boolean) => {
   useEffect(() => {
     if (visible) {
       logAnalyticsEvent("card_viewed");
+      return;
     }
+
+    // The sheet stays mounted while it is hidden, so a QR overlay left open
+    // would pop straight back up the next time the sheet is shown. Resetting
+    // here rather than in the close handlers covers every way the sheet can go
+    // away — on iOS the pageSheet swipe-to-dismiss never fires onRequestClose,
+    // and the parent can drop `visible` on its own at any time.
+    setQrVisible(false);
   }, [visible]);
 
   const openQr = () => {

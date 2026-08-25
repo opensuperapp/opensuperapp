@@ -33,6 +33,13 @@ type GoogleSaveUrlResponse = {
 const isSuccessStatus = (status: number | undefined): boolean =>
   status !== undefined && status >= 200 && status < 300;
 
+// `responseType: "arraybuffer"` means the body should be an ArrayBuffer, but an
+// empty one is still truthy, and a zero-byte .pkpass is a file Apple Wallet
+// cannot install. Reading byteLength covers both an ArrayBuffer and a view over
+// one, and is undefined for every other shape — none of which is a pass either.
+const hasPassBytes = (data: unknown): boolean =>
+  ((data as ArrayBuffer | undefined)?.byteLength ?? 0) > 0;
+
 // Repeated at the call site so no caller can fire a request that axios cannot
 // resolve, independent of the button-level gate in useWalletPassEnabled.
 const isWalletServiceConfigured = (): boolean => {
@@ -60,7 +67,11 @@ export const addToAppleWallet = async (
       onLogout
     );
 
-    if (!isSuccessStatus(response?.status) || !response?.data) {
+    if (
+      !response ||
+      !isSuccessStatus(response.status) ||
+      !hasPassBytes(response.data)
+    ) {
       Alert.alert(
         "Couldn't add to Apple Wallet",
         "Something went wrong while fetching your pass."
@@ -68,8 +79,8 @@ export const addToAppleWallet = async (
       return false;
     }
 
-    // Write only once the response is a confirmed 2xx with a body, so the pass
-    // handed to iOS is never partial or empty.
+    // Write only once the response is a confirmed 2xx carrying at least one
+    // byte, so the pass handed to iOS is never empty.
     const file = new File(Paths.cache, "wso2-business-card.pkpass");
     file.create({ overwrite: true });
     file.write(new Uint8Array(response.data));

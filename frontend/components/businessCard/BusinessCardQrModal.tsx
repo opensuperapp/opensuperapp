@@ -14,10 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 import { Colors } from "@/constants/Colors";
+import { isIos } from "@/constants/Constants";
 import { BusinessCardData } from "@/types/businessCard.types";
 import { buildVCard } from "@/utils/vcard";
 import * as Brightness from "expo-brightness";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   Dimensions,
   Modal,
@@ -35,6 +36,14 @@ type Props = {
 };
 
 const BusinessCardQrModal = ({ visible, data, onClose }: Props) => {
+  // What the screen was at before we took it over, kept in a ref so the effect
+  // cleanup can read a value captured by the effect body.
+  const previousBrightness = useRef<number | null>(null);
+  // Raising and restoring are both async, and the cleanup can fire while the
+  // raise is still in flight. Chaining every call keeps them in order, so a
+  // close can never be overtaken by the setBrightnessAsync(1) it cancels.
+  const brightnessQueue = useRef<Promise<void>>(Promise.resolve());
+
   useEffect(() => {
     if (!visible) {
       return;
@@ -46,18 +55,45 @@ const BusinessCardQrModal = ({ visible, data, onClose }: Props) => {
     // system settings screen mid-demo.
     const raiseBrightness = async () => {
       try {
+        // Read before writing: once we have set 1 the user's own level is gone,
+        // and iOS gives us nothing to restore it from.
+        previousBrightness.current = await Brightness.getBrightnessAsync();
         await Brightness.setBrightnessAsync(1);
       } catch (error) {
         console.error("Failed to raise screen brightness", error);
       }
     };
 
-    raiseBrightness();
+    const restoreBrightness = async () => {
+      try {
+        // restoreSystemBrightnessAsync is Android-only. On iOS the override
+        // outlives the modal — it holds until the device is locked — so the
+        // captured level has to be written back by hand.
+        if (isIos) {
+          const previous = previousBrightness.current;
+          if (previous === null) {
+            return;
+          }
+
+          previousBrightness.current = null;
+          await Brightness.setBrightnessAsync(previous);
+          return;
+        }
+
+        await Brightness.restoreSystemBrightnessAsync();
+      } catch (error) {
+        console.error("Failed to restore screen brightness", error);
+      }
+    };
+
+    const enqueue = (task: () => Promise<void>) => {
+      brightnessQueue.current = brightnessQueue.current.then(task);
+    };
+
+    enqueue(raiseBrightness);
 
     return () => {
-      Brightness.restoreSystemBrightnessAsync().catch((error) => {
-        console.error("Failed to restore screen brightness", error);
-      });
+      enqueue(restoreBrightness);
     };
   }, [visible]);
 
