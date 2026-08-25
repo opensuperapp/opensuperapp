@@ -1,0 +1,179 @@
+{
+  "_comment": [
+    "Canonical vCard specification, shared by two implementations: this app's",
+    "encoder (frontend/utils/vcard.ts) and the wallet pass service's Go one.",
+    "The implementations live in different repos, so this file is duplicated:",
+    "one copy beside each suite. Edit both or the encoders diverge silently.",
+    "Expected values are hand-derived from RFC 2426 and frontend/utils/vcard.ts,",
+    "never regenerated from an implementation — that would make the fixture agree",
+    "with a bug. Escape order is backslash, semicolon, comma, then newlines."
+  ],
+  "cases": [
+    {
+      "name": "full — every optional field present",
+      "input": {
+        "firstName": "Jane",
+        "lastName": "Doe",
+        "jobTitle": "Software Engineer",
+        "department": "Platform",
+        "workEmail": "jane.doe@wso2.com",
+        "workPhone": "+94112345678",
+        "mobile": "+94771234567",
+        "organization": "WSO2 LLC",
+        "website": "https://wso2.com",
+        "address": "20 Palm Grove, Colombo 03, Sri Lanka"
+      },
+      "expected": "BEGIN:VCARD\r\nVERSION:3.0\r\nN:Doe;Jane;;;\r\nFN:Jane Doe\r\nORG:WSO2 LLC;Platform\r\nTITLE:Software Engineer\r\nEMAIL;TYPE=INTERNET,WORK:jane.doe@wso2.com\r\nTEL;TYPE=WORK,VOICE:+94112345678\r\nTEL;TYPE=CELL,VOICE:+94771234567\r\nURL:https://wso2.com\r\nADR;TYPE=WORK:;;20 Palm Grove\\, Colombo 03\\, Sri Lanka;;;;\r\nEND:VCARD\r\n"
+    },
+    {
+      "name": "minimal — every optional field absent",
+      "input": {
+        "firstName": "Jane",
+        "lastName": "Doe",
+        "workEmail": "jane.doe@wso2.com",
+        "organization": "WSO2 LLC",
+        "website": "https://wso2.com"
+      },
+      "expected": "BEGIN:VCARD\r\nVERSION:3.0\r\nN:Doe;Jane;;;\r\nFN:Jane Doe\r\nORG:WSO2 LLC\r\nEMAIL;TYPE=INTERNET,WORK:jane.doe@wso2.com\r\nURL:https://wso2.com\r\nEND:VCARD\r\n"
+    },
+    {
+      "name": "whitespace-only optionals are absent, not empty",
+      "input": {
+        "firstName": "Jane",
+        "lastName": "Doe",
+        "jobTitle": "   ",
+        "department": "  ",
+        "workEmail": "jane.doe@wso2.com",
+        "workPhone": " ",
+        "mobile": "   ",
+        "organization": "WSO2 LLC",
+        "website": "https://wso2.com",
+        "address": "\t "
+      },
+      "expected": "BEGIN:VCARD\r\nVERSION:3.0\r\nN:Doe;Jane;;;\r\nFN:Jane Doe\r\nORG:WSO2 LLC\r\nEMAIL;TYPE=INTERNET,WORK:jane.doe@wso2.com\r\nURL:https://wso2.com\r\nEND:VCARD\r\n"
+    },
+    {
+      "name": "shape of a real signed pass — comma in department and address",
+      "input": {
+        "firstName": "Jane",
+        "lastName": "Doe",
+        "jobTitle": "Senior Customer Success Engineer",
+        "department": "Customer Success, Sri Lanka",
+        "workEmail": "jane.doe@wso2.com",
+        "organization": "WSO2 LLC",
+        "website": "https://wso2.com",
+        "address": "10900 Stonelake Blvd Bldg 2 Ste 100, Austin, TX, US"
+      },
+      "expected": "BEGIN:VCARD\r\nVERSION:3.0\r\nN:Doe;Jane;;;\r\nFN:Jane Doe\r\nORG:WSO2 LLC;Customer Success\\, Sri Lanka\r\nTITLE:Senior Customer Success Engineer\r\nEMAIL;TYPE=INTERNET,WORK:jane.doe@wso2.com\r\nURL:https://wso2.com\r\nADR;TYPE=WORK:;;10900 Stonelake Blvd Bldg 2 Ste 100\\, Austin\\, TX\\, US;;;;\r\nEND:VCARD\r\n"
+    },
+    {
+      "name": "escape order — backslash before semicolon before comma",
+      "input": {
+        "firstName": "Jane",
+        "lastName": "Doe",
+        "department": "R&D; Platform\\Alpha, Team",
+        "workEmail": "jane.doe@wso2.com",
+        "organization": "WSO2, LLC",
+        "website": "https://wso2.com"
+      },
+      "expected": "BEGIN:VCARD\r\nVERSION:3.0\r\nN:Doe;Jane;;;\r\nFN:Jane Doe\r\nORG:WSO2\\, LLC;R&D\\; Platform\\\\Alpha\\, Team\r\nEMAIL;TYPE=INTERNET,WORK:jane.doe@wso2.com\r\nURL:https://wso2.com\r\nEND:VCARD\r\n"
+    },
+    {
+      "name": "CRLF, CR and LF all collapse to a literal backslash-n",
+      "input": {
+        "firstName": "Jane",
+        "lastName": "Doe",
+        "workEmail": "jane.doe@wso2.com",
+        "organization": "WSO2 LLC",
+        "website": "https://wso2.com",
+        "address": "20 Palm Grove\r\nColombo 03\nSri Lanka\rLK"
+      },
+      "expected": "BEGIN:VCARD\r\nVERSION:3.0\r\nN:Doe;Jane;;;\r\nFN:Jane Doe\r\nORG:WSO2 LLC\r\nEMAIL;TYPE=INTERNET,WORK:jane.doe@wso2.com\r\nURL:https://wso2.com\r\nADR;TYPE=WORK:;;20 Palm Grove\\nColombo 03\\nSri Lanka\\nLK;;;;\r\nEND:VCARD\r\n"
+    },
+    {
+      "name": "Sinhala name survives unmodified",
+      "input": {
+        "firstName": "සමන්",
+        "lastName": "පෙරේරා",
+        "jobTitle": "ඉංජිනේරු",
+        "workEmail": "saman@wso2.com",
+        "organization": "WSO2 LLC",
+        "website": "https://wso2.com"
+      },
+      "expected": "BEGIN:VCARD\r\nVERSION:3.0\r\nN:පෙරේරා;සමන්;;;\r\nFN:සමන් පෙරේරා\r\nORG:WSO2 LLC\r\nTITLE:ඉංජිනේරු\r\nEMAIL;TYPE=INTERNET,WORK:saman@wso2.com\r\nURL:https://wso2.com\r\nEND:VCARD\r\n"
+    },
+    {
+      "name": "Tamil name survives unmodified",
+      "input": {
+        "firstName": "அருண்",
+        "lastName": "குமார்",
+        "workEmail": "arun@wso2.com",
+        "organization": "WSO2 LLC",
+        "website": "https://wso2.com"
+      },
+      "expected": "BEGIN:VCARD\r\nVERSION:3.0\r\nN:குமார்;அருண்;;;\r\nFN:அருண் குமார்\r\nORG:WSO2 LLC\r\nEMAIL;TYPE=INTERNET,WORK:arun@wso2.com\r\nURL:https://wso2.com\r\nEND:VCARD\r\n"
+    },
+    {
+      "name": "accented Latin name survives unmodified",
+      "input": {
+        "firstName": "Zoë",
+        "lastName": "Müller",
+        "workEmail": "zoe@wso2.com",
+        "organization": "WSO2 LLC",
+        "website": "https://wso2.com"
+      },
+      "expected": "BEGIN:VCARD\r\nVERSION:3.0\r\nN:Müller;Zoë;;;\r\nFN:Zoë Müller\r\nORG:WSO2 LLC\r\nEMAIL;TYPE=INTERNET,WORK:zoe@wso2.com\r\nURL:https://wso2.com\r\nEND:VCARD\r\n"
+    },
+    {
+      "name": "empty last name leaves no stray space in FN",
+      "input": {
+        "firstName": "Jane",
+        "lastName": "",
+        "workEmail": "jane@wso2.com",
+        "organization": "WSO2 LLC",
+        "website": "https://wso2.com"
+      },
+      "expected": "BEGIN:VCARD\r\nVERSION:3.0\r\nN:;Jane;;;\r\nFN:Jane\r\nORG:WSO2 LLC\r\nEMAIL;TYPE=INTERNET,WORK:jane@wso2.com\r\nURL:https://wso2.com\r\nEND:VCARD\r\n"
+    },
+    {
+      "name": "empty first name leaves no leading space in FN",
+      "input": {
+        "firstName": "",
+        "lastName": "Doe",
+        "workEmail": "doe@wso2.com",
+        "organization": "WSO2 LLC",
+        "website": "https://wso2.com"
+      },
+      "expected": "BEGIN:VCARD\r\nVERSION:3.0\r\nN:Doe;;;;\r\nFN:Doe\r\nORG:WSO2 LLC\r\nEMAIL;TYPE=INTERNET,WORK:doe@wso2.com\r\nURL:https://wso2.com\r\nEND:VCARD\r\n"
+    },
+    {
+      "name": "surrounding whitespace is trimmed from every field",
+      "input": {
+        "firstName": "  Jane  ",
+        "lastName": " Doe ",
+        "jobTitle": " Software Engineer ",
+        "department": " Platform ",
+        "workEmail": " jane.doe@wso2.com ",
+        "workPhone": " +94112345678 ",
+        "mobile": " +94771234567 ",
+        "organization": " WSO2 LLC ",
+        "website": " https://wso2.com ",
+        "address": " 20 Palm Grove "
+      },
+      "expected": "BEGIN:VCARD\r\nVERSION:3.0\r\nN:Doe;Jane;;;\r\nFN:Jane Doe\r\nORG:WSO2 LLC;Platform\r\nTITLE:Software Engineer\r\nEMAIL;TYPE=INTERNET,WORK:jane.doe@wso2.com\r\nTEL;TYPE=WORK,VOICE:+94112345678\r\nTEL;TYPE=CELL,VOICE:+94771234567\r\nURL:https://wso2.com\r\nADR;TYPE=WORK:;;20 Palm Grove;;;;\r\nEND:VCARD\r\n"
+    },
+    {
+      "name": "mobile absent is a privacy guarantee, never an empty TEL line",
+      "input": {
+        "firstName": "Jane",
+        "lastName": "Doe",
+        "workEmail": "jane.doe@wso2.com",
+        "workPhone": "+94112345678",
+        "mobile": "",
+        "organization": "WSO2 LLC",
+        "website": "https://wso2.com"
+      },
+      "expected": "BEGIN:VCARD\r\nVERSION:3.0\r\nN:Doe;Jane;;;\r\nFN:Jane Doe\r\nORG:WSO2 LLC\r\nEMAIL;TYPE=INTERNET,WORK:jane.doe@wso2.com\r\nTEL;TYPE=WORK,VOICE:+94112345678\r\nURL:https://wso2.com\r\nEND:VCARD\r\n"
+    }
+  ]
+}

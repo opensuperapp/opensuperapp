@@ -1,4 +1,4 @@
-// Copyright (c) 2025 WSO2 LLC. (https://www.wso2.com).
+// Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
@@ -14,17 +14,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Wire claim names, looked up by the exact key the token carries — `jobtitle`
-// and `userid` are Asgardeo's own spellings, not OIDC standard ones, so do not
-// camelCase them.
-export type DecodedAccessToken = {
-  email?: string;
-  given_name?: string;
-  family_name?: string;
-  userid?: string;
-  jobtitle?: string;
-  /** E.164. HR exposes no work number, so the card renders this as the mobile. */
-  phone_number?: string;
-  /** Avatar URL; Google photos carry an `=s100` suffix that callers strip. */
-  profile?: string;
+export type BusinessCardData = {
+  firstName: string;
+  lastName: string;
+  jobTitle?: string;
+  department?: string;
+  workEmail: string;
+  workPhone?: string;
+  mobile?: string; // only present when the user opted in
+  organization: string;
+  website: string;
+  address?: string;
+  photoUri?: string; // NOT encoded into the QR payload
 };
