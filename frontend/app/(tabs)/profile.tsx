@@ -14,6 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 import Avatar from "@/components/Avatar";
+import BusinessCardSheet from "@/components/BusinessCardSheet";
+import BusinessCardHeaderButton from "@/components/headers/BusinessCardHeaderButton";
 import ProfileListItem from "@/components/ProfileListItem";
 import SignInMessage from "@/components/SignInMessage";
 import { Colors } from "@/constants/Colors";
@@ -28,8 +30,14 @@ import { DecodedAccessToken } from "@/types/decodeAccessToken.types";
 import { performLogout } from "@/utils/performLogout";
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
+import { useNavigation } from "expo-router";
 import { jwtDecode } from "jwt-decode";
-import React, { useCallback, useEffect, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useState,
+} from "react";
 import {
   Alert,
   Image,
@@ -48,6 +56,7 @@ import { useDispatch, useSelector } from "react-redux";
  */
 const SettingsScreen = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const navigation = useNavigation();
   const { accessToken } = useSelector((state: RootState) => state.auth);
   const { userInfo } = useSelector((state: RootState) => state.userInfo);
   const colorScheme = useColorScheme();
@@ -59,8 +68,18 @@ const SettingsScreen = () => {
     workEmail: "",
     avatarUri: "",
   });
+  const [cardVisible, setCardVisible] = useState(false);
 
   useTrackActiveScreen(ScreenPaths.PROFILE);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () =>
+        accessToken ? (
+          <BusinessCardHeaderButton onPress={() => setCardVisible(true)} />
+        ) : null,
+    });
+  }, [navigation, accessToken]);
 
   useEffect(() => {
     if (userInfo) {
@@ -188,6 +207,11 @@ const SettingsScreen = () => {
           </View>
         </TouchableOpacity>
       </View>
+
+      <BusinessCardSheet
+        visible={cardVisible}
+        onClose={() => setCardVisible(false)}
+      />
     </SafeAreaView>
   );
 };

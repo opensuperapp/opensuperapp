@@ -286,6 +286,24 @@ base64 -w 0 path/to/your/google-services.json
 
 Paste the generated strings into the `FIREBASE_IOS_PLIST_B64` and `FIREBASE_ANDROID_JSON_B64` variables in your `.env` file.
 
+#### 1.4. (Optional) If you are using the `Wallet pass` feature for the digital business card, enable the feature flag in the `.env` file:
+
+```bash
+EXPO_PUBLIC_ENABLE_WALLET_PASS=true
+```
+
+This is the build-time switch for the "Save Business Card" action that adds the card to Apple Wallet or Google Wallet. It needs a wallet-pass-service deployment behind `EXPO_PUBLIC_WALLET_SERVICE_BASE_URL`; left unset, the action is disabled and the app never calls the service.
+
+Rollout per operating system is done with Firebase Remote Config, so either platform can be turned on (or pulled) without a release. Create a single JSON parameter named `wallet_pass_enabled` in **Firebase Console > Remote Config**:
+
+```json
+{ "ios": true, "android": false }
+```
+
+`ios` controls the Apple Wallet `.pkpass` path and `android` the Google Wallet save-link path; the two depend on separate certificates and separate console onboarding, which is why either has to be switchable on its own. Fields are keyed by `Platform.OS`, so a platform that is absent — or set to anything other than `true` — is off. The schema lives in `types/remoteConfig.types.ts` (`WalletPassConfig`) and defaults to both off in `config/remoteConfig.ts`.
+
+The env flag and the remote config both have to say yes: either one off disables the feature. That is also what happens when `EXPO_PUBLIC_ENABLE_FIREBASE` is false, since the config then falls back to its `false` defaults.
+
 ### 2. Update the `app.config.ts` file with plugins
 
 If you use Firebase **OR** _any other library_ that requires `config plugins` or `custom native modules`, you must add the necessary plugins to your `app.config.ts` file. For specific instructions on the Firebase setup, refer to the official [React Native Firebase](https://rnfirebase.io/) documentation.

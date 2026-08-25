@@ -14,3 +14,4 @@
 // specific language governing permissions and limitations
 // under the License.
 export const TAB_VISIBILITY_RULES_KEY = "tab_visibility_rules";
+export const WALLET_PASS_ENABLED_KEY = "wallet_pass_enabled";
