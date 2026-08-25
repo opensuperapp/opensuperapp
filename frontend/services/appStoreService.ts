@@ -29,7 +29,7 @@ import {
   updateAppStatus,
   updateDownloadProgress,
 } from "@/context/slices/appSlice";
-import { AppDispatch } from "@/context/store";
+import { AppDispatch, store } from "@/context/store";
 import { buildAppsWithTokens } from "@/utils/exchangedTokenRehydrator";
 import { persistAppsWithoutTokens } from "@/utils/exchangedTokenStore";
 import { apiRequest } from "@/utils/requestHandler";
@@ -314,6 +314,9 @@ export const loadMicroAppDetails = async (
     // Load stored apps from AsyncStorage
     const storedApps = await loadStoredApps();
 
+    // Abort if the user logged out during the async operation
+    if (!store.getState().auth.userId) return;
+
     // Dispatch stored apps initially
     dispatch(setApps(storedApps));
 
@@ -342,6 +345,9 @@ export const loadMicroAppDetails = async (
 
         return mergeAppData(latestApp, storedApp);
       });
+
+      // Abort if the user logged out during the API fetch
+      if (!store.getState().auth.userId) return;
 
       // Update Redux and AsyncStorage
       dispatch(setApps(await buildAppsWithTokens(apps)));
