@@ -13,17 +13,21 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { TAB_VISIBILITY_RULES_KEY } from "@/constants/RemoteConfigDefaults";
-import { DEFAULT_TAB_CONFIG } from "@/types/remoteConfig.types";
+import {
+  TAB_VISIBILITY_RULES_KEY,
+  WALLET_PASS_ENABLED_KEY,
+} from "@/constants/RemoteConfigDefaults";
+import {
+  DEFAULT_TAB_CONFIG,
+  DEFAULT_WALLET_PASS_CONFIG,
+} from "@/types/remoteConfig.types";
 
 /**
- * Default values for Firebase Remote Config parameters.
- * These values are set locally and are used as fallbacks when remote values
- * are unavailable (network offline, fetch failures, or initial app load before activation).
- *
- * The tab_visibility_rules value is serialized as JSON because Firebase Remote Config
- * stores all values as strings.
+ * Fallbacks used when remote values are unavailable (offline, fetch failure, or
+ * before the first activation). Serialized as JSON because Firebase Remote
+ * Config stores every value as a string.
  */
 export const REMOTE_CONFIG_INITIAL_VALUES = {
   [TAB_VISIBILITY_RULES_KEY]: JSON.stringify(DEFAULT_TAB_CONFIG),
+  [WALLET_PASS_ENABLED_KEY]: JSON.stringify(DEFAULT_WALLET_PASS_CONFIG),
 };

@@ -26,6 +26,13 @@ export const REDIRECT_URI = process.env.EXPO_PUBLIC_REDIRECT_URI ?? "";
 export const TOKEN_URL = process.env.EXPO_PUBLIC_TOKEN_URL ?? "";
 export const LOGOUT_URL = process.env.EXPO_PUBLIC_LOGOUT_URL ?? "";
 export const BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL ?? "";
+// The wallet pass service is a separate backend from BASE_URL.
+export const WALLET_SERVICE_BASE_URL =
+  process.env.EXPO_PUBLIC_WALLET_SERVICE_BASE_URL ?? "";
+// Unset, the wallet endpoints stay relative paths that axios in React Native
+// cannot resolve, so treat the feature as unconfigured rather than broken.
+export const IS_WALLET_SERVICE_CONFIGURED =
+  WALLET_SERVICE_BASE_URL.trim() !== "";
 export const MICRO_APP_STORAGE_DIR =
   process.env.EXPO_PUBLIC_MICRO_APP_STORAGE_DIR ?? "";
 export const ARTICLE_BASE_URL = process.env.EXPO_PUBLIC_ARTICLE_BASE_URL ?? "";
@@ -50,6 +57,9 @@ export const DEVELOPER_APP_IOS_DEFAULT_URL =
 export const DEVELOPER_APP_ANDROID_DEFAULT_URL =
   process.env.EXPO_PUBLIC_DEVELOPER_APP_ANDROID_DEFAULT_URL ?? "";
 export const ENABLE_FIREBASE = process.env.EXPO_PUBLIC_ENABLE_FIREBASE === TRUE;
+// Build-time switch; the per-OS remote config flags handle the runtime rollout.
+export const ENABLE_WALLET_PASS =
+  process.env.EXPO_PUBLIC_ENABLE_WALLET_PASS === TRUE;
 export const GOOGLE_SCOPES = [
   "openid",
   "profile",

@@ -13,6 +13,19 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import { PlatformOSType } from "react-native";
+
+// Keyed by `Platform.OS` so consumers index rather than branch, and an absent
+// platform is off. The Apple and Google paths need separate certificates and
+// console onboarding, so each has to be switchable on its own.
+export type WalletPassConfig = Partial<Record<PlatformOSType, boolean>>;
+
+// Off by default so a build that has not been explicitly switched on never
+// reaches the wallet pass service, including when Remote Config is unavailable.
+export const DEFAULT_WALLET_PASS_CONFIG: WalletPassConfig = {
+  ios: false,
+  android: false,
+};
 
 export interface TabVisibilityConfig {
   version: number;
