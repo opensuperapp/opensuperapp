@@ -13,6 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import superapp_mobile_service.authorization;
 import superapp_mobile_service.entity;
 
 import ballerina/cache;
@@ -43,4 +44,34 @@ public isolated function getUserInfo(string email) returns entity:Employee|error
     }
 
     return employee;
+}
+
+# Builds the business card of the logged in user from the access token claims.
+#
+# + userInfo - Claims of the caller, extracted from the access token by the JWT interceptor
+# + return - BusinessCard of the caller
+public isolated function toBusinessCard(authorization:CustomJwtPayload userInfo) returns BusinessCard => {
+    userId: userInfo.userId,
+    // The wallet pass contract requires non-null names, so an absent claim becomes an empty string.
+    firstName: userInfo.firstName ?: "",
+    lastName: userInfo.lastName ?: "",
+    workEmail: userInfo.email,
+    jobTitle: userInfo.jobTitle,
+    mobile: userInfo.mobile,
+    thumbnailUrl: toFullResolutionPhotoUrl(userInfo.profileUrl)
+};
+
+# Strips the size suffix from a profile picture URL.
+#
+# The `profile` claim carries a Google photo URL sized down by a trailing `=s<pixels>` suffix
+# (`https://lh3.googleusercontent.com/a/XXXX=s100`). Dropping the suffix yields the full
+# resolution image, which is what a wallet pass renders. URLs without the suffix are left as is.
+#
+# + url - Profile picture URL from the `profile` claim, if any
+# + return - Full resolution URL, or nil when there is no usable URL
+isolated function toFullResolutionPhotoUrl(string? url) returns string? {
+    if url is () || url.trim() == "" {
+        return ();
+    }
+    return re `=s\d+$`.replace(url, "");
 }
