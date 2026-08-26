@@ -13,7 +13,6 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import * as Constants from "@/constants/Constants";
 import {
   addToAppleWallet,
   addToGoogleWallet,
@@ -27,15 +26,12 @@ jest.mock("@/utils/requestHandler", () => ({
 }));
 
 // The endpoint URLs are built when the service loads, so the base URL is
-// pinned here instead of being whatever EXPO_PUBLIC_WALLET_SERVICE_BASE_URL
-// happens to be in the shell running the tests. `__esModule` keeps this the
-// one module object both the service and the unconfigured suite below hold,
-// which is what lets that suite flip the flag with jest.replaceProperty.
+// pinned here instead of being whatever EXPO_PUBLIC_BACKEND_BASE_URL happens
+// to be in the shell running the tests.
 jest.mock("@/constants/Constants", () => ({
   __esModule: true,
   ...jest.requireActual("@/constants/Constants"),
-  WALLET_SERVICE_BASE_URL: "https://wallet.example.com",
-  IS_WALLET_SERVICE_CONFIGURED: true,
+  BASE_URL: "https://backend.example.com",
 }));
 
 jest.mock("expo-sharing", () => ({
@@ -112,7 +108,7 @@ describe("addToAppleWallet", () => {
 
     expect(apiRequest).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: expect.stringContaining("/api/v1/business-card/pkpass"),
+        url: "https://backend.example.com/business-card/pkpass",
         method: "GET",
         responseType: "arraybuffer",
       }),
@@ -181,7 +177,7 @@ describe("addToGoogleWallet", () => {
 
     expect(apiRequest).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: expect.stringContaining("/api/v1/business-card/google-save-url"),
+        url: "https://backend.example.com/business-card/google-save-url",
         method: "GET",
       }),
       onLogout
@@ -218,44 +214,5 @@ describe("addToGoogleWallet", () => {
 
     await expect(addToGoogleWallet(true, onLogout)).resolves.toBe(false);
     expect(Alert.alert).toHaveBeenCalled();
-  });
-});
-
-/**
- * The build this guard exists for: EXPO_PUBLIC_WALLET_SERVICE_BASE_URL never
- * made it into .env, so the endpoint URLs are relative paths that axios in
- * React Native cannot resolve. useWalletPassEnabled already hides the button
- * in that build, but the service has to hold the line on its own — otherwise
- * any other caller gets a bare "AxiosError: Network Error" that names nothing.
- */
-describe("with no wallet service base URL configured", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    jest.replaceProperty(Constants, "IS_WALLET_SERVICE_CONFIGURED", false);
-    jest.spyOn(console, "warn").mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
-  });
-
-  it("keeps addToAppleWallet from requesting, and names the missing variable", async () => {
-    await expect(addToAppleWallet(true, onLogout)).resolves.toBe(false);
-
-    expect(apiRequest).not.toHaveBeenCalled();
-    expect(Sharing.shareAsync).not.toHaveBeenCalled();
-    expect(console.warn).toHaveBeenCalledWith(
-      expect.stringContaining("EXPO_PUBLIC_WALLET_SERVICE_BASE_URL")
-    );
-  });
-
-  it("keeps addToGoogleWallet from requesting, and names the missing variable", async () => {
-    await expect(addToGoogleWallet(true, onLogout)).resolves.toBe(false);
-
-    expect(apiRequest).not.toHaveBeenCalled();
-    expect(Linking.openURL).not.toHaveBeenCalled();
-    expect(console.warn).toHaveBeenCalledWith(
-      expect.stringContaining("EXPO_PUBLIC_WALLET_SERVICE_BASE_URL")
-    );
   });
 });

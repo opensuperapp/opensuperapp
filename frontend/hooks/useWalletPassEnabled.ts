@@ -13,10 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import {
-  ENABLE_WALLET_PASS,
-  IS_WALLET_SERVICE_CONFIGURED,
-} from "@/constants/Constants";
+import { ENABLE_WALLET_PASS } from "@/constants/Constants";
 import { WALLET_PASS_ENABLED_KEY } from "@/constants/RemoteConfigDefaults";
 import { useRemoteConfig } from "@/hooks/useRemoteConfig";
 import {
@@ -25,8 +22,8 @@ import {
 } from "@/types/remoteConfig.types";
 import { Platform } from "react-native";
 
-// Three independent gates: the build ships the feature at all, a service URL
-// exists to call, and WSO2 has it switched on for this OS right now.
+// Two independent gates: the build ships the feature at all, and WSO2 has it
+// switched on for this OS right now.
 export const useWalletPassEnabled = (): boolean => {
   const { value: config } = useRemoteConfig<WalletPassConfig>(
     WALLET_PASS_ENABLED_KEY,
@@ -35,9 +32,5 @@ export const useWalletPassEnabled = (): boolean => {
 
   // `=== true`, not truthiness: the config comes from JSON.parse, so `null` or
   // a stringly-typed "true" have to read as off rather than pass or crash.
-  return (
-    ENABLE_WALLET_PASS &&
-    IS_WALLET_SERVICE_CONFIGURED &&
-    config?.[Platform.OS] === true
-  );
+  return ENABLE_WALLET_PASS && config?.[Platform.OS] === true;
 };

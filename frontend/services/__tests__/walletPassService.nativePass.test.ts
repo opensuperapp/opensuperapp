@@ -22,14 +22,12 @@ jest.mock("@/utils/requestHandler", () => ({
   apiRequest: jest.fn(),
 }));
 
-// The endpoint URLs are built when the service loads, and the service refuses
-// to request against an empty base URL, so pin one rather than depend on the
-// environment running the tests.
+// The endpoint URLs are built when the service loads, so pin the base URL
+// rather than depend on the environment running the tests.
 jest.mock("@/constants/Constants", () => ({
   __esModule: true,
   ...jest.requireActual("@/constants/Constants"),
-  WALLET_SERVICE_BASE_URL: "https://wallet.example.com",
-  IS_WALLET_SERVICE_CONFIGURED: true,
+  BASE_URL: "https://backend.example.com",
 }));
 
 jest.mock("expo-sharing", () => ({
