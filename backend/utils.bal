@@ -15,6 +15,7 @@
 // under the License.
 import superapp_mobile_service.authorization;
 import superapp_mobile_service.entity;
+import superapp_mobile_service.wallet;
 
 import ballerina/cache;
 import ballerina/log;
@@ -74,4 +75,34 @@ isolated function toFullResolutionPhotoUrl(string? url) returns string? {
         return ();
     }
     return re `=s\d+$`.replace(url, "");
+}
+
+# Maps a business card to the payload the wallet service expects.
+#
+# + card - Business card of the user
+# + return - wallet:WalletCardRequest to POST to the wallet service
+isolated function toWalletCardRequest(BusinessCard card) returns wallet:WalletCardRequest {
+    wallet:WalletCardRequest cardRequest = {
+        serialNumber: card.userId,
+        firstName: card.firstName,
+        lastName: card.lastName,
+        workEmail: card.workEmail
+    };
+
+    string? jobTitle = card.jobTitle;
+    if jobTitle is string {
+        cardRequest.jobTitle = jobTitle;
+    }
+
+    string? mobile = card.mobile;
+    if mobile is string {
+        cardRequest.mobile = mobile;
+    }
+
+    string? thumbnailUrl = card.thumbnailUrl;
+    if thumbnailUrl is string {
+        cardRequest.employeeThumbnail = thumbnailUrl;
+    }
+
+    return cardRequest;
 }
