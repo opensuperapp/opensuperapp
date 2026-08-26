@@ -52,10 +52,28 @@ public isolated service class JwtInterceptor {
         CustomJwtPayload customUserInfo = {
             userId: userInfo.userid,
             email: userInfo.email,
-            groups: userInfo.groups ?: []
+            groups: userInfo.groups ?: [],
+            firstName: optionalStringClaim(userInfo, CLAIM_GIVEN_NAME),
+            lastName: optionalStringClaim(userInfo, CLAIM_FAMILY_NAME),
+            jobTitle: optionalStringClaim(userInfo, CLAIM_JOB_TITLE),
+            mobile: optionalStringClaim(userInfo, CLAIM_PHONE_NUMBER),
+            profileUrl: optionalStringClaim(userInfo, CLAIM_PROFILE)
         };
 
         ctx.set(HEADER_USER_INFO, customUserInfo);
         return ctx.next();
     }
+}
+
+# Reads an optional string claim from the decoded JWT payload.
+#
+# The business-card claims are cosmetic, so a claim that is absent or carries an unexpected
+# shape yields nil rather than failing the request.
+#
+# + payload - Decoded JWT payload
+# + claim - Name of the claim to read
+# + return - The claim value, or nil if it is absent or not a string
+isolated function optionalStringClaim(JwtPayload payload, string claim) returns string? {
+    json value = payload[claim];
+    return value is string ? value : ();
 }

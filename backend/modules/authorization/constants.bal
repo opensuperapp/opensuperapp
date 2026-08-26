@@ -17,3 +17,10 @@
 # Authorization Constants.
 public const JWT_ASSERTION_HEADER = "x-jwt-assertion";
 public const HEADER_USER_INFO = "user-info";
+
+# Business card claims carried by the access token.
+const CLAIM_GIVEN_NAME = "given_name";
+const CLAIM_FAMILY_NAME = "family_name";
+const CLAIM_JOB_TITLE = "jobtitle";
+const CLAIM_PHONE_NUMBER = "phone_number";
+const CLAIM_PROFILE = "profile";
