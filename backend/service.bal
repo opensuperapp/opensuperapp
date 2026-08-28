@@ -18,6 +18,7 @@ import superapp_mobile_service.authorization;
 import superapp_mobile_service.database;
 import superapp_mobile_service.entity;
 import superapp_mobile_service.scim;
+import superapp_mobile_service.wallet;
 
 import ballerina/http;
 import ballerina/log;
@@ -145,6 +146,95 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
         }
 
         return loggedInUser;
+    }
+
+    # Build the Apple Wallet business card pass of the logged in user.
+    #
+    # + ctx - Request context
+    # + req - HTTP request, used to forward the caller's JWT assertion to the wallet service
+    # + return - The `.pkpass` bytes, or an `http:InternalServerError` if the operation fails
+    resource function get business\-card/pkpass(http:RequestContext ctx, http:Request req)
+        returns http:Response|http:InternalServerError {
+
+        authorization:CustomJwtPayload|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
+        if userInfo is error {
+            return <http:InternalServerError>{
+                body: {
+                    message: ERR_MSG_USER_HEADER_NOT_FOUND
+                }
+            };
+        }
+
+        string|error jwtAssertion = req.getHeader(authorization:JWT_ASSERTION_HEADER);
+        if jwtAssertion is error {
+            string customError = "Missing invoker info header!";
+            log:printError(customError, jwtAssertion);
+            return <http:InternalServerError>{
+                body: {
+                    message: customError
+                }
+            };
+        }
+
+        byte[]|error pass = wallet:getApplePass(toWalletCardRequest(toBusinessCard(userInfo)), jwtAssertion);
+        if pass is error {
+            string customError = "Error occurred while generating the Apple Wallet pass!";
+            log:printError(customError, pass);
+            return <http:InternalServerError>{
+                body: {
+                    message: customError
+                }
+            };
+        }
+
+        http:Response response = new;
+        response.setBinaryPayload(pass, "application/vnd.apple.pkpass");
+        response.setHeader("Content-Disposition", string `attachment; filename="wso2-business-card.pkpass"`);
+        response.setHeader("Cache-Control", "no-store");
+        return response;
+    }
+
+    # Build the Google Wallet save URL for the business card of the logged in user.
+    #
+    # + ctx - Request context
+    # + req - HTTP request, used to forward the caller's JWT assertion to the wallet service
+    # + return - The Google Wallet save URL, or an `http:InternalServerError` if the operation fails
+    resource function get business\-card/google\-save\-url(http:RequestContext ctx, http:Request req)
+        returns wallet:GoogleSaveUrl|http:InternalServerError {
+
+        authorization:CustomJwtPayload|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
+        if userInfo is error {
+            return <http:InternalServerError>{
+                body: {
+                    message: ERR_MSG_USER_HEADER_NOT_FOUND
+                }
+            };
+        }
+
+        string|error jwtAssertion = req.getHeader(authorization:JWT_ASSERTION_HEADER);
+        if jwtAssertion is error {
+            string customError = "Missing invoker info header!";
+            log:printError(customError, jwtAssertion);
+            return <http:InternalServerError>{
+                body: {
+                    message: customError
+                }
+            };
+        }
+
+        wallet:GoogleSaveUrl|error saveUrl = wallet:getGoogleSaveUrl(toWalletCardRequest(toBusinessCard(userInfo)),
+                jwtAssertion);
+        if saveUrl is error {
+            string customError = "Error occurred while generating the Google Wallet save URL!";
+            log:printError(customError, saveUrl);
+            return <http:InternalServerError>{
+                body: {
+                    message: customError
+                }
+            };
+        }
+
+        return saveUrl;
     }
 
     # Retrieves the list of micro apps available to the authenticated user.

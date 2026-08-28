@@ -38,4 +38,7 @@ scimUrl=""
     clientId=""
     clientSecret=""
     scopes=[""]
+
+[superapp_mobile_service.wallet]
+walletServiceBaseUrl=""
     

@@ -487,6 +487,7 @@ modules = [
 	{org = "opensuperapp", packageName = "superapp_mobile_service", moduleName = "superapp_mobile_service.authorization"},
 	{org = "opensuperapp", packageName = "superapp_mobile_service", moduleName = "superapp_mobile_service.database"},
 	{org = "opensuperapp", packageName = "superapp_mobile_service", moduleName = "superapp_mobile_service.entity"},
-	{org = "opensuperapp", packageName = "superapp_mobile_service", moduleName = "superapp_mobile_service.scim"}
+	{org = "opensuperapp", packageName = "superapp_mobile_service", moduleName = "superapp_mobile_service.scim"},
+	{org = "opensuperapp", packageName = "superapp_mobile_service", moduleName = "superapp_mobile_service.wallet"}
 ]
 
