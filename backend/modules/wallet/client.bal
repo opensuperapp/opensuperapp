@@ -19,7 +19,7 @@ configurable string walletServiceBaseUrl = ?;
 
 // No `auth` configuration: the wallet service accepts the caller's own `x-jwt-assertion`,
 // which is forwarded per request, so this client needs no credentials of its own.
-final http:Client walletClient = check new (walletServiceBaseUrl, {
+public final http:Client walletClient = check new (walletServiceBaseUrl, {
     httpVersion: http:HTTP_1_1,
     http1Settings: {keepAlive: http:KEEPALIVE_NEVER}
 });

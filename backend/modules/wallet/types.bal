@@ -15,11 +15,6 @@
 // under the License.
 
 # Business card payload sent to the wallet service.
-#
-# The wallet service keys a pass by `serialNumber`, which is the user id under a different
-# name. That rename is the reason this record exists rather than posting a `BusinessCard`
-# directly. Fields the card does not carry (`department`, `workPhone`, `organization`,
-# `website`, `address`) are simply not sent; the wallet service treats them as absent.
 public type WalletCardRequest record {|
     # User id of the employee, the serial number of the pass
     string serialNumber;

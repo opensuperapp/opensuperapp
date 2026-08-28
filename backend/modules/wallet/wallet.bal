@@ -21,7 +21,8 @@ import superapp_mobile_service.authorization;
 # + jwtAssertion - JWT assertion of the caller, forwarded to the wallet service
 # + return - The `.pkpass` bytes, or an error if the operation fails
 public isolated function getApplePass(WalletCardRequest card, string jwtAssertion) returns byte[]|error {
-    byte[] pass = check walletClient->post(APPLE_PASS_PATH, card, {[authorization:JWT_ASSERTION_HEADER]: jwtAssertion});
+    byte[] pass = check walletClient->/api/v1/business\-card/pkpass.post(card,
+            {[authorization:JWT_ASSERTION_HEADER]: jwtAssertion});
     return pass;
 }
 
@@ -31,7 +32,7 @@ public isolated function getApplePass(WalletCardRequest card, string jwtAssertio
 # + jwtAssertion - JWT assertion of the caller, forwarded to the wallet service
 # + return - The Google Wallet save URL, or an error if the operation fails
 public isolated function getGoogleSaveUrl(WalletCardRequest card, string jwtAssertion) returns GoogleSaveUrl|error {
-    GoogleSaveUrl saveUrl = check walletClient->post(GOOGLE_SAVE_URL_PATH, card,
+    GoogleSaveUrl saveUrl = check walletClient->/api/v1/business\-card/google\-save\-url.post(card,
             {[authorization:JWT_ASSERTION_HEADER]: jwtAssertion});
     return saveUrl;
 }
