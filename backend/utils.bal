@@ -18,6 +18,7 @@ import superapp_mobile_service.entity;
 import superapp_mobile_service.wallet;
 
 import ballerina/cache;
+import ballerina/http;
 import ballerina/log;
 
 final cache:Cache userInfoCache = new (capacity = 100, evictionFactor = 0.2);
@@ -105,4 +106,37 @@ isolated function toWalletCardRequest(BusinessCard card) returns wallet:WalletCa
     }
 
     return cardRequest;
+}
+
+# Maps a wallet service failure to the response the caller gets.
+#
+# The upstream status is what makes these distinguishable in the app and in the logs: an
+# expired token is the caller's problem (401) and is by far the most common cause, while
+# anything else is the wallet service failing on our behalf (502). Collapsing both into a
+# blanket 500 is what made this endpoint impossible to triage.
+#
+# + operation - What was being built, used in the log line
+# + userId - User the pass was being built for
+# + walletError - Failure returned by the wallet module
+# + return - `http:Unauthorized` when the wallet service rejected the token, else `http:BadGateway`
+public isolated function walletFailure(string operation, string userId, wallet:WalletError walletError)
+    returns http:Unauthorized|http:BadGateway {
+
+    int? statusCode = walletError.detail().statusCode;
+    log:printError(string `Error occurred while generating the ${operation}!`, walletError,
+            userId = userId, upstreamStatus = statusCode ?: -1, upstreamBody = walletError.detail().body);
+
+    if statusCode == http:STATUS_UNAUTHORIZED || statusCode == http:STATUS_FORBIDDEN {
+        return <http:Unauthorized>{
+            body: {
+                message: string `Not authorized to generate the ${operation}. Sign in again and retry.`
+            }
+        };
+    }
+
+    return <http:BadGateway>{
+        body: {
+            message: string `The wallet service could not generate the ${operation}.`
+        }
+    };
 }

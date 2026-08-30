@@ -42,3 +42,5 @@ scimUrl=""
 [superapp_mobile_service.wallet]
 walletServiceBaseUrl=""
     
+[ballerina.log]
+level = ""

@@ -19,3 +19,9 @@ const APPLE_PASS_PATH = "/api/v1/business-card/pkpass";
 
 # Wallet service path that builds a Google Wallet save URL
 const GOOGLE_SAVE_URL_PATH = "/api/v1/business-card/google-save-url";
+
+# Header the wallet service authenticates on
+const AUTHORIZATION_HEADER = "Authorization";
+
+# Scheme prefix of the `Authorization` header value
+const BEARER_PREFIX = "Bearer ";

@@ -17,8 +17,9 @@ import ballerina/http;
 
 configurable string walletServiceBaseUrl = ?;
 
-// No `auth` configuration: the wallet service accepts the caller's own `x-jwt-assertion`,
-// which is forwarded per request, so this client needs no credentials of its own.
+// No `auth` configuration: the wallet service authenticates the end user, not this service.
+// It rejects an application (client credentials) token, so the caller's own access token is
+// forwarded per request instead and this client holds no credentials of its own.
 final http:Client walletClient = check new (walletServiceBaseUrl, {
     httpVersion: http:HTTP_1_1,
     http1Settings: {keepAlive: http:KEEPALIVE_NEVER}
