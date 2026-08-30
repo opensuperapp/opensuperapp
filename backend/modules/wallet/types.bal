@@ -42,3 +42,16 @@ public type GoogleSaveUrl record {|
     # URL that adds the pass to the user's Google Wallet
     string saveUrl;
 |};
+
+# Failure returned by the wallet service, carrying enough of the upstream response to be
+# actionable in a log line: a bare `error` from the HTTP client hides the status code and
+# body behind a generic message, which is what made the previous 500s undiagnosable.
+public type WalletErrorDetail record {|
+    # HTTP status the wallet service responded with, or `()` when the call never got a response
+    int? statusCode;
+    # Response body of the wallet service, truncated to keep log lines readable
+    string body;
+|};
+
+# Error type raised when the wallet service does not return a pass.
+public type WalletError distinct error<WalletErrorDetail>;

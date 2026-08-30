@@ -154,7 +154,7 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
     # + req - HTTP request, used to forward the caller's JWT assertion to the wallet service
     # + return - The `.pkpass` bytes, or an `http:InternalServerError` if the operation fails
     resource function get business\-card/pkpass(http:RequestContext ctx, http:Request req)
-        returns http:Response|http:InternalServerError {
+        returns http:Response|http:Unauthorized|http:BadGateway|http:InternalServerError {
 
         authorization:CustomJwtPayload|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
         if userInfo is error {
@@ -165,26 +165,22 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        string|error jwtAssertion = req.getHeader(authorization:JWT_ASSERTION_HEADER);
-        if jwtAssertion is error {
+        string|error userToken = authorization:getUserAccessToken(req);
+        if userToken is error {
             string customError = "Missing invoker info header!";
-            log:printError(customError, jwtAssertion);
-            return <http:InternalServerError>{
+            log:printError(customError, userToken);
+            return <http:Unauthorized>{
                 body: {
                     message: customError
                 }
             };
         }
 
-        byte[]|error pass = wallet:getApplePass(toWalletCardRequest(toBusinessCard(userInfo)), jwtAssertion);
-        if pass is error {
-            string customError = "Error occurred while generating the Apple Wallet pass!";
-            log:printError(customError, pass);
-            return <http:InternalServerError>{
-                body: {
-                    message: customError
-                }
-            };
+        log:printDebug("Building the Apple Wallet pass", userId = userInfo.userId);
+        byte[]|wallet:WalletError pass =
+            wallet:getApplePass(toWalletCardRequest(toBusinessCard(userInfo)), userToken);
+        if pass is wallet:WalletError {
+            return walletFailure("Apple Wallet pass", userInfo.userId, pass);
         }
 
         http:Response response = new;
@@ -200,7 +196,7 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
     # + req - HTTP request, used to forward the caller's JWT assertion to the wallet service
     # + return - The Google Wallet save URL, or an `http:InternalServerError` if the operation fails
     resource function get business\-card/google\-save\-url(http:RequestContext ctx, http:Request req)
-        returns wallet:GoogleSaveUrl|http:InternalServerError {
+        returns wallet:GoogleSaveUrl|http:Unauthorized|http:BadGateway|http:InternalServerError {
 
         authorization:CustomJwtPayload|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
         if userInfo is error {
@@ -211,27 +207,22 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             };
         }
 
-        string|error jwtAssertion = req.getHeader(authorization:JWT_ASSERTION_HEADER);
-        if jwtAssertion is error {
+        string|error userToken = authorization:getUserAccessToken(req);
+        if userToken is error {
             string customError = "Missing invoker info header!";
-            log:printError(customError, jwtAssertion);
-            return <http:InternalServerError>{
+            log:printError(customError, userToken);
+            return <http:Unauthorized>{
                 body: {
                     message: customError
                 }
             };
         }
 
-        wallet:GoogleSaveUrl|error saveUrl = wallet:getGoogleSaveUrl(toWalletCardRequest(toBusinessCard(userInfo)),
-                jwtAssertion);
-        if saveUrl is error {
-            string customError = "Error occurred while generating the Google Wallet save URL!";
-            log:printError(customError, saveUrl);
-            return <http:InternalServerError>{
-                body: {
-                    message: customError
-                }
-            };
+        log:printDebug("Building the Google Wallet save URL", userId = userInfo.userId);
+        wallet:GoogleSaveUrl|wallet:WalletError saveUrl =
+            wallet:getGoogleSaveUrl(toWalletCardRequest(toBusinessCard(userInfo)), userToken);
+        if saveUrl is wallet:WalletError {
+            return walletFailure("Google Wallet save URL", userInfo.userId, saveUrl);
         }
 
         return saveUrl;

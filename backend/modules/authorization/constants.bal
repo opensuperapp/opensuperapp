@@ -16,6 +16,19 @@
 
 # Authorization Constants.
 public const JWT_ASSERTION_HEADER = "x-jwt-assertion";
+
+# Header carrying the caller's raw access token.
+#
+# An API gateway in front of this service overwrites `x-jwt-assertion` with a JWT it mints
+# itself, so that header cannot be replayed against another gateway-fronted API. This one is
+# passed through untouched, which is why the chat agent already uses it for the same purpose.
+public const USER_ASSERTION_HEADER = "x-user-assertion";
+
+# Header carrying the caller's bearer token, used as a fallback source of the access token.
+public const AUTHORIZATION_HEADER = "Authorization";
+
+# Scheme prefix of the `Authorization` header value.
+public const BEARER_PREFIX = "Bearer ";
 public const HEADER_USER_INFO = "user-info";
 
 # Business card claims carried by the access token.
