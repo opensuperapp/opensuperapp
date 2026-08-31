@@ -138,6 +138,12 @@ const MicroApp = () => {
   // Denial is sticky for the lifetime of the screen: re-prompting on every request
   // turns one "no" into a permission dialog loop.
   const locationPermissionDenied = useRef(false);
+  // Starting and stopping a stream are asynchronous and can overlap: a stop, an
+  // unmount, or a second start can land while the first is still awaiting a permission
+  // dialog or the OS opening the watch. Running them through one chain means each sees
+  // the finished state of the last, so a watch or a foreground service can never be
+  // created after the teardown that was meant to cancel it and then outlive the screen.
+  const locationQueue = useRef<Promise<unknown>>(Promise.resolve());
   const isDeveloper: boolean = appId.includes("developer");
   const isTotp: boolean = appId.includes("totp");
   const insets = useSafeAreaInsets();
@@ -614,7 +620,10 @@ const MicroApp = () => {
     await clearLocationBuffer();
 
     try {
-      deactivateKeepAwake(LOCATION_KEEP_AWAKE_TAG);
+      // deactivateKeepAwake() is async and rejects when the tag was never activated,
+      // which is the normal case for a non-fullscreen micro app. Without the await the
+      // catch never sees it and every teardown raises an unhandled rejection instead.
+      await deactivateKeepAwake(LOCATION_KEEP_AWAKE_TAG);
     } catch {
       // Not activated - nothing to release.
     }
@@ -701,6 +710,22 @@ const MicroApp = () => {
     deliveredFixTimestamps.current.clear();
   }, [teardownLocationStream]);
 
+  /**
+   * Runs a location stream operation once every operation queued before it has settled.
+   * @param task - The operation to run
+   * @returns What the operation resolved to
+   */
+  const enqueueLocationTask = useCallback(
+    <T,>(task: () => Promise<T>): Promise<T> => {
+      const next = locationQueue.current.then(task, task);
+      // Swallow the failure on the chain only: one rejected operation must not block
+      // every operation queued after it, but the caller still sees its own rejection.
+      locationQueue.current = next.catch(() => undefined);
+      return next;
+    },
+    []
+  );
+
   // Flush fixes recorded while the WebView's JS was suspended. Each carries the
   // timestamp it was taken at, so the consumer can order them against live fixes.
   useEffect(() => {
@@ -718,9 +743,9 @@ const MicroApp = () => {
   // says it is still running - so tear it down when the micro app is navigated away from.
   useEffect(() => {
     return () => {
-      void teardownLocationStream();
+      void enqueueLocationTask(teardownLocationStream);
     };
-  }, [teardownLocationStream]);
+  }, [enqueueLocationTask, teardownLocationStream]);
 
   // Handle messages from WebView
   const onMessage = async (event: WebViewMessageEvent) => {
@@ -814,10 +839,10 @@ const MicroApp = () => {
           await handleComposeEmail(data?.config);
           break;
         case TOPIC.LOCATION_START:
-          await startLocationUpdates(data);
+          await enqueueLocationTask(() => startLocationUpdates(data));
           break;
         case TOPIC.LOCATION_STOP:
-          await stopLocationUpdates();
+          await enqueueLocationTask(stopLocationUpdates);
           break;
         default:
           console.error("Unknown topic:", topic);

@@ -67,7 +67,10 @@ export const ensureLocationPermissions = async (
 
     if (needsBackground) {
       const background = await requestBackgroundPermissionsAsync();
-      if (background.status !== GRANTED) return "permission_denied";
+      // Distinct from a foreground denial: granting "while using" but not "always" is
+      // the common answer on iOS, and the caller must stay free to retry without
+      // `background` rather than have one "always" refusal close location for good.
+      if (background.status !== GRANTED) return "background_permission_denied";
     }
 
     return null;
