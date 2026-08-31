@@ -17,6 +17,7 @@ import {
   APPS,
   LAST_LOGGED_IN_USER_ID_KEY,
   MICRO_APP_STORAGE_DIR,
+  USER_CONFIGURATIONS,
 } from "@/constants/Constants";
 import { setApps } from "@/context/slices/appSlice";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -36,6 +37,7 @@ const clearDownloadedMicroApps = async (dispatch: Dispatch<UnknownAction>) => {
     microAppsDir.delete();
   }
   await AsyncStorage.removeItem(APPS);
+  await AsyncStorage.removeItem(USER_CONFIGURATIONS);
   dispatch(setApps([]));
 };
 

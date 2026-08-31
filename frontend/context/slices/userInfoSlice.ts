@@ -52,8 +52,8 @@ export const getUserInfo = createAsyncThunk(
 
       if (response?.status === 200) return response.data;
       else return rejectWithValue("User info not found");
-    } catch (error) {
-      return rejectWithValue(error);
+    } catch (error: any) {
+      return rejectWithValue(error?.message || "Error fetching user info");
     }
   }
 );

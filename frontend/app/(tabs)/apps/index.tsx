@@ -21,7 +21,9 @@ import {
   APP_LIST_CONFIG_KEY,
   APP_UPDATE_CHECK_TIMESTAMP_KEY,
   DOWNLOADED,
+  MICRO_APP_STORAGE_DIR,
 } from "@/constants/Constants";
+import { Directory, Paths } from "expo-file-system";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { MicroApp } from "@/context/slices/appSlice";
 import { getUserConfigurations } from "@/context/slices/userConfigSlice";
@@ -209,11 +211,17 @@ export default function HomeScreen() {
 
         const allowedApps = (userConfigAppIds?.configValue as string[]) || [];
 
-        const localApps: MicroApp[] = apps.filter(
-          (app) => app?.status === DOWNLOADED
-        );
+        // Verify if the files actually exist on disk, not just trust the Redux status
+        const localAppIds: string[] = [];
+        for (const app of apps) {
+          if (app?.status === DOWNLOADED) {
+             const appDir = new Directory(Paths.document, MICRO_APP_STORAGE_DIR, "micro-apps", `${app.appId}-extracted`);
+             if (appDir.exists) {
+                localAppIds.push(app.appId);
+             }
+          }
+        }
 
-        const localAppIds = localApps.map((app) => app.appId);
         const appsToRemove = localAppIds.filter(
           (appId) => !allowedApps.includes(appId)
         );
@@ -232,8 +240,8 @@ export default function HomeScreen() {
           setProgress((prev) => ({ ...prev, done: prev.done + 1 }));
         }
 
-        let updatedApps = localApps.filter(
-          (app) => !appsToRemove.includes(app.appId)
+        let updatedApps = apps.filter(
+          (app) => localAppIds.includes(app.appId) && !appsToRemove.includes(app.appId)
         );
 
         // Install apps

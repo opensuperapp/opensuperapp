@@ -15,6 +15,7 @@
 // under the License.
 import superapp_mobile_service.authorization;
 import superapp_mobile_service.entity;
+import superapp_mobile_service.scim;
 import superapp_mobile_service.wallet;
 
 import ballerina/cache;
@@ -28,6 +29,10 @@ final cache:Cache userInfoCache = new (capacity = 100, evictionFactor = 0.2);
 # + email - Email address of the user
 # + return - entity:Employee record if available, or error? if an error occurs or the user is not found
 public isolated function getUserInfo(string email) returns entity:Employee|error? {
+    if !scim:isInternalUser(email) {
+        return ();
+    }
+
     if userInfoCache.hasKey(email) {
         entity:Employee|error loggedInUser = userInfoCache.get(email).ensureType();
         if loggedInUser is error {
