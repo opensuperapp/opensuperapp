@@ -100,9 +100,13 @@ export interface LocationFix {
   buffered?: boolean;
 }
 
-// Why a location stream could not be opened.
+// Why a location stream could not be opened. "permission_denied" covers foreground
+// location and is refused for the rest of the screen's life; a micro app that asked for
+// background and was granted only "while using" gets "background_permission_denied"
+// instead and can still open a foreground-only stream.
 export type LocationRejectReason =
   | "permission_denied"
+  | "background_permission_denied"
   | "services_disabled"
   | "not_declared"
   | "unavailable";

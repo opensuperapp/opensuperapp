@@ -230,9 +230,15 @@ window.nativebridge.resolveLocationUpdate = (fix) => {
 };
 
 window.nativebridge.rejectLocationUpdates = (reason) => {
-  // "permission_denied" | "services_disabled" | "not_declared" | "unavailable"
+  // "permission_denied" | "background_permission_denied" | "services_disabled"
+  // | "not_declared" | "unavailable"
 };
 ```
+
+`"permission_denied"` is final for the lifetime of the screen — the host will not
+re-prompt, so retrying is pointless. `"background_permission_denied"` means foreground
+location was granted but background was not (on iOS, "While Using the App" rather than
+"Always"); retry without `background: true` to get a foreground-only stream.
 
 The host also stops the stream automatically when the user navigates away from the
 micro app, so a watch can never outlive the screen.
