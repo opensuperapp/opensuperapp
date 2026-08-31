@@ -152,6 +152,7 @@ build/
   "isMandatory": 0,
   "clientId": "client-id-for-authentication-if-integrated",
   "displayMode": "Controls whether to hide the header ('fullscreen') or show it ('default'). If no value is provided, it defaults to 'default'",
+  "requiredPermissions": ["location"],
   "versions": [
     {
       "version": "version no",
@@ -180,6 +181,93 @@ build/
 9. Additionally, you can restrict micro-app visibility by groups using the `micro_app_role` table and mentioning groups in the role column.
    <br></br>
    <img src="../resources/micro_app_role.png" alt="Micro App Role Database Table" width="700"/>
+
+---
+
+## 📍 Location
+
+Location is the one bridge capability a micro app must **declare** before it can use it.
+Add it to `microapp.json`:
+
+```json
+"requiredPermissions": ["location"]
+```
+
+Without that entry the host rejects every location request with `"not_declared"`, even
+though the Super App itself holds the OS permission. This keeps the blast radius of the
+permission to apps that asked for it rather than handing a position stream to every
+installed micro app. Declared permissions are shown on the Store listing before install.
+
+### Use the bridge, not `navigator.geolocation`
+
+`navigator.geolocation` is **not** the supported path for an embedded micro app. A
+micro app is served from a `file://` origin, which WKWebView does not treat as secure,
+so the web API is unavailable on iOS. It also stops firing the moment the Super App is
+backgrounded, because the WebView's JavaScript is suspended. Use the bridge topic.
+
+### Starting and stopping a stream
+
+```js
+window.nativebridge.requestLocationUpdates({
+  accuracy: "high", // "high" | "balanced" (default "balanced")
+  distanceIntervalM: 10, // minimum metres between fixes (default 10)
+  timeIntervalMs: 5000, // minimum milliseconds between fixes (default 5000)
+  background: true, // keep recording while the Super App is backgrounded
+});
+
+window.nativebridge.requestStopLocationUpdates();
+```
+
+**This is a subscription, not a one-shot.** Every other bridge topic calls its
+`resolve*` callback once; `resolveLocationUpdate` fires repeatedly until you call
+`requestStopLocationUpdates`. Treating it as one-shot leaks a subscription.
+
+Override the callbacks to receive fixes:
+
+```js
+window.nativebridge.resolveLocationUpdate = (fix) => {
+  // { lat, lng, accuracy, ts, buffered? }
+};
+
+window.nativebridge.rejectLocationUpdates = (reason) => {
+  // "permission_denied" | "background_permission_denied" | "services_disabled"
+  // | "not_declared" | "unavailable"
+};
+```
+
+`"permission_denied"` is final for the lifetime of the screen — the host will not
+re-prompt, so retrying is pointless. `"background_permission_denied"` means foreground
+location was granted but background was not (on iOS, "While Using the App" rather than
+"Always"); retry without `background: true` to get a foreground-only stream.
+
+The host also stops the stream automatically when the user navigates away from the
+micro app, so a watch can never outlive the screen.
+
+### `ts` is when the fix was taken
+
+Each fix carries `ts`, an ISO 8601 timestamp of the moment the position was **recorded** —
+not the moment it was delivered. This matters because of buffering, below: a fix that
+arrives two minutes late must still be attributable to when it happened, or a consumer
+cannot tell a replay from a teleport.
+
+### Background buffering
+
+When `background: true` and the OS grants background permission, the Super App keeps
+recording while it is not in the foreground — the driver is in another app, or the screen
+is off. The WebView cannot receive those fixes at the time, so they are written to a
+bounded on-device buffer and flushed when the app returns to the foreground:
+
+- flushed fixes arrive oldest-first, each with `buffered: true`;
+- each keeps its original `ts`;
+- a fix delivered both live and from the buffer is sent only once;
+- the buffer is capped, so a very long background gap drops the oldest fixes rather than
+  growing without limit.
+
+A `fullscreen` micro app keeps the screen awake while a stream is open, released on stop.
+
+> **Store review:** background location triggers extra review on both the App Store and
+> Google Play, and needs a written justification plus, on Android, a video of the in-app
+> disclosure. Budget for that lead time.
 
 ---
 

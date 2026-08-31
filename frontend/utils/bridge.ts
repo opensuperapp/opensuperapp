@@ -42,6 +42,10 @@ export const TOPIC = {
   OPEN_URL: "open_url",
   MICRO_APP_VERSION: "micro_app_version",
   COMPOSE_EMAIL: "compose_email",
+  // Location is a subscription, not a one-shot: LOCATION_START opens a stream that
+  // pushes many resolveLocationUpdate callbacks until LOCATION_STOP closes it.
+  LOCATION_START: "location_start",
+  LOCATION_STOP: "location_stop",
 };
 
 // JavaScript code injected into the WebView to enable communication between
@@ -122,5 +126,10 @@ export const injectedJavaScript = `window.nativebridge = {
     rejectMicroAppVersion: (err) => console.error("Failed to get Micro App version:", err),
     requestComposeEmail: (config) => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "compose_email", data: { config } })),
     resolveComposeEmail: (result) => console.log("Email composed successfully:", result),
-    rejectComposeEmail: (err) => console.error("Failed to compose email:", err)
+    rejectComposeEmail: (err) => console.error("Failed to compose email:", err),
+    requestLocationUpdates: (options) => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "location_start", data: options })),
+    requestStopLocationUpdates: () => window.ReactNativeWebView.postMessage(JSON.stringify({ topic: "location_stop" })),
+    // Fires repeatedly until requestStopLocationUpdates - a subscription, not a one-shot.
+    resolveLocationUpdate: (fix) => console.log("Location fix:", fix),
+    rejectLocationUpdates: (err) => console.error("Location updates failed:", err)
   };`;

@@ -26,9 +26,18 @@ import {
   GOOGLE_WEB_CLIENT_ID,
   isAndroid,
   isIos,
+  LOCATION_BUFFER_MAX_FIXES,
+  LOCATION_KEEP_AWAKE_TAG,
+  LOCATION_PERMISSION,
 } from "@/constants/Constants";
 import { RootState } from "@/context/store";
 import { logout, tokenExchange } from "@/services/authService";
+import {
+  ensureLocationPermissions,
+  startBackgroundLocationUpdates,
+  startForegroundLocationStream,
+  stopBackgroundLocationUpdates,
+} from "@/services/locationService";
 import googleAuthenticationService, {
   getGoogleUserInfo,
   isAuthenticatedWithGoogle,
@@ -43,22 +52,32 @@ import {
 import {
   BrowserConfig,
   DismissButtonStyle,
+  LocationFix,
+  LocationRejectReason,
+  LocationRequestOptions,
   mapToWebBrowserPresentationStyle,
   ScheduledNotificationData,
   ScheduledNotificationIdentifiable,
 } from "@/types/microApp.types";
 import { MicroAppParams } from "@/types/navigation";
 import { injectedJavaScript, TOPIC } from "@/utils/bridge";
+import {
+  clearLocationBuffer,
+  drainLocationBuffer,
+} from "@/utils/locationBuffer";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Google from "expo-auth-session/providers/google";
 import { documentDirectory } from "expo-file-system";
+import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
+import { LocationSubscription } from "expo-location";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { StatusBar } from "expo-status-bar";
 import * as WebBrowser from "expo-web-browser";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
+  AppState,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -104,6 +123,27 @@ const MicroApp = () => {
   const appScopes = useSelector(
     (state: RootState) => state.appConfig.appScopes
   );
+  // Read from the store rather than a route param: this is what the installed
+  // microapp.json declared, and route params cannot carry an array reliably.
+  const requiredPermissions = useSelector(
+    (state: RootState) =>
+      state.apps.apps.find((app) => app.appId === appId)?.requiredPermissions
+  );
+  const locationSub = useRef<LocationSubscription | null>(null);
+  // Set while a stream is open so AppState knows whether there is anything to flush.
+  const locationOptions = useRef<LocationRequestOptions | null>(null);
+  // Timestamps already delivered, so a fix that arrives live and is also buffered is
+  // not sent twice. Bounded alongside the buffer it guards.
+  const deliveredFixTimestamps = useRef<Set<string>>(new Set());
+  // Denial is sticky for the lifetime of the screen: re-prompting on every request
+  // turns one "no" into a permission dialog loop.
+  const locationPermissionDenied = useRef(false);
+  // Starting and stopping a stream are asynchronous and can overlap: a stop, an
+  // unmount, or a second start can land while the first is still awaiting a permission
+  // dialog or the OS opening the watch. Running them through one chain means each sees
+  // the finished state of the last, so a watch or a foreground service can never be
+  // created after the teardown that was meant to cancel it and then outlive the screen.
+  const locationQueue = useRef<Promise<unknown>>(Promise.resolve());
   const isDeveloper: boolean = appId.includes("developer");
   const isTotp: boolean = appId.includes("totp");
   const insets = useSafeAreaInsets();
@@ -129,11 +169,11 @@ const MicroApp = () => {
   });
 
   // Function to send response to micro app
-  const sendResponseToWeb = (method: string, data?: any) => {
+  const sendResponseToWeb = useCallback((method: string, data?: any) => {
     webviewRef.current?.injectJavaScript(
       `window.nativebridge.${method}(${JSON.stringify(data)});`
     );
-  };
+  }, []);
 
   // Handle Google authentication response
   useEffect(() => {
@@ -151,7 +191,7 @@ const MicroApp = () => {
           sendResponseToWeb("rejectGoogleLogin", err.message);
         });
     }
-  }, [response]);
+  }, [response, sendResponseToWeb]);
 
   useEffect(() => {
     const fetchToken = async () => {
@@ -534,6 +574,179 @@ const MicroApp = () => {
     }
   };
 
+  /**
+   * Sends one fix to the micro app, dropping any timestamp already delivered.
+   *
+   * A fix can reach us twice: once live and once from the background buffer if the
+   * app changed state mid-flight. The consumer treats fixes as a track, so a
+   * duplicate reads as a stationary sample and skews anything derived from it.
+   * @param fix - The fix to deliver
+   */
+  const deliverLocationFix = useCallback(
+    (fix: LocationFix) => {
+      // The foreground watch can still emit for a moment after the app leaves the
+      // foreground, but injectJavaScript into a suspended WebView is discarded.
+      // Marking such a fix delivered would make the dedup below swallow the buffered
+      // copy too, losing it outright - so leave it to the background buffer.
+      if (!fix.buffered && AppState.currentState !== "active") return;
+
+      if (deliveredFixTimestamps.current.has(fix.ts)) return;
+
+      deliveredFixTimestamps.current.add(fix.ts);
+      if (deliveredFixTimestamps.current.size > LOCATION_BUFFER_MAX_FIXES) {
+        // A Set iterates in insertion order, so this keeps the most recent half.
+        deliveredFixTimestamps.current = new Set(
+          Array.from(deliveredFixTimestamps.current).slice(
+            -LOCATION_BUFFER_MAX_FIXES / 2
+          )
+        );
+      }
+
+      sendResponseToWeb("resolveLocationUpdate", fix);
+    },
+    [sendResponseToWeb]
+  );
+
+  /**
+   * Releases every resource a location stream holds.
+   * Safe to call when no stream is running.
+   */
+  const teardownLocationStream = useCallback(async () => {
+    locationSub.current?.remove();
+    locationSub.current = null;
+    locationOptions.current = null;
+
+    await stopBackgroundLocationUpdates();
+    await clearLocationBuffer();
+
+    try {
+      // deactivateKeepAwake() is async and rejects when the tag was never activated,
+      // which is the normal case for a non-fullscreen micro app. Without the await the
+      // catch never sees it and every teardown raises an unhandled rejection instead.
+      await deactivateKeepAwake(LOCATION_KEEP_AWAKE_TAG);
+    } catch {
+      // Not activated - nothing to release.
+    }
+  }, []);
+
+  /**
+   * Opens a position stream for the micro app.
+   * @param options - Stream options supplied by the micro app
+   */
+  const startLocationUpdates = useCallback(
+    async (requested?: LocationRequestOptions | null) => {
+      // requestLocationUpdates() may be called with nothing, or with null.
+      const options: LocationRequestOptions = requested ?? {};
+
+      // A host-level OS permission must not become an implicit grant to every micro
+      // app: only an app that declared the capability may open a stream.
+      if (!requiredPermissions?.includes(LOCATION_PERMISSION)) {
+        sendResponseToWeb(
+          "rejectLocationUpdates",
+          "not_declared" as LocationRejectReason
+        );
+        return;
+      }
+
+      if (locationPermissionDenied.current) {
+        sendResponseToWeb(
+          "rejectLocationUpdates",
+          "permission_denied" as LocationRejectReason
+        );
+        return;
+      }
+
+      const wantsBackground = options.background === true;
+      const failure = await ensureLocationPermissions(wantsBackground);
+      if (failure) {
+        if (failure === "permission_denied") {
+          locationPermissionDenied.current = true;
+        }
+        sendResponseToWeb("rejectLocationUpdates", failure);
+        return;
+      }
+
+      // Starting twice replaces the stream rather than stacking two watches.
+      await teardownLocationStream();
+
+      try {
+        locationOptions.current = options;
+        locationSub.current = await startForegroundLocationStream(
+          options,
+          deliverLocationFix
+        );
+
+        if (wantsBackground) {
+          await startBackgroundLocationUpdates(options, appName);
+        }
+
+        // A fullscreen app is the whole screen the driver is looking at; letting the
+        // display sleep mid-route is indistinguishable from the app having crashed.
+        if (!shouldShowHeader) {
+          await activateKeepAwakeAsync(LOCATION_KEEP_AWAKE_TAG);
+        }
+      } catch (error) {
+        console.error("Failed to start location updates:", error);
+        await teardownLocationStream();
+        sendResponseToWeb(
+          "rejectLocationUpdates",
+          "unavailable" as LocationRejectReason
+        );
+      }
+    },
+    [
+      appName,
+      deliverLocationFix,
+      requiredPermissions,
+      sendResponseToWeb,
+      shouldShowHeader,
+      teardownLocationStream,
+    ]
+  );
+
+  /** Closes the position stream and forgets the delivered-timestamp history. */
+  const stopLocationUpdates = useCallback(async () => {
+    await teardownLocationStream();
+    deliveredFixTimestamps.current.clear();
+  }, [teardownLocationStream]);
+
+  /**
+   * Runs a location stream operation once every operation queued before it has settled.
+   * @param task - The operation to run
+   * @returns What the operation resolved to
+   */
+  const enqueueLocationTask = useCallback(
+    <T,>(task: () => Promise<T>): Promise<T> => {
+      const next = locationQueue.current.then(task, task);
+      // Swallow the failure on the chain only: one rejected operation must not block
+      // every operation queued after it, but the caller still sees its own rejection.
+      locationQueue.current = next.catch(() => undefined);
+      return next;
+    },
+    []
+  );
+
+  // Flush fixes recorded while the WebView's JS was suspended. Each carries the
+  // timestamp it was taken at, so the consumer can order them against live fixes.
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", async (state) => {
+      if (state !== "active" || !locationOptions.current?.background) return;
+
+      const buffered = await drainLocationBuffer();
+      buffered.forEach((fix) => deliverLocationFix({ ...fix, buffered: true }));
+    });
+
+    return () => subscription.remove();
+  }, [deliverLocationFix]);
+
+  // A watch that outlives the screen drains the battery invisibly - nothing on screen
+  // says it is still running - so tear it down when the micro app is navigated away from.
+  useEffect(() => {
+    return () => {
+      void enqueueLocationTask(teardownLocationStream);
+    };
+  }, [enqueueLocationTask, teardownLocationStream]);
+
   // Handle messages from WebView
   const onMessage = async (event: WebViewMessageEvent) => {
     try {
@@ -624,6 +837,12 @@ const MicroApp = () => {
           break;
         case TOPIC.COMPOSE_EMAIL:
           await handleComposeEmail(data?.config);
+          break;
+        case TOPIC.LOCATION_START:
+          await enqueueLocationTask(() => startLocationUpdates(data));
+          break;
+        case TOPIC.LOCATION_STOP:
+          await enqueueLocationTask(stopLocationUpdates);
           break;
         default:
           console.error("Unknown topic:", topic);

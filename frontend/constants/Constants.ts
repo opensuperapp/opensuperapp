@@ -93,6 +93,17 @@ export const APP_UPDATE_CHECK_TIMESTAMP_KEY = "app_update_check_timestamp";
 export const FULL_SCREEN_VIEWING_MODE = "fullscreen";
 export const DEFAULT_VIEWING_MODE = "default";
 
+// Location capability
+export const LOCATION_PERMISSION = "location";
+export const LOCATION_TASK_NAME = "superapp-background-location";
+export const LOCATION_BUFFER_KEY = "location_fix_buffer";
+// A two hour background gap at one fix every five seconds is ~1,400 fixes. Cap above
+// that but bounded - an unbounded buffer is a slow leak on a phone left in a cradle.
+export const LOCATION_BUFFER_MAX_FIXES = 2000;
+export const LOCATION_KEEP_AWAKE_TAG = "micro-app-location";
+export const DEFAULT_LOCATION_TIME_INTERVAL_MS = 5000;
+export const DEFAULT_LOCATION_DISTANCE_INTERVAL_M = 10;
+
 // Keys for Secure Store
 export const LAST_SENT_FCM_TOKEN = "last_sent_fcm_token";
 export const ACCESS_TOKEN = "secure_access_token";
