@@ -273,8 +273,8 @@ export default function HomeScreen() {
       }
     };
 
-    if (userConfigurations && userConfigurations.length > 0) syncApps();
-  }, [dispatch, userConfigurations]);
+    if (userConfigurations && userConfigurations.length > 0 && apps && apps.length > 0) syncApps();
+  }, [dispatch, userConfigurations, apps]);
 
   // Filter apps based on search query
   useEffect(() => {

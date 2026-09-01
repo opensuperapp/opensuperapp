@@ -73,8 +73,7 @@ export const downloadMicroApp = async (
     dispatch(updateDownloadProgress({ appId, progress: 0 })); // Initialize progress
 
     if (!downloadUrl) {
-      Alert.alert("Error", "Download URL is empty.");
-      return false;
+      throw new Error("Download URL is empty.");
     }
 
     await downloadAndSaveFile(dispatch, appId, downloadUrl); // Download react production build
@@ -120,7 +119,6 @@ const unzipFile = async (dispatch: AppDispatch, appId: string) => {
     const extractedDir = new Directory(microAppsDir, `${appId}-extracted`);
 
     if (!zipFile.exists || zipFile.size === 0) {
-      Alert.alert("Error", "ZIP file not found or is empty.");
       throw new Error("ZIP file not found or is empty.");
     }
 
