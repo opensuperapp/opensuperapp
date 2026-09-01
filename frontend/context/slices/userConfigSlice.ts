@@ -82,7 +82,11 @@ export const getUserConfigurations = createAsyncThunk(
 const userConfigSlice = createSlice({
   name: "userConfig",
   initialState,
-  reducers: {},
+  reducers: {
+    clearUserConfigurations: (state) => {
+      state.configurations = [];
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(getUserConfigurations.pending, (state) => {
@@ -97,5 +101,7 @@ const userConfigSlice = createSlice({
       });
   },
 });
+
+export const { clearUserConfigurations } = userConfigSlice.actions;
 
 export default userConfigSlice.reducer;
