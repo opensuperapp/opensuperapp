@@ -292,7 +292,7 @@ Paste the generated strings into the `FIREBASE_IOS_PLIST_B64` and `FIREBASE_ANDR
 EXPO_PUBLIC_ENABLE_WALLET_PASS=true
 ```
 
-This is the build-time switch for the "Save Business Card" action that adds the card to Apple Wallet or Google Wallet. It needs a wallet-pass-service deployment behind `EXPO_PUBLIC_WALLET_SERVICE_BASE_URL`; left unset, the action is disabled and the app never calls the service.
+This is the build-time switch for the "Save Business Card" action that adds the card to Apple Wallet or Google Wallet. The pass is served by the backend at `EXPO_PUBLIC_BACKEND_BASE_URL`, so no other URL is involved; left unset, the action is disabled and the app never asks the backend for a pass.
 
 Rollout per operating system is done with Firebase Remote Config, so either platform can be turned on (or pulled) without a release. Create a single JSON parameter named `wallet_pass_enabled` in **Firebase Console > Remote Config**:
 
