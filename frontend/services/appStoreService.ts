@@ -67,14 +67,14 @@ export const downloadMicroApp = async (
   appId: string,
   downloadUrl: string | null,
   onLogout: () => Promise<void>
-) => {
+): Promise<boolean> => {
   try {
     dispatch(addDownloading(appId)); // Downloading status for indicator
     dispatch(updateDownloadProgress({ appId, progress: 0 })); // Initialize progress
 
     if (!downloadUrl) {
       Alert.alert("Error", "Download URL is empty.");
-      return;
+      return false;
     }
 
     await downloadAndSaveFile(dispatch, appId, downloadUrl); // Download react production build
@@ -85,9 +85,12 @@ export const downloadMicroApp = async (
 
     await UpdateUserConfiguration(appId, DOWNLOADED, onLogout); // Update user configurations
     dispatch(updateDownloadProgress({ appId, progress: 100 }));
+    
+    return true;
   } catch (error) {
     await UpdateUserConfiguration(appId, NOT_DOWNLOADED, onLogout); // Update user configurations
     Alert.alert("Error", "Failed to download or save the file.");
+    return false;
   } finally {
     dispatch(removeDownloading(appId));
   }
@@ -118,7 +121,7 @@ const unzipFile = async (dispatch: AppDispatch, appId: string) => {
 
     if (!zipFile.exists || zipFile.size === 0) {
       Alert.alert("Error", "ZIP file not found or is empty.");
-      return;
+      throw new Error("ZIP file not found or is empty.");
     }
 
     const zipContent = await zipFile.base64();

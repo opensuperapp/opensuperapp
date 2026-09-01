@@ -249,16 +249,19 @@ export default function HomeScreen() {
           const appData = apps.find((app) => app.appId === appId);
           if (appData) {
             setCurrentAction(`Downloading ${appData.name}`);
-            await downloadMicroApp(
+            const success = await downloadMicroApp(
               dispatch,
               appId,
               appData.versions?.[0]?.downloadUrl,
               logout
             );
-            updatedApps.push({
-              ...appData,
-              status: DOWNLOADED,
-            });
+            
+            if (success) {
+              updatedApps.push({
+                ...appData,
+                status: DOWNLOADED,
+              });
+            }
             setProgress((prev) => ({ ...prev, done: prev.done + 1 }));
           }
         }
