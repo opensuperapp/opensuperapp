@@ -224,3 +224,21 @@ public type FcmTokenRequest record {|
     # Limit of items to return
     int itemsPerPage = 'limit;
 |};
+
+# Record type for a row to be appended to the `audit_log` table.
+public type AuditLogEntry record {|
+    # Feature the action belongs to
+    string category;
+    # What happened within that feature
+    string action;
+    # UUID of the user who performed the action
+    @sql:Column {name: "actor_id"}
+    string actorId;
+    # Email of the user who performed the action
+    @sql:Column {name: "actor_email"}
+    string? actorEmail;
+    # Human readable description of the action
+    string? description;
+    # Extra context for the action, kept small and free of PII
+    json? metadata;
+|};

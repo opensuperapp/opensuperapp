@@ -277,3 +277,12 @@ public isolated function getNotifications(string[] groups, string userId, int st
             : notifications.length()
     };
 }
+
+# Appends an entry to the `audit_log` table.
+#
+# + entry - Audit log entry to be recorded
+# + return - `ExecutionSuccessResult` if the insertion succeeds, or `error` if it fails
+public isolated function addAuditLog(AuditLogEntry entry) returns ExecutionSuccessResult|error {
+    sql:ExecutionResult result = check databaseClient->execute(addAuditLogQuery(entry));
+    return result.cloneWithType(ExecutionSuccessResult);
+}

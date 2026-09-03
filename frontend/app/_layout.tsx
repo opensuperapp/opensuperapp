@@ -29,7 +29,7 @@ import { usePushNotificationHandler } from "@/hooks/usePushNotificationHandler";
 import { runMigrations } from "@/migrations/migrator";
 import {
   onRemoteConfigChange,
-  setRemoteConfigDefaults,
+  initializeRemoteConfig,
 } from "@/services/remoteConfig";
 import { buildAppsWithTokens } from "@/utils/exchangedTokenRehydrator";
 import { handleFreshInstall } from "@/utils/freshInstall";
@@ -159,7 +159,7 @@ export default function RootLayout() {
 
   // Initialize Firebase Remote Config
   useEffect(() => {
-    setRemoteConfigDefaults();
+    initializeRemoteConfig();
 
     const unsubscribe = onRemoteConfigChange((error, _) => {
       if (error) {

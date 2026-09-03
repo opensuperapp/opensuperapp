@@ -26,13 +26,6 @@ export const REDIRECT_URI = process.env.EXPO_PUBLIC_REDIRECT_URI ?? "";
 export const TOKEN_URL = process.env.EXPO_PUBLIC_TOKEN_URL ?? "";
 export const LOGOUT_URL = process.env.EXPO_PUBLIC_LOGOUT_URL ?? "";
 export const BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL ?? "";
-// The wallet pass service is a separate backend from BASE_URL.
-export const WALLET_SERVICE_BASE_URL =
-  process.env.EXPO_PUBLIC_WALLET_SERVICE_BASE_URL ?? "";
-// Unset, the wallet endpoints stay relative paths that axios in React Native
-// cannot resolve, so treat the feature as unconfigured rather than broken.
-export const IS_WALLET_SERVICE_CONFIGURED =
-  WALLET_SERVICE_BASE_URL.trim() !== "";
 export const MICRO_APP_STORAGE_DIR =
   process.env.EXPO_PUBLIC_MICRO_APP_STORAGE_DIR ?? "";
 export const ARTICLE_BASE_URL = process.env.EXPO_PUBLIC_ARTICLE_BASE_URL ?? "";
@@ -60,6 +53,44 @@ export const ENABLE_FIREBASE = process.env.EXPO_PUBLIC_ENABLE_FIREBASE === TRUE;
 // Build-time switch; the per-OS remote config flags handle the runtime rollout.
 export const ENABLE_WALLET_PASS =
   process.env.EXPO_PUBLIC_ENABLE_WALLET_PASS === TRUE;
+
+// Apple's pass type identifier, which together with the serial number is
+// Wallet's identity key for a pass. The app needs it only to ask iOS whether
+// the card is already installed and to open it there; the passes themselves
+// are built and signed by the wallet service, which owns the matching
+// certificate. It must be the same value as APPLE_PASS_TYPE_ID in the wallet
+// service, or the lookup silently answers "not installed" forever. Left unset,
+// the app simply never claims the card is already in Wallet.
+export const APPLE_PASS_TYPE_ID =
+  process.env.EXPO_PUBLIC_APPLE_PASS_TYPE_ID ?? "";
+
+// Parses a comma-separated env list into trimmed, lowercased, non-empty
+// entries, falling back to `defaultValue` when unset or empty so a blank
+// override in `.env` doesn't silently lock the gate to nothing.
+const parseAllowList = (
+  raw: string | undefined,
+  defaultValue: string[],
+): string[] => {
+  const parsed =
+    raw
+      ?.split(",")
+      .map((entry) => entry.trim().toLowerCase())
+      .filter((entry) => entry.length > 0) ?? [];
+  return parsed.length > 0 ? parsed : defaultValue;
+};
+
+// Business card visibility gate (ANDed with the wallet-pass card/download
+// gates above, not a replacement for them): the signed-in user's email
+// domain must be in this list.
+export const BUSINESS_CARD_ALLOWED_DOMAINS = parseAllowList(
+  process.env.EXPO_PUBLIC_BUSINESS_CARD_ALLOWED_DOMAINS,
+  ["wso2.com"],
+);
+// ...and the user must belong to at least one of these groups.
+export const BUSINESS_CARD_ALLOWED_GROUPS = parseAllowList(
+  process.env.EXPO_PUBLIC_BUSINESS_CARD_ALLOWED_GROUPS,
+  ["wso2-employees"],
+);
 export const GOOGLE_SCOPES = [
   "openid",
   "profile",

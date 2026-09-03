@@ -15,16 +15,23 @@
 // under the License.
 import { PlatformOSType } from "react-native";
 
-// Keyed by `Platform.OS` so consumers index rather than branch, and an absent
-// platform is off. The Apple and Google paths need separate certificates and
-// console onboarding, so each has to be switchable on its own.
-export type WalletPassConfig = Partial<Record<PlatformOSType, boolean>>;
+export interface WalletPassPlatformRule {
+  enabled?: boolean;
+  walletDownload?: boolean;
+}
 
-// Off by default so a build that has not been explicitly switched on never
-// reaches the wallet pass service, including when Remote Config is unavailable.
+// A bare boolean is the legacy shape the console may still hold.
+export type WalletPassPlatformConfig = boolean | WalletPassPlatformRule;
+
+export type WalletPassConfig = Partial<
+  Record<PlatformOSType, WalletPassPlatformConfig>
+>;
+
+// Card visible, wallet download off, on both platforms: exactly today's
+// shipped behavior, so a build with Remote Config unavailable changes nothing.
 export const DEFAULT_WALLET_PASS_CONFIG: WalletPassConfig = {
-  ios: false,
-  android: false,
+  ios: { enabled: true, walletDownload: false },
+  android: { enabled: true, walletDownload: false },
 };
 
 export interface TabVisibilityConfig {

@@ -152,15 +152,25 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
     #
     # + ctx - Request context
     # + req - HTTP request, used to forward the caller's JWT assertion to the wallet service
-    # + return - The `.pkpass` bytes, or an `http:InternalServerError` if the operation fails
+    # + return - The `.pkpass` bytes, an `http:Forbidden` if the user lacks business-card
+    # access, or an `http:InternalServerError` if the operation fails
     resource function get business\-card/pkpass(http:RequestContext ctx, http:Request req)
-        returns http:Response|http:Unauthorized|http:BadGateway|http:InternalServerError {
+        returns http:Response|http:Forbidden|http:Unauthorized|http:BadGateway|http:InternalServerError {
 
         authorization:CustomJwtPayload|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
         if userInfo is error {
             return <http:InternalServerError>{
                 body: {
                     message: ERR_MSG_USER_HEADER_NOT_FOUND
+                }
+            };
+        }
+
+        if !authorization:hasBusinessCardAccess(userInfo) {
+            log:printInfo("Business card access denied", userId = userInfo.userId);
+            return <http:Forbidden>{
+                body: {
+                    message: ERR_MSG_BUSINESS_CARD_FORBIDDEN
                 }
             };
         }
@@ -183,6 +193,9 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
             return walletFailure("Apple Wallet pass", userInfo.userId, pass);
         }
 
+        recordWalletPassAudit(userInfo, AUDIT_ACTION_APPLE_WALLET_PASS_ISSUED,
+                "Issued an Apple Wallet business card pass", "apple");
+
         http:Response response = new;
         response.setBinaryPayload(pass, "application/vnd.apple.pkpass");
         response.setHeader("Content-Disposition", string `attachment; filename="wso2-business-card.pkpass"`);
@@ -194,15 +207,25 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
     #
     # + ctx - Request context
     # + req - HTTP request, used to forward the caller's JWT assertion to the wallet service
-    # + return - The Google Wallet save URL, or an `http:InternalServerError` if the operation fails
+    # + return - The Google Wallet save URL, an `http:Forbidden` if the user lacks business-card
+    # access, or an `http:InternalServerError` if the operation fails
     resource function get business\-card/google\-save\-url(http:RequestContext ctx, http:Request req)
-        returns wallet:GoogleSaveUrl|http:Unauthorized|http:BadGateway|http:InternalServerError {
+        returns wallet:GoogleSaveUrl|http:Forbidden|http:Unauthorized|http:BadGateway|http:InternalServerError {
 
         authorization:CustomJwtPayload|error userInfo = ctx.getWithType(authorization:HEADER_USER_INFO);
         if userInfo is error {
             return <http:InternalServerError>{
                 body: {
                     message: ERR_MSG_USER_HEADER_NOT_FOUND
+                }
+            };
+        }
+
+        if !authorization:hasBusinessCardAccess(userInfo) {
+            log:printInfo("Business card access denied", userId = userInfo.userId);
+            return <http:Forbidden>{
+                body: {
+                    message: ERR_MSG_BUSINESS_CARD_FORBIDDEN
                 }
             };
         }
@@ -224,6 +247,9 @@ service http:InterceptableService / on new http:Listener(9090, config = {request
         if saveUrl is wallet:WalletError {
             return walletFailure("Google Wallet save URL", userInfo.userId, saveUrl);
         }
+
+        recordWalletPassAudit(userInfo, AUDIT_ACTION_GOOGLE_WALLET_PASS_ISSUED,
+                "Issued a Google Wallet business card pass", "google");
 
         return saveUrl;
     }

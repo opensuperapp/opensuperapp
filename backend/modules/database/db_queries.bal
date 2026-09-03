@@ -310,3 +310,31 @@ public isolated function getNotificationsQuery(string[] groups, string userId, i
         LIMIT ${itemsPerPage} OFFSET ${startIndex}
     `);
 }
+
+# Query to append an entry to the audit log.
+#
+# + entry - Audit log entry to be recorded
+# + return - Generated query to insert the entry into the `audit_log` table
+isolated function addAuditLogQuery(AuditLogEntry entry) returns sql:ParameterizedQuery {
+    json? metadata = entry.metadata;
+    // A nil metadata has to stay a SQL NULL; serializing it would store the JSON literal null.
+    string? serializedMetadata = metadata is () ? () : metadata.toJsonString();
+    return `
+        INSERT INTO audit_log (
+            category,
+            action,
+            actor_id,
+            actor_email,
+            description,
+            metadata
+        )
+        VALUES (
+            ${entry.category},
+            ${entry.action},
+            ${entry.actorId},
+            ${entry.actorEmail},
+            ${entry.description},
+            ${serializedMetadata}
+        )
+    `;
+}
