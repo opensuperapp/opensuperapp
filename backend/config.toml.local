@@ -3,6 +3,10 @@ userRegionFilter=""
 mobileAppReviewerEmail=""
 regionRestrictedMicroApps=["", "", ""]
 
+[superapp_mobile_service.authorization]
+businessCardAllowedDomains=[""]
+businessCardAllowedGroups=[""]
+
 [superapp_mobile_service.database]
 defaultMicroAppsGroup=""
 

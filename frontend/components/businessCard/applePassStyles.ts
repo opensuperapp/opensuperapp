@@ -21,7 +21,7 @@ import {
 } from "@/constants/BusinessCard";
 import { StyleSheet } from "react-native";
 
-export const walletPassStyles = StyleSheet.create({
+export const applePassStyles = StyleSheet.create({
   pass: {
     aspectRatio: CARD_ASPECT_RATIO,
     backgroundColor: PASS_BACKGROUND_COLOR,

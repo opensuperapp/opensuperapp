@@ -16,6 +16,7 @@ backend/
 ├── constants.bal # Common constants
 ├── types.bal # Types for root level
 ├── config.toml.local # Sample config file
+├── resources/ # Hand-applied DDL for tables this service owns
 ├── modules
 │   ├── database/ # Database access module
 │   ├── authorization/ # Authorization module
@@ -68,5 +69,20 @@ bal run
 | **user_config**       | Stores user details and configurations for the Super App.                                                          |
 | **app_configs**       | Stores configurations for the Super App.                                                                           |
 | **device_token**      | Stores FCM tokens of a device.                                                                                     |
+| **audit_log**         | Append-only trail of user actions across superapp features, e.g. issuing a business card wallet pass.             |
+
+### audit_log
+
+A single generic table shared by every feature rather than one audit table per feature. A row is
+`category` (the feature), `action` (what happened), the actor, a human readable `description`, and a
+small `metadata` JSON blob. Keep PII out of `metadata`, the actor email is already its own column.
+
+Rows are only ever written server-side, from inside the resource that performed the action, and only
+after that action has actually succeeded. There is no endpoint for writing them, a log a client can
+post arbitrary rows into is not an audit log. Nothing updates or deletes rows either.
+
+New features should reuse this table through `database:addAuditLog` instead of adding their own.
+The DDL lives in `resources/audit_log.sql`, this project has no migration tool so tables are created
+by hand.
 
 ---

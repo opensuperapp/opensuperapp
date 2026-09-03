@@ -20,28 +20,42 @@ import {
   getRemoteConfig,
   getValue,
   onConfigUpdate,
+  setConfigSettings,
   setDefaults,
 } from "@react-native-firebase/remote-config";
 
-/**
- * Sets the default values for the remote config.
- * @returns void
- */
-export const setRemoteConfigDefaults = async () => {
-  try {
-    await setDefaults(getRemoteConfig(), REMOTE_CONFIG_INITIAL_VALUES);
-  } catch (error) {
-    console.error("Error setting remote config defaults:", error);
-  }
-};
+// The SDK serves the last activated values from disk on every launch and will
+// not go back to the server until this interval has elapsed. Its own default is
+// twelve hours, which is far too coarse to roll a flag out or pull one back:
+// a published change stays invisible for the rest of the day.
+const MINIMUM_FETCH_INTERVAL_MILLIS = __DEV__ ? 0 : 60 * 60 * 1000;
 
-//Fetches the latest remote config values from Firebase.
-export const fetchAndActivateRemoteConfig = async () => {
-  try {
-    await fetchAndActivate(getRemoteConfig());
-  } catch (error) {
-    console.error("Error fetching and activating remote config:", error);
-  }
+let initialization: Promise<void> | null = null;
+
+/**
+ * Applies the fetch settings, seeds the in-app defaults, then activates the
+ * newest published values — in that order, since the settings have to be in
+ * place before the fetch and the defaults before anything reads a value.
+ *
+ * Safe to call from anywhere: every caller shares the first call's promise, so
+ * consumers can await this instead of racing the app's startup effect.
+ */
+export const initializeRemoteConfig = (): Promise<void> => {
+  initialization ??= (async () => {
+    try {
+      const remoteConfig = getRemoteConfig();
+      await setConfigSettings(remoteConfig, {
+        minimumFetchIntervalMillis: MINIMUM_FETCH_INTERVAL_MILLIS,
+      });
+      await setDefaults(remoteConfig, REMOTE_CONFIG_INITIAL_VALUES);
+      await fetchAndActivate(remoteConfig);
+    } catch (error) {
+      // A failed fetch leaves the defaults active, which is still a usable app.
+      console.error("Error initializing remote config:", error);
+    }
+  })();
+
+  return initialization;
 };
 
 /**

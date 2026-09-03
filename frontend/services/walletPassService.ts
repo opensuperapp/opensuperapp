@@ -19,6 +19,9 @@ import { apiRequest } from "@/utils/requestHandler";
 import { File, Paths } from "expo-file-system";
 import { Alert, Linking } from "react-native";
 
+// The wallet service is not called directly: the backend proxies both endpoints,
+// so it can build the card from the caller's own JWT claims and keep the wallet
+// service's credentials off the device.
 const PKPASS_URL = `${BASE_URL}/business-card/pkpass`;
 const GOOGLE_SAVE_URL_ENDPOINT = `${BASE_URL}/business-card/google-save-url`;
 

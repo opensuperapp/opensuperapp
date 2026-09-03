@@ -26,8 +26,8 @@ jest.mock("@/utils/requestHandler", () => ({
 }));
 
 // The endpoint URLs are built when the service loads, so the base URL is
-// pinned here instead of being whatever EXPO_PUBLIC_BACKEND_BASE_URL happens
-// to be in the shell running the tests.
+// pinned here instead of being whatever EXPO_PUBLIC_BACKEND_BASE_URL happens to
+// be in the shell running the tests.
 jest.mock("@/constants/Constants", () => ({
   __esModule: true,
   ...jest.requireActual("@/constants/Constants"),

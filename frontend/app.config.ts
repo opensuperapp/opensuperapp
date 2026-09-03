@@ -84,7 +84,7 @@ let config: ExpoConfig = {
     checkAutomatically: "ON_LOAD",
     fallbackToCacheTimeout: 0,
   },
-   runtimeVersion: {
+  runtimeVersion: {
     policy: "appVersion",
   },
   ios: {
@@ -111,6 +111,13 @@ let config: ExpoConfig = {
       "android.permission.CAMERA",
       "android.permission.RECORD_AUDIO",
       "android.permission.POST_NOTIFICATIONS",
+    ],
+    // Firebase (messaging/remote-config) pulls these in transitively via
+    // play-services-measurement. The app does not use the advertising ID,
+    // so strip them to keep the Play Console declaration answerable as "No".
+    blockedPermissions: [
+      "com.google.android.gms.permission.AD_ID",
+      "android.permission.ACCESS_ADSERVICES_AD_ID",
     ],
     adaptiveIcon: {
       foregroundImage: "./assets/images/adaptive-icon.png",
@@ -188,6 +195,8 @@ let config: ExpoConfig = {
         },
       },
     ],
+    // Raise the Gradle daemon heap/metaspace so release lint analysis does not OOM
+    "./plugins/withGradleMemory.ts",
     // Remove the intent scheme from the AndroidManifest.xml as it is duplicated by the app auth plugin
     [
       "./plugins/withRemoveIntentScheme.ts",

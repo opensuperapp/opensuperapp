@@ -28,7 +28,7 @@ type Props = {
 };
 
 // Wallet uppercases labels itself, so callers pass the strings pass.go writes.
-const PassField = ({ label, value, size, style }: Props) => (
+const ApplePassField = ({ label, value, size, style }: Props) => (
   <View style={style}>
     <Text style={styles.label} numberOfLines={1}>
       {label.toUpperCase()}
@@ -46,7 +46,7 @@ const PassField = ({ label, value, size, style }: Props) => (
   </View>
 );
 
-export default PassField;
+export default ApplePassField;
 
 const styles = StyleSheet.create({
   label: {

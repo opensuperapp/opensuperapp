@@ -14,5 +14,10 @@
 // specific language governing permissions and limitations
 // under the License.
 public const ERR_MSG_USER_HEADER_NOT_FOUND = "User information header not found!";
+public const ERR_MSG_BUSINESS_CARD_FORBIDDEN = "You do not have access to the business card feature!";
 
 public const int NOTIFICATION_ITEMS_PER_PAGE = 100;
+
+public const AUDIT_CATEGORY_BUSINESS_CARD = "business_card";
+public const AUDIT_ACTION_APPLE_WALLET_PASS_ISSUED = "apple_wallet_pass_issued";
+public const AUDIT_ACTION_GOOGLE_WALLET_PASS_ISSUED = "google_wallet_pass_issued";

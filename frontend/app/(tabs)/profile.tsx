@@ -24,6 +24,7 @@ import { disableFCMToken } from "@/context/slices/deviceSlice";
 import { getUserInfo } from "@/context/slices/userInfoSlice";
 import { AppDispatch, RootState } from "@/context/store";
 import { useTrackActiveScreen } from "@/hooks/useTrackActiveScreen";
+import { useWalletPassConfig } from "@/hooks/useWalletPassConfig";
 import { logout } from "@/services/authService";
 import { BasicUserInfo } from "@/types/basicUserInfo.types";
 import { DecodedAccessToken } from "@/types/decodeAccessToken.types";
@@ -69,17 +70,18 @@ const SettingsScreen = () => {
     avatarUri: "",
   });
   const [cardVisible, setCardVisible] = useState(false);
+  const { cardEnabled } = useWalletPassConfig();
 
   useTrackActiveScreen(ScreenPaths.PROFILE);
 
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () =>
-        accessToken ? (
+        accessToken && cardEnabled ? (
           <BusinessCardHeaderButton onPress={() => setCardVisible(true)} />
         ) : null,
     });
-  }, [navigation, accessToken]);
+  }, [navigation, accessToken, cardEnabled]);
 
   useEffect(() => {
     if (userInfo) {

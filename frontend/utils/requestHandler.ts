@@ -40,9 +40,14 @@ export const apiRequest = async (
   }
 
   // Set Authorization Header
+  //
+  // `x-user-assertion` carries the same token and is what the backend forwards to other
+  // with a JWT it mints itself, so that header cannot be replayed downstream; this custom
+  // one is passed through untouched. The chat agent already relies on the same header.
   config.headers = {
     ...config.headers,
     Authorization: `Bearer ${accessToken}`,
+    "x-user-assertion": accessToken,
   };
 
   if (__DEV__) {
@@ -57,6 +62,7 @@ export const apiRequest = async (
       if (newAuthData?.accessToken) {
         // Retry the request with the new token
         config.headers.Authorization = `Bearer ${newAuthData.accessToken}`;
+        config.headers["x-user-assertion"] = newAuthData.accessToken;
         if (__DEV__) {
           config.headers["x-jwt-assertion"] = newAuthData.accessToken;
         }

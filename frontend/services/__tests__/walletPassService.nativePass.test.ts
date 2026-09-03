@@ -22,8 +22,8 @@ jest.mock("@/utils/requestHandler", () => ({
   apiRequest: jest.fn(),
 }));
 
-// The endpoint URLs are built when the service loads, so pin the base URL
-// rather than depend on the environment running the tests.
+// The endpoint URLs are built when the service loads, so the base URL is pinned
+// here rather than depending on the environment running the tests.
 jest.mock("@/constants/Constants", () => ({
   __esModule: true,
   ...jest.requireActual("@/constants/Constants"),

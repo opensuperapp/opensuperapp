@@ -16,7 +16,8 @@
 import { isIos } from "@/constants/Constants";
 import { RootState } from "@/context/store";
 import { useTokenClaims } from "@/hooks/useTokenClaims";
-import { useWalletPassEnabled } from "@/hooks/useWalletPassEnabled";
+import { useWalletPassConfig } from "@/hooks/useWalletPassConfig";
+import { useWalletPassPresence } from "@/hooks/useWalletPassPresence";
 import { logout } from "@/services/authService";
 import { shareCardImage, shareVCard } from "@/services/businessCardService";
 import { saveBusinessCardPass } from "@/services/walletPassService";
@@ -40,11 +41,18 @@ export const useBusinessCardActions = (visible: boolean) => {
   const passRef = useRef<View>(null);
   const [qrVisible, setQrVisible] = useState(false);
   const [saving, setSaving] = useState(false);
-  const walletPassEnabled = useWalletPassEnabled();
+  const [disclaimerVisible, setDisclaimerVisible] = useState(false);
+  const { walletDownloadEnabled } = useWalletPassConfig();
+  // The pass serial number is the JWT `userid`, not the work email — the same
+  // identity key the wallet service builds passes under.
+  const { inWallet, markAdded, openInWallet, addAgain } = useWalletPassPresence(
+    visible,
+    claims?.userid,
+  );
 
   const data = useMemo(
     () => toBusinessCardData(userInfo, claims),
-    [userInfo, claims]
+    [userInfo, claims],
   );
 
   useEffect(() => {
@@ -57,8 +65,11 @@ export const useBusinessCardActions = (visible: boolean) => {
     // would pop straight back up the next time the sheet is shown. Resetting
     // here rather than in the close handlers covers every way the sheet can go
     // away — on iOS the pageSheet swipe-to-dismiss never fires onRequestClose,
-    // and the parent can drop `visible` on its own at any time.
+    // and the parent can drop `visible` on its own at any time. The consent
+    // sheet is reset for the same reason, and because consent shown once is
+    // not consent given: it has to be asked again next time.
     setQrVisible(false);
+    setDisclaimerVisible(false);
   }, [visible]);
 
   const openQr = () => {
@@ -84,33 +95,49 @@ export const useBusinessCardActions = (visible: boolean) => {
     } catch (error) {
       Alert.alert(
         "Couldn't save image",
-        "Something went wrong while exporting your card."
+        "Something went wrong while exporting your card.",
       );
       console.error("Failed to save business card as image", error);
     }
   };
 
-  const savePass = async () => {
+  // Tapping the wallet button does not save anything. It asks first: the card
+  // carries employee personal data to a third-party wallet, and the point of
+  // the consent sheet is that the employee reads what that means before it
+  // happens, not after. The friction is the feature.
+  const savePass = () => {
     // The .vcf is a real answer to "I want this contact somewhere" while the
     // pass path is still gated behind the env flag and remote config.
-    if (!walletPassEnabled) {
+    if (!walletDownloadEnabled) {
       Alert.alert(
         "Not available yet",
         `Saving to ${isIos ? "Apple" : "Google"} Wallet is still being rolled out. You can share your contact file instead.`,
         [
           { text: "Cancel", style: "cancel" },
           { text: "Share contact file", onPress: shareContactFile },
-        ]
+        ],
       );
       return;
     }
 
+    logAnalyticsEvent("wallet_disclaimer_shown");
+    setDisclaimerVisible(true);
+  };
+
+  const declineDisclaimer = () => setDisclaimerVisible(false);
+
+  const acceptDisclaimer = async () => {
     setSaving(true);
     try {
-      const added = await saveBusinessCardPass(walletPassEnabled, logout);
+      const added = await saveBusinessCardPass(walletDownloadEnabled, logout);
       if (added) {
         logAnalyticsEvent("wallet_pass_added");
+        await markAdded();
       }
+      // Only on the way out, so the consent sheet keeps its spinner for the
+      // whole call and a failure leaves the employee on the screen they can
+      // retry from rather than back on a card that looks untouched.
+      setDisclaimerVisible(false);
     } finally {
       setSaving(false);
     }
@@ -121,10 +148,17 @@ export const useBusinessCardActions = (visible: boolean) => {
     passRef,
     qrVisible,
     saving,
+    disclaimerVisible,
+    walletDownloadEnabled,
+    passInWallet: inWallet,
     openQr,
     closeQr,
     shareContactFile,
     saveAsImage,
     savePass,
+    acceptDisclaimer,
+    declineDisclaimer,
+    openWallet: openInWallet,
+    addPassAgain: addAgain,
   };
 };

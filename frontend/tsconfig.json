@@ -2,6 +2,10 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
+    // Platform files (Foo.ios.tsx / Foo.android.tsx) are resolved by Metro at
+    // bundle time. Without this, tsc cannot follow an import of "./Foo" that
+    // has no base file and reports it as a missing module.
+    "moduleSuffixes": [".ios", ".android", ".native", ""],
     "paths": {
       "@/*": ["./*"]
     }
