@@ -247,6 +247,11 @@ export const removeMicroApp = async (
       zipFile.delete();
     }
 
+    // Drop the entitlement before flipping the status. The status dispatch
+    // re-triggers the My Apps sync effect, which would otherwise still see this
+    // app as entitled but missing from disk and immediately re-download it.
+    await UpdateUserConfiguration(appId, NOT_DOWNLOADED, onLogout); // Update user configurations
+
     dispatch(
       updateAppStatus({
         appId,
@@ -258,7 +263,6 @@ export const removeMicroApp = async (
         displayMode: DEFAULT_VIEWING_MODE,
       })
     );
-    await UpdateUserConfiguration(appId, NOT_DOWNLOADED, onLogout); // Update user configurations
   } catch (error) {
     Alert.alert("Error", "Failed to remove the app.");
   }

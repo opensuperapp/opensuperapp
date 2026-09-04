@@ -60,6 +60,7 @@ export default function HomeScreen() {
   const downloadProgress = useSelector(
     (state: RootState) => state.apps.downloadProgress
   );
+  const downloading = useSelector((state: RootState) => state.apps.downloading);
   const { userId } = useSelector((state: RootState) => state.auth);
   const isForceUpdate = useSelector(
     (state: RootState) =>
@@ -88,6 +89,10 @@ export default function HomeScreen() {
   });
   const [updatingApps, setUpdatingApps] = useState<string[]>([]);
   const isCheckingUpdates = useRef(false);
+  // Mirrored into a ref so syncApps can read the in-flight download set without
+  // adding it to the effect's dependencies (which would change when syncApps runs).
+  const downloadingRef = useRef<string[]>(downloading);
+  downloadingRef.current = downloading;
   useTrackActiveScreen(ScreenPaths.MY_APPS);
   const updateCheckInterval = useSelector(
     (state: RootState) =>
@@ -222,11 +227,16 @@ export default function HomeScreen() {
           }
         }
 
+        // A download in flight has already written its files and status, but
+        // has not yet recorded its entitlement. Leave those apps alone so this
+        // effect never removes or re-downloads an app it raced with.
+        const inFlight = downloadingRef.current;
+
         const appsToRemove = localAppIds.filter(
-          (appId) => !allowedApps.includes(appId)
+          (appId) => !allowedApps.includes(appId) && !inFlight.includes(appId)
         );
         const appsToInstall = allowedApps.filter(
-          (appId) => !localAppIds.includes(appId)
+          (appId) => !localAppIds.includes(appId) && !inFlight.includes(appId)
         );
 
         const totalSteps = appsToRemove.length + appsToInstall.length;
