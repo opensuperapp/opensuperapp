@@ -19,7 +19,10 @@ import {
   DOWNLOADED,
   USER_CONFIGURATIONS,
 } from "@/constants/Constants";
-import { UserConfig } from "@/context/slices/userConfigSlice";
+import {
+  setUserConfigValue,
+  UserConfig,
+} from "@/context/slices/userConfigSlice";
 import { store } from "@/context/store";
 import { apiRequest } from "@/utils/requestHandler";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -67,8 +70,10 @@ export const UpdateUserConfiguration = async (
       return;
     }
 
-    let updatedConfigValue = Array.isArray(appUserConfigs.configValue)
-      ? [...appUserConfigs.configValue]
+    // The app-list config is always a string[] of appIds; annotate so the value
+    // can be handed to the typed reducer below. No runtime change.
+    let updatedConfigValue: string[] = Array.isArray(appUserConfigs.configValue)
+      ? [...(appUserConfigs.configValue as string[])]
       : [];
 
     if (action === DOWNLOADED) {
@@ -88,6 +93,15 @@ export const UpdateUserConfiguration = async (
     await AsyncStorage.setItem(
       USER_CONFIGURATIONS,
       JSON.stringify(updatedUserConfigs)
+    );
+    // Keep Redux in step with the write above. Without this, readers such as
+    // the My Apps sync effect keep using the boot-time snapshot and treat a
+    // just-downloaded app as one the user is no longer entitled to.
+    store.dispatch(
+      setUserConfigValue({
+        configKey: APP_LIST_CONFIG_KEY,
+        configValue: updatedConfigValue,
+      })
     );
     const state = store.getState();
     const userId = state.auth.userId;
@@ -121,6 +135,12 @@ export const UpdateUserConfiguration = async (
       await AsyncStorage.setItem(
         USER_CONFIGURATIONS,
         JSON.stringify(storedUserConfigs)
+      );
+      store.dispatch(
+        setUserConfigValue({
+          configKey: APP_LIST_CONFIG_KEY,
+          configValue: appUserConfigs.configValue,
+        })
       );
     }
 
