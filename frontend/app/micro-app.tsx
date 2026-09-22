@@ -17,6 +17,7 @@ import NotFound from "@/components/NotFound";
 import Scanner from "@/components/Scanner";
 import { Colors } from "@/constants/Colors";
 import {
+  CAMERA_PERMISSION,
   DEVELOPER_APP_ANDROID_DEFAULT_URL,
   DEVELOPER_APP_IOS_DEFAULT_URL,
   FULL_SCREEN_VIEWING_MODE,
@@ -26,6 +27,7 @@ import {
   GOOGLE_WEB_CLIENT_ID,
   isAndroid,
   isIos,
+  MICROPHONE_PERMISSION,
 } from "@/constants/Constants";
 import { RootState } from "@/context/store";
 import { logout, tokenExchange } from "@/services/authService";
@@ -48,7 +50,11 @@ import {
   ScheduledNotificationIdentifiable,
 } from "@/types/microApp.types";
 import { MicroAppParams } from "@/types/navigation";
-import { injectedJavaScript, TOPIC } from "@/utils/bridge";
+import {
+  buildMediaCaptureGuard,
+  injectedJavaScript,
+  TOPIC,
+} from "@/utils/bridge";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Google from "expo-auth-session/providers/google";
 import { documentDirectory } from "expo-file-system";
@@ -105,6 +111,20 @@ const MicroApp = () => {
     (state: RootState) => state.appConfig.appScopes
   );
   const isDeveloper: boolean = appId.includes("developer");
+  // What this micro app declared in its microapp.json. The host already holds the OS
+  // camera and microphone permissions for the built in QR scanner, so without this the
+  // WebView would hand capture to every micro app that thought to ask for it. The
+  // developer shell has no microapp.json to declare anything and an author has to be
+  // able to test a capture screen before packaging it, so it is granted both.
+  const requiredPermissions = useSelector(
+    (state: RootState) =>
+      state.apps.apps.find((app) => app.appId === appId)?.requiredPermissions
+  );
+  const allowsCamera =
+    isDeveloper || !!requiredPermissions?.includes(CAMERA_PERMISSION);
+  const allowsMicrophone =
+    isDeveloper || !!requiredPermissions?.includes(MICROPHONE_PERMISSION);
+  const allowsMediaCapture = allowsCamera || allowsMicrophone;
   const isTotp: boolean = appId.includes("totp");
   const insets = useSafeAreaInsets();
   const shouldShowHeader: boolean = displayMode !== FULL_SCREEN_VIEWING_MODE;
@@ -728,7 +748,22 @@ const MicroApp = () => {
             onShouldStartLoadWithRequest={() => true}
             domStorageEnabled
             webviewDebuggingEnabled={isDeveloper}
-            injectedJavaScriptBeforeContentLoaded={injectedJavaScript}
+            // iOS only, and the only native gate available for capture: WKWebView asks
+            // the host once per request and "deny" refuses without reaching the page.
+            // It cannot tell camera from microphone, so which of the two a micro app
+            // actually gets is settled by the guard script below.
+            mediaCapturePermissionGrantType={
+              allowsMediaCapture ? "grant" : "deny"
+            }
+            // Without these two a MediaStream preview on iOS is handed to the fullscreen
+            // native player and will not start without a tap, which leaves no way to draw
+            // a viewfinder overlay over it.
+            allowsInlineMediaPlayback
+            mediaPlaybackRequiresUserAction={false}
+            injectedJavaScriptBeforeContentLoaded={
+              buildMediaCaptureGuard(allowsCamera, allowsMicrophone) +
+              injectedJavaScript
+            }
           />
         )}
       </View>

@@ -152,6 +152,7 @@ build/
   "isMandatory": 0,
   "clientId": "client-id-for-authentication-if-integrated",
   "displayMode": "Controls whether to hide the header ('fullscreen') or show it ('default'). If no value is provided, it defaults to 'default'",
+  "requiredPermissions": ["camera"],
   "versions": [
     {
       "version": "version no",
@@ -180,6 +181,61 @@ build/
 9. Additionally, you can restrict micro-app visibility by groups using the `micro_app_role` table and mentioning groups in the role column.
    <br></br>
    <img src="../resources/micro_app_role.png" alt="Micro App Role Database Table" width="700"/>
+
+---
+
+### Camera and microphone in a micro app
+
+A micro app can call `navigator.mediaDevices.getUserMedia()` directly — reading camera
+frames in JavaScript is the only way to do things the native bridge does not offer, such as
+decoding a barcode format `requestQr()` does not scan or sampling colour from a frame. The
+existing `requestQr()` topic remains the better choice for plain QR scanning: it uses the
+native scanner and needs no declaration.
+
+The super app already holds the OS camera and microphone permissions, for the built-in QR
+scanner. Holding them is not the same as handing them to web content, so capture is refused
+unless the micro app declares it:
+
+```json
+"requiredPermissions": ["camera", "microphone"]
+```
+
+Declare only what the app uses. `camera` admits video capture, `microphone` admits audio
+capture, and a `getUserMedia` call for anything undeclared rejects with `NotAllowedError`.
+Screen capture (`getDisplayMedia`) is never available. The store listing shows the user what
+an app declared, before they install it, so an undeclared sensor is a promise broken to
+them.
+
+How it is enforced differs by platform, and it is worth knowing which line refuses you:
+
+- **iOS** — `mediaCapturePermissionGrantType` on the `WebView` is the native gate. An app
+  that declared neither capability is refused by WKWebView before the page is consulted.
+  The gate cannot tell camera from microphone, so which of the two an app that declared
+  only one actually gets is settled by the injected guard.
+- **Android** — `react-native-webview` grants any resource the host already has an OS
+  permission for, and exposes no per-`WebView` prop to override that, so the declaration is
+  enforced entirely by the injected guard.
+
+The guard (`buildMediaCaptureGuard` in `utils/bridge.ts`) runs before any page script and
+either removes `getUserMedia` or wraps it to reject an undeclared kind. It is a gate, not a
+sandbox: it covers the main frame, so a bundle that goes looking for a fresh realm can still
+reach the untouched API. It is enough to hold an app to what it declared, which is what the
+store listing promises.
+
+The developer micro app is granted both, because it has no `microapp.json` to declare
+anything and an author has to be able to test a capture screen before packaging it.
+
+Two things to know when building the capture screen itself:
+
+- Give the preview `<video>` a `playsinline` attribute and `muted`. The host sets
+  `allowsInlineMediaPlayback` and `mediaPlaybackRequiresUserAction={false}`, but without
+  `playsinline` on the element iOS still hands the stream to the fullscreen native player,
+  and nothing can be drawn over it.
+- A packaged micro app is served from a `file://` path. That is a secure context, so
+  `navigator.mediaDevices` is present, but the origin is opaque: a grant cannot be
+  remembered against it and the user is asked again each time the WebView is created.
+  Verify capture on a real iOS device before depending on it — the simulator does not
+  model this.
 
 ---
 

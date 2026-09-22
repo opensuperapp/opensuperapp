@@ -260,6 +260,7 @@ const Store = () => {
                 iconUrl={item.iconUrl}
                 status={item.status || NOT_DOWNLOADED}
                 displayMode={item.displayMode}
+                requiredPermissions={item.requiredPermissions}
                 downloading={
                   downloading.includes(item.appId) ||
                   installationQueue.some((i) => i.appId === item.appId)

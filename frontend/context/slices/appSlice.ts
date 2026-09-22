@@ -43,6 +43,10 @@ export type MicroApp = {
   clientId?: string | "";
   exchangedToken?: string | "";
   displayMode?: DisplayMode;
+  // Capabilities the micro app declared in its microapp.json. Capabilities that carry
+  // privacy weight (currently "camera" and "microphone") are refused unless listed
+  // here, so the host holding an OS permission does not hand it to every micro app.
+  requiredPermissions?: string[];
 };
 
 interface AppsState {
@@ -89,6 +93,7 @@ const appsSlice = createSlice({
         clientId: string;
         exchangedToken?: string;
         displayMode?: DisplayMode;
+        requiredPermissions?: string[];
       }>
     ) => {
       const {
@@ -98,6 +103,7 @@ const appsSlice = createSlice({
         clientId,
         exchangedToken,
         displayMode,
+        requiredPermissions,
       } = action.payload;
       const app = state.apps.find((app) => app.appId === appId);
       if (app) {
@@ -105,6 +111,8 @@ const appsSlice = createSlice({
         app.webViewUri = webViewUri;
         app.clientId = clientId;
         app.displayMode = displayMode ?? app.displayMode;
+        // An install that declares nothing must clear what a previous install declared.
+        app.requiredPermissions = requiredPermissions ?? [];
         if (exchangedToken !== undefined) {
           app.exchangedToken = exchangedToken;
           void (exchangedToken

@@ -93,6 +93,13 @@ export const APP_UPDATE_CHECK_TIMESTAMP_KEY = "app_update_check_timestamp";
 export const FULL_SCREEN_VIEWING_MODE = "fullscreen";
 export const DEFAULT_VIEWING_MODE = "default";
 
+// Media capture capabilities a micro app may declare in its microapp.json. The host
+// already holds the OS camera and microphone permissions for the built in QR scanner,
+// so these do not gate the OS prompt - they gate whether the WebView hands that
+// permission through to web content, which is a separate decision per micro app.
+export const CAMERA_PERMISSION = "camera";
+export const MICROPHONE_PERMISSION = "microphone";
+
 // Keys for Secure Store
 export const LAST_SENT_FCM_TOKEN = "last_sent_fcm_token";
 export const ACCESS_TOKEN = "secure_access_token";

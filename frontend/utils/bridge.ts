@@ -124,3 +124,69 @@ export const injectedJavaScript = `window.nativebridge = {
     resolveComposeEmail: (result) => console.log("Email composed successfully:", result),
     rejectComposeEmail: (err) => console.error("Failed to compose email:", err)
   };`;
+
+/**
+ * Builds the script that constrains `getUserMedia` to what the micro app declared.
+ *
+ * Media capture is the one capability the host cannot gate from the native side alone.
+ * On iOS `mediaCapturePermissionGrantType` decides for the whole WebView and is blind to
+ * whether the page asked for the camera or the microphone, and on Android
+ * `react-native-webview` grants any resource the host already holds an OS permission for,
+ * with no per WebView prop to say otherwise. So the declaration in microapp.json is
+ * enforced here, before any page script runs, and the same rule then applies on both
+ * platforms.
+ *
+ * This is a gate, not a sandbox: it runs in the main frame, so a bundle that goes looking
+ * for a fresh realm can still reach the untouched API. It is enough to stop a micro app
+ * using a sensor it never declared, which is what the store listing promises the user.
+ * On iOS the undeclared case is additionally refused natively and this script never
+ * decides it.
+ *
+ * @param allowVideo Whether the micro app declared the camera capability.
+ * @param allowAudio Whether the micro app declared the microphone capability.
+ * @returns JavaScript to inject before the micro app's own scripts load.
+ */
+export const buildMediaCaptureGuard = (
+  allowVideo: boolean,
+  allowAudio: boolean
+) => {
+  if (!allowVideo && !allowAudio) {
+    // Remove the entry points outright rather than let a call reach the native layer.
+    // A micro app that feature detects sees no capture support, which is the truth.
+    return `(function () {
+      try {
+        if (navigator.mediaDevices) {
+          delete navigator.mediaDevices.getUserMedia;
+          delete navigator.mediaDevices.getDisplayMedia;
+        }
+        delete navigator.getUserMedia;
+        delete navigator.webkitGetUserMedia;
+      } catch (e) {}
+    })();`;
+  }
+
+  return `(function () {
+    try {
+      var devices = navigator.mediaDevices;
+      if (!devices || !devices.getUserMedia) return;
+      var allowVideo = ${allowVideo};
+      var allowAudio = ${allowAudio};
+      var original = devices.getUserMedia.bind(devices);
+      devices.getUserMedia = function (constraints) {
+        var wants = constraints || {};
+        if ((wants.video && !allowVideo) || (wants.audio && !allowAudio)) {
+          return Promise.reject(new DOMException(
+            "This app did not declare the media it asked for.", "NotAllowedError"));
+        }
+        return original(constraints);
+      };
+      if (devices.getDisplayMedia) {
+        // Screen capture is never part of the camera or microphone declaration.
+        devices.getDisplayMedia = function () {
+          return Promise.reject(new DOMException(
+            "Screen capture is not available to micro apps.", "NotAllowedError"));
+        };
+      }
+    } catch (e) {}
+  })();`;
+};
