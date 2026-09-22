@@ -183,6 +183,7 @@ const unzipFile = async (dispatch: AppDispatch, appId: string) => {
         webViewUri: relativeUri,
         clientId: microAppConfig.clientId,
         displayMode: microAppConfig.displayMode,
+        requiredPermissions: microAppConfig.requiredPermissions,
       })
     );
   } catch (error: any) {
@@ -229,22 +230,42 @@ const getMicroAppConfig = async (extractedDir: string) => {
           return {
             clientId: appConfig.clientId || null,
             displayMode: appConfig.displayMode || DEFAULT_VIEWING_MODE,
+            requiredPermissions: parseRequiredPermissions(
+              appConfig.requiredPermissions
+            ),
           };
         } catch (jsonError) {
           console.error("Error parsing microapp.json:", jsonError);
           Alert.alert("Error", "Failed to parse microapp.json.");
-          return { clientId: null, displayMode: DEFAULT_VIEWING_MODE };
+          return EMPTY_MICRO_APP_CONFIG;
         }
       }
     }
 
     Alert.alert("Error", "microapp configs not found after unzipping.");
-    return { clientId: null, displayMode: DEFAULT_VIEWING_MODE };
+    return EMPTY_MICRO_APP_CONFIG;
   } catch (error) {
     console.error("Error reading microapp config:", error);
-    return { clientId: null, displayMode: DEFAULT_VIEWING_MODE };
+    return EMPTY_MICRO_APP_CONFIG;
   }
 };
+
+const EMPTY_MICRO_APP_CONFIG = {
+  clientId: null,
+  displayMode: DEFAULT_VIEWING_MODE,
+  requiredPermissions: [] as string[],
+};
+
+/**
+ * Reads the `requiredPermissions` field of a microapp.json, ignoring anything that is
+ * not an array of strings. A malformed field must grant nothing rather than everything.
+ * @param value The raw value read from microapp.json.
+ * @returns The declared permissions, or an empty list.
+ */
+const parseRequiredPermissions = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === "string")
+    : [];
 
 export const removeMicroApp = async (
   dispatch: AppDispatch,
@@ -312,6 +333,10 @@ const mergeAppData = (latestApp: MicroApp, storedApp?: MicroApp): MicroApp => {
     exchangedToken: storedApp.exchangedToken || "",
     displayMode:
       storedApp.displayMode || latestApp.displayMode || DEFAULT_VIEWING_MODE,
+    // The installed microapp.json is what the host enforces against, so it wins over
+    // the store listing. The listing is only a pre-install preview.
+    requiredPermissions:
+      storedApp.requiredPermissions ?? latestApp.requiredPermissions ?? [],
   };
 };
 
