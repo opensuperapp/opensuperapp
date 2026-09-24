@@ -51,12 +51,14 @@ export type MicroApp = {
 interface AppsState {
   apps: MicroApp[];
   downloading: string[];
+  removing: string[];
   downloadProgress: { [appId: string]: number }; // Track download progress for each app (0-100)
 }
 
 const initialState: AppsState = {
   apps: [],
   downloading: [],
+  removing: [],
   downloadProgress: {},
 };
 
@@ -75,6 +77,16 @@ const appsSlice = createSlice({
         (appId) => appId !== action.payload
       );
       delete state.downloadProgress[action.payload];
+    },
+    addRemoving(state, action: PayloadAction<string>) {
+      if (!state.removing.includes(action.payload)) {
+        state.removing.push(action.payload);
+      }
+    },
+    removeRemoving(state, action: PayloadAction<string>) {
+      state.removing = state.removing.filter(
+        (appId) => appId !== action.payload
+      );
     },
     updateDownloadProgress(
       state,
@@ -159,6 +171,8 @@ export const {
   setApps,
   addDownloading,
   removeDownloading,
+  addRemoving,
+  removeRemoving,
   updateDownloadProgress,
   updateAppStatus,
   updateExchangedToken,

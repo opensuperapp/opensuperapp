@@ -23,8 +23,10 @@ import {
 } from "@/constants/Constants";
 import {
   addDownloading,
+  addRemoving,
   MicroApp,
   removeDownloading,
+  removeRemoving,
   setApps,
   updateAppStatus,
   updateDownloadProgress,
@@ -79,12 +81,24 @@ export const downloadMicroApp = async (
     await downloadAndSaveFile(dispatch, appId, downloadUrl); // Download react production build
     dispatch(updateDownloadProgress({ appId, progress: 70 }));
 
-    await unzipFile(dispatch, appId); // Unzip downloaded zip file
+    const installed = await unzipFile(appId); // Unzip downloaded zip file
     dispatch(updateDownloadProgress({ appId, progress: 90 }));
 
+    // The user config list has to gain the app before its status flips: the My
+    // Apps screen reconciles what is on disk against that list, and would
+    // uninstall the app again if it saw the new status first.
     await UpdateUserConfiguration(appId, DOWNLOADED, onLogout); // Update user configurations
+    dispatch(
+      updateAppStatus({
+        appId,
+        status: DOWNLOADED,
+        webViewUri: installed.webViewUri,
+        clientId: installed.clientId,
+        displayMode: installed.displayMode,
+      })
+    );
     dispatch(updateDownloadProgress({ appId, progress: 100 }));
-    
+
     return true;
   } catch (error) {
     await UpdateUserConfiguration(appId, NOT_DOWNLOADED, onLogout); // Update user configurations
@@ -112,7 +126,7 @@ const downloadAndSaveFile = async (
   }
 };
 
-const unzipFile = async (dispatch: AppDispatch, appId: string) => {
+const unzipFile = async (appId: string) => {
   try {
     const microAppsDir = getMicroAppsDirectory();
     const zipFile = new File(microAppsDir, `${appId}.zip`);
@@ -158,15 +172,11 @@ const unzipFile = async (dispatch: AppDispatch, appId: string) => {
 
     const relativeUri = Paths.relative(Paths.document, indexFile);
 
-    dispatch(
-      updateAppStatus({
-        appId,
-        status: DOWNLOADED,
-        webViewUri: encodeURI(relativeUri),
-        clientId: microAppConfig.clientId,
-        displayMode: microAppConfig.displayMode,
-      })
-    );
+    return {
+      webViewUri: encodeURI(relativeUri),
+      clientId: microAppConfig.clientId as string,
+      displayMode: microAppConfig.displayMode,
+    };
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : String(error);
@@ -236,9 +246,19 @@ export const removeMicroApp = async (
   onLogout: () => Promise<void>
 ) => {
   try {
+    // Marks the app busy for the whole removal. The My Apps screen reconciles
+    // disk against the user's app list, and every intermediate state here looks
+    // to it like something to undo.
+    dispatch(addRemoving(appId));
+
     const microAppsDir = getMicroAppsDirectory();
     const extractedDir = new Directory(microAppsDir, `${appId}-extracted`);
     const zipFile = new File(microAppsDir, `${appId}.zip`);
+
+    // Drop the entitlement before flipping the status. The status dispatch
+    // re-triggers the My Apps sync effect, which would otherwise still see this
+    // app as entitled but missing from disk and immediately re-download it.
+    await UpdateUserConfiguration(appId, NOT_DOWNLOADED, onLogout);
 
     if (extractedDir.exists) {
       extractedDir.delete();
@@ -246,11 +266,6 @@ export const removeMicroApp = async (
     if (zipFile.exists) {
       zipFile.delete();
     }
-
-    // Drop the entitlement before flipping the status. The status dispatch
-    // re-triggers the My Apps sync effect, which would otherwise still see this
-    // app as entitled but missing from disk and immediately re-download it.
-    await UpdateUserConfiguration(appId, NOT_DOWNLOADED, onLogout); // Update user configurations
 
     dispatch(
       updateAppStatus({
@@ -265,6 +280,8 @@ export const removeMicroApp = async (
     );
   } catch (error) {
     Alert.alert("Error", "Failed to remove the app.");
+  } finally {
+    dispatch(removeRemoving(appId));
   }
 };
 

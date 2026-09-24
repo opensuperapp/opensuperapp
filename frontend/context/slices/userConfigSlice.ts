@@ -88,23 +88,30 @@ const userConfigSlice = createSlice({
     },
     // Mirrors a single config entry that has already been written to
     // AsyncStorage/the server back into Redux, so in-memory readers don't work
-    // off a boot-time snapshot. Only the named key is touched; every other
-    // entry (and its uuid) is left as-is.
+    // off a boot-time snapshot (which makes the My Apps reconciler undo the
+    // download or removal that just happened). Only the named key is touched;
+    // every other entry (and its uuid) is left as-is.
     setUserConfigValue: (
       state,
       action: PayloadAction<{
         configKey: string;
         configValue: UserConfig["configValue"];
+        isActive?: number;
       }>
     ) => {
-      const { configKey, configValue } = action.payload;
+      const { configKey, configValue, isActive } = action.payload;
       const existing = state.configurations.find(
         (config) => config.configKey === configKey
       );
       if (existing) {
         existing.configValue = configValue;
+        if (isActive !== undefined) existing.isActive = isActive;
       } else {
-        state.configurations.push({ configKey, configValue, isActive: 1 });
+        state.configurations.push({
+          configKey,
+          configValue,
+          isActive: isActive ?? 1,
+        });
       }
     },
   },

@@ -101,6 +101,7 @@ export const UpdateUserConfiguration = async (
       setUserConfigValue({
         configKey: APP_LIST_CONFIG_KEY,
         configValue: updatedConfigValue,
+        isActive: appUserConfigs.isActive,
       })
     );
     const state = store.getState();
@@ -136,10 +137,12 @@ export const UpdateUserConfiguration = async (
         USER_CONFIGURATIONS,
         JSON.stringify(storedUserConfigs)
       );
+      // Roll the Redux mirror back to the pre-write value as well.
       store.dispatch(
         setUserConfigValue({
           configKey: APP_LIST_CONFIG_KEY,
           configValue: appUserConfigs.configValue,
+          isActive: appUserConfigs.isActive,
         })
       );
     }
