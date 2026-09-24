@@ -15,8 +15,13 @@
 // under the License.
 
 /**
- * Copy for the consent step shown before a business card is written to a
- * wallet.
+ * The wallet disclaimer, as the employee reads it.
+ *
+ * This is not a gate. It sits behind a link in the business card's action row,
+ * so the disclosure is available on demand rather than standing between the
+ * wallet button and the save. The text still speaks in the language of terms
+ * being agreed to, because it is the same disclosure Legal wrote — tapping the
+ * vendor's add button is the acceptance it refers to.
  *
  * The two platforms get two texts because they are two different disclosures,
  * not one disclosure with the vendor's name swapped. An Apple pass is signed by
@@ -29,26 +34,19 @@
  *
  * Field lists are kept in step with the pass field set in
  * wallet-pass-service/internal/card/card.go. If a field is added there it has to
- * be named here too, otherwise this screen is quietly consenting to something it
- * does not describe.
+ * be named here too, otherwise this screen is quietly describing a card that no
+ * longer exists.
+ *
+ * The copy is markdown and is rendered by react-native-markdown-display, so the
+ * emphasis and the mailto: link below are load-bearing rather than decorative.
  */
-
-/** WSO2's public, external-facing privacy policy. */
-export const WSO2_PRIVACY_POLICY_URL = "https://wso2.com/privacy-policy";
-
-/**
- * The internal People Operations Data Protection Policy — the document that
- * actually governs employee data. It is not on the public web, so the location
- * is configuration rather than a constant: an intranet URL differs per
- * deployment and a broken link on a consent screen is worse than none. Falls
- * back to the public policy so the link is never dead.
- */
-export const EMPLOYEE_PRIVACY_POLICY_URL =
-  process.env.EXPO_PUBLIC_EMPLOYEE_PRIVACY_POLICY_URL ||
-  WSO2_PRIVACY_POLICY_URL;
 
 /** Data Protection Officer, per §8.0 of the People Operations policy. */
 export const DPO_EMAIL = "dpo@wso2.com";
+
+/** Sheet titles, which are the `#` heading of each document. */
+export const APPLE_WALLET_DISCLAIMER_TITLE = "Apple Wallet Disclaimer";
+export const GOOGLE_WALLET_DISCLAIMER_TITLE = "Google Wallet Disclaimer";
 
 /**
  * The part both platforms share: what leaves your profile and goes onto the
@@ -62,17 +60,23 @@ Your **name**, **job title**, **department**, **work email**, **office phone**, 
 The card also carries a QR code holding the same details as a contact file, so anyone you show it to can scan and keep them.`;
 
 /**
- * The part both platforms share: rights and where to ask. Deliberately short —
- * §10.1 of the policy lists five rights and reciting all of them here would bury
- * the one sentence that matters, which is that this is governed and reversible.
+ * The part both platforms share, bar the vendor's name: rights, where to ask,
+ * and what the add button means. Deliberately short — §10.1 of the policy lists
+ * five rights and reciting all of them here would bury the sentence that
+ * matters, which is that this is governed and reversible.
+ *
+ * @param wallet - The vendor wallet's name, as it appears on its add button.
+ * @returns The closing section of the disclaimer.
  */
-const YOUR_RIGHTS = `## Your data
+const yourRights = (wallet: string) => `## Your data
 
-These are employee details, and WSO2 processes them under the [People Operations Data Protection Policy](${EMPLOYEE_PRIVACY_POLICY_URL}). You can ask to see, correct or erase them at any time, and you can delete the card from your wallet whenever you like.
+These are employee details, and WSO2 processes them as explained here. You can ask to see, correct or erase them at any time, and you can delete the card from your wallet whenever you like.
 
-[WSO2 Privacy Policy](${WSO2_PRIVACY_POLICY_URL}) · [${DPO_EMAIL}](mailto:${DPO_EMAIL})`;
+Any questions related to the data processing can be directed to [${DPO_EMAIL}](mailto:${DPO_EMAIL}).
 
-/** Consent copy for Apple Wallet. */
+By clicking “Continue with the ${wallet}” to access or use the ${wallet}, you acknowledge and agree to these Terms. If you do not agree to these Terms, please do not click “Continue with the ${wallet}” or proceed with accessing or using the ${wallet}.`;
+
+/** Disclaimer copy for Apple Wallet. */
 export const APPLE_WALLET_DISCLAIMER_MD = `${WHAT_IS_USED}
 
 ## How it works
@@ -81,13 +85,13 @@ WSO2 builds and signs the card, then hands it to **Apple Wallet on this device**
 
 To keep it current, Wallet registers the card with WSO2 and Apple's push service tells your device when something has changed. That message carries no content, so **Apple never receives your card details**.
 
-${YOUR_RIGHTS}`;
+${yourRights("Apple Wallet")}`;
 
-/** Consent copy for Google Wallet. */
+/** Disclaimer copy for Google Wallet. */
 export const GOOGLE_WALLET_DISCLAIMER_MD = `${WHAT_IS_USED}
 
 ## How it works
 
 WSO2 builds the card and saves it to **Google Wallet**. Unlike a card held only on your phone, Google stores and renders this one on **Google's servers** — so saving it **shares the details above with Google**, and Google fetches your directory photo from WSO2. Google's own privacy policy covers what it does with them from there.
 
-${YOUR_RIGHTS}`;
+${yourRights("Google Wallet")}`;

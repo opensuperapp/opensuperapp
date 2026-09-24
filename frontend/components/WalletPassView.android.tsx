@@ -97,17 +97,6 @@ const WalletPassView = forwardRef<View, Props>(
         <Text style={styles.barcodeAlternateText} numberOfLines={1}>
           {data.workEmail}
         </Text>
-
-        {/* Wallet draws the hero image full width at the foot of the pass,
-            not as a thumbnail beside the name the way an Apple pass does. */}
-        {data.photoUri && (
-          <Image
-            source={{ uri: data.photoUri }}
-            style={styles.hero}
-            resizeMode="cover"
-            accessibilityIgnoresInvertColors
-          />
-        )}
       </View>
     );
   }

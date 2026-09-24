@@ -34,6 +34,9 @@ type Props = {
   onAddAgain: () => void;
   onShareVCard: () => void;
   onSaveAsImage: () => void;
+  // Opens the disclaimer describing what the wallet does with the card. Only
+  // reachable when the wallet download is on; see BusinessCardActionsFooter.
+  onShowDisclaimer: () => void;
 };
 
 const BusinessCardActions = ({
@@ -44,10 +47,12 @@ const BusinessCardActions = ({
   onOpenWallet,
   onShareVCard,
   onSaveAsImage,
+  onShowDisclaimer,
 }: Props) => (
   <BusinessCardActionsFooter
     onShareVCard={onShareVCard}
     onSaveAsImage={onSaveAsImage}
+    onShowDisclaimer={walletDownloadEnabled ? onShowDisclaimer : undefined}
   >
     {walletDownloadEnabled ? (
       // Adding a pass that is already installed re-opens the same "Add"
