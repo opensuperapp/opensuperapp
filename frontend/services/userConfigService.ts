@@ -19,7 +19,10 @@ import {
   DOWNLOADED,
   USER_CONFIGURATIONS,
 } from "@/constants/Constants";
-import { UserConfig } from "@/context/slices/userConfigSlice";
+import {
+  UserConfig,
+  upsertUserConfiguration,
+} from "@/context/slices/userConfigSlice";
 import { store } from "@/context/store";
 import { apiRequest } from "@/utils/requestHandler";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -67,8 +70,8 @@ export const UpdateUserConfiguration = async (
       return;
     }
 
-    let updatedConfigValue = Array.isArray(appUserConfigs.configValue)
-      ? [...appUserConfigs.configValue]
+    let updatedConfigValue: string[] = Array.isArray(appUserConfigs.configValue)
+      ? [...(appUserConfigs.configValue as string[])]
       : [];
 
     if (action === DOWNLOADED) {
@@ -88,6 +91,15 @@ export const UpdateUserConfiguration = async (
     await AsyncStorage.setItem(
       USER_CONFIGURATIONS,
       JSON.stringify(updatedUserConfigs)
+    );
+    // Mirror the write into Redux so screens reconciling against the app list
+    // (e.g. the My Apps sync effect) see the new value instead of a stale one.
+    store.dispatch(
+      upsertUserConfiguration({
+        configKey: APP_LIST_CONFIG_KEY,
+        configValue: updatedConfigValue,
+        isActive: appUserConfigs.isActive,
+      })
     );
     const state = store.getState();
     const userId = state.auth.userId;
@@ -121,6 +133,14 @@ export const UpdateUserConfiguration = async (
       await AsyncStorage.setItem(
         USER_CONFIGURATIONS,
         JSON.stringify(storedUserConfigs)
+      );
+      // Roll the Redux mirror back to the pre-write value as well.
+      store.dispatch(
+        upsertUserConfiguration({
+          configKey: APP_LIST_CONFIG_KEY,
+          configValue: appUserConfigs.configValue,
+          isActive: appUserConfigs.isActive,
+        })
       );
     }
 
