@@ -60,6 +60,7 @@ const handlers = () => ({
   onAddAgain: jest.fn(),
   onShareVCard: jest.fn(),
   onSaveAsImage: jest.fn(),
+  onShowDisclaimer: jest.fn(),
 });
 
 const render = (
@@ -328,68 +329,42 @@ describe.each([
   });
 });
 
-// Once the card is in the wallet the vendor add button has no work left: on
-// iOS re-adding re-opens the same PassKit sheet to no effect, on Android it
-// walks the employee back through Google's save screen. Both platforms hand
-// the primary slot to a plain "Open" affordance drawn in app chrome, because
-// neither vendor allows its own artwork to be relabelled.
-describe.each([
-  ["iOS", AppleActions] as const,
-  ["Android", AndroidActions] as const,
-])(
-  "BusinessCardActions (%s) — card already in the wallet",
-  (_name, Actions) => {
-    const openButton = (root: ReturnType<typeof create>) =>
-      root.root.findByProps({ accessibilityLabel: "open_wallet_app" });
-
-    it("drops the vendor add button and offers Open in wallet instead", () => {
-      const { root } = render(Actions, false, true, true);
-
-      expect(root.root.findAllByType(AddToAppleWalletButton)).toHaveLength(0);
-      expect(root.root.findAllByType(AddToGoogleWalletButton)).toHaveLength(0);
-      expect(
-        root.root.findAllByProps(
-          { accessibilityLabel: "save_business_card" },
-          { deep: false },
-        ),
-      ).toHaveLength(0);
-      expect(
-        root.root.findAllByProps(
-          { accessibilityLabel: "open_wallet_app" },
-          { deep: false },
-        ),
-      ).toHaveLength(1);
-    });
-
-    it("fires onOpenWallet, not onSavePass, when it is tapped", () => {
-      const { root, props } = render(Actions, false, true, true);
-
-      act(() => openButton(root).props.onPress());
-
-      expect(props.onOpenWallet).toHaveBeenCalledTimes(1);
-      expect(props.onSavePass).not.toHaveBeenCalled();
-    });
-  },
-);
-
-describe("BusinessCardActions (Android) — card already in the wallet", () => {
-  it("offers Add again, the only way back when Google cannot be asked", () => {
-    const { root, props } = render(AndroidActions, false, true, true);
-
-    // Android's answer is a marker of what this device last did, so an
-    // employee who deleted the card from Google Wallet is looking at an Open
-    // button for something that is gone. This link is the way out.
-    act(() =>
-      root.root
-        .findByProps({ accessibilityLabel: "add_to_wallet_again" })
-        .props.onPress(),
-    );
-
-    expect(props.onAddAgain).toHaveBeenCalledTimes(1);
-  });
-});
-
+// On iOS, once the card is in the wallet the add button has no work left:
+// re-adding re-opens the same PassKit sheet to no effect. PassKit is also the
+// one that answers the presence question, so the app is acting on the wallet's
+// own word. The primary slot goes to a plain "Open" affordance drawn in app
+// chrome, because Apple does not allow its control to be relabelled.
 describe("BusinessCardActions (iOS) — card already in the wallet", () => {
+  const openButton = (root: ReturnType<typeof create>) =>
+    root.root.findByProps({ accessibilityLabel: "open_wallet_app" });
+
+  it("drops the add button and offers Open in wallet instead", () => {
+    const { root } = render(AppleActions, false, true, true);
+
+    expect(root.root.findAllByType(AddToAppleWalletButton)).toHaveLength(0);
+    expect(
+      root.root.findAllByProps(
+        { accessibilityLabel: "save_business_card" },
+        { deep: false },
+      ),
+    ).toHaveLength(0);
+    expect(
+      root.root.findAllByProps(
+        { accessibilityLabel: "open_wallet_app" },
+        { deep: false },
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("fires onOpenWallet, not onSavePass, when it is tapped", () => {
+    const { root, props } = render(AppleActions, false, true, true);
+
+    act(() => openButton(root).props.onPress());
+
+    expect(props.onOpenWallet).toHaveBeenCalledTimes(1);
+    expect(props.onSavePass).not.toHaveBeenCalled();
+  });
+
   it("offers no Add again: PassKit answers presence, so nothing can go stale", () => {
     const { root } = render(AppleActions, false, true, true);
 
@@ -401,3 +376,85 @@ describe("BusinessCardActions (iOS) — card already in the wallet", () => {
     ).toHaveLength(0);
   });
 });
+
+// Android does none of that, and the reason is that neither half of it holds.
+// There is no Google Wallet app to open — the save URL is a web link, so an
+// "Open in Google Wallet" button put the employee in a browser instead of the
+// wallet it named. And Google cannot be asked what a wallet holds, so
+// passInWallet is only a note of what this device last did: a card deleted from
+// Google Wallet, or added on another device, would have left that employee with
+// a browser link and no way to add it back. So the add button always stands.
+describe("BusinessCardActions (Android) — the wallet slot never changes", () => {
+  it("keeps Google's add button even when the app thinks the card is saved", () => {
+    const { root, props } = render(AndroidActions, false, true, true);
+
+    expect(root.root.findAllByType(AddToGoogleWalletButton)).toHaveLength(1);
+
+    act(() =>
+      root.root
+        .findByProps({ accessibilityLabel: "save_business_card" })
+        .props.onPress(),
+    );
+
+    expect(props.onSavePass).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers no Open in wallet, which only ever reached a browser", () => {
+    const { root, props } = render(AndroidActions, false, true, true);
+
+    expect(
+      root.root.findAllByProps(
+        { accessibilityLabel: "open_wallet_app" },
+        { deep: false },
+      ),
+    ).toHaveLength(0);
+    expect(props.onOpenWallet).not.toHaveBeenCalled();
+  });
+
+  it("offers no Add again, now that the add button is never taken away", () => {
+    const { root } = render(AndroidActions, false, true, true);
+
+    expect(
+      root.root.findAllByProps(
+        { accessibilityLabel: "add_to_wallet_again" },
+        { deep: false },
+      ),
+    ).toHaveLength(0);
+  });
+});
+
+// The disclaimer describes what a wallet does with the employee's details. With
+// the wallet download switched off the card never reaches a wallet at all, so
+// the notice would be describing something that cannot happen — and offering it
+// there would imply an affordance the remote config has taken away.
+describe.each([
+  ["iOS", AppleActions] as const,
+  ["Android", AndroidActions] as const,
+])(
+  "BusinessCardActions (%s) — the wallet disclaimer link",
+  (_name, Actions) => {
+    const label = { accessibilityLabel: "view_wallet_disclaimer" };
+
+    it("offers the disclaimer once the wallet download is on", () => {
+      const { root, props } = render(Actions, false, true);
+
+      expect(root.root.findAllByProps(label, { deep: false })).toHaveLength(1);
+
+      act(() => root.root.findByProps(label).props.onPress());
+
+      expect(props.onShowDisclaimer).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps offering it once the card is already in the wallet", () => {
+      const { root } = render(Actions, false, true, true);
+
+      expect(root.root.findAllByProps(label, { deep: false })).toHaveLength(1);
+    });
+
+    it("withholds it when the wallet download is off", () => {
+      const { root } = render(Actions, false, false);
+
+      expect(root.root.findAllByProps(label, { deep: false })).toHaveLength(0);
+    });
+  },
+);

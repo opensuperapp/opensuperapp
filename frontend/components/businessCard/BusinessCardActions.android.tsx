@@ -14,7 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 import BusinessCardActionsFooter from "@/components/businessCard/BusinessCardActionsFooter";
-import OpenInWalletButton from "@/components/businessCard/OpenInWalletButton";
 import AddToGoogleWalletButton from "@/components/wallet/AddToGoogleWalletButton";
 import {
   GOOGLE_WALLET_BUTTON,
@@ -26,71 +25,73 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 type Props = {
   saving: boolean;
   walletDownloadEnabled: boolean;
-  // Whether this device has saved the card to Google Wallet. Google offers no
-  // way to ask what a wallet holds, so this is what the app last did, not what
-  // is actually there — which is why onAddAgain has to exist here.
+  // Accepted so both platform files take the same props, and deliberately
+  // unused here, along with onOpenWallet and onAddAgain. Google offers no way
+  // to ask what a wallet holds, so this could only ever be a marker of what
+  // this device last did — and acting on it took the add button away from an
+  // employee whose card is not actually there. See below.
   passInWallet: boolean;
   onSavePass: () => void;
   onOpenWallet: () => void;
   onAddAgain: () => void;
   onShareVCard: () => void;
   onSaveAsImage: () => void;
+  // Opens the disclaimer describing what the wallet does with the card. Only
+  // reachable when the wallet download is on; see BusinessCardActionsFooter.
+  onShowDisclaimer: () => void;
 };
 
 const BusinessCardActions = ({
   saving,
   walletDownloadEnabled,
-  passInWallet,
   onSavePass,
-  onOpenWallet,
-  onAddAgain,
   onShareVCard,
   onSaveAsImage,
+  onShowDisclaimer,
 }: Props) => (
   <BusinessCardActionsFooter
     onShareVCard={onShareVCard}
     onSaveAsImage={onSaveAsImage}
-    onAddAgain={walletDownloadEnabled && passInWallet ? onAddAgain : undefined}
+    onShowDisclaimer={walletDownloadEnabled ? onShowDisclaimer : undefined}
   >
     {walletDownloadEnabled ? (
-      // Saving a card Google Wallet already has just walks the employee back
-      // through Google's save screen to no effect, so once it is there the
-      // useful action is opening it instead.
-      passInWallet ? (
-        <OpenInWalletButton
-          label="Open in Google Wallet"
-          onPress={onOpenWallet}
-        />
-      ) : (
-        <Pressable
-          onPress={onSavePass}
-          disabled={saving}
-          style={styles.button}
-          accessibilityRole="button"
-          accessibilityLabel="save_business_card"
-          // The label is baked into Google's artwork, so spell it out for
-          // TalkBack rather than leaving the artwork to be announced.
-          accessibilityHint="Adds your business card to Google Wallet"
-          accessibilityState={{ disabled: saving }}
-        >
-          {saving ? (
-            // Dimming or tinting the button is not allowed, so the pending state
-            // replaces it with a spinner in a box of exactly the same footprint
-            // instead of drawing over it.
-            <View style={styles.pending}>
-              <ActivityIndicator />
-            </View>
-          ) : (
-            // Google's unmodified official primary button, as vector artwork.
-            // GPASS.md forbids recolouring it, altering its font, radius or
-            // padding, and free-scaling it, so it is drawn at its intrinsic
-            // 283x50 and never stretched to the footer width.
-            <AddToGoogleWalletButton
-              height={GOOGLE_WALLET_BUTTON.intrinsicHeight}
-            />
-          )}
-        </Pressable>
-      )
+      // Always the add button, never an "Open in Google Wallet" one. There is
+      // no Google Wallet app to open on Android: the save URL is a web link, so
+      // that button dropped the employee into a browser rather than the wallet
+      // it named. And because Google cannot be asked what a wallet holds, the
+      // presence it was keyed on was only ever a note of what this device last
+      // did — so a card deleted from Google Wallet, or added on another device,
+      // left the employee with a browser link and no way to add it. Saving a
+      // card Google already has is the harmless case here; losing the add
+      // button is not, which is also why there is no "Add again" link.
+      <Pressable
+        onPress={onSavePass}
+        disabled={saving}
+        style={styles.button}
+        accessibilityRole="button"
+        accessibilityLabel="save_business_card"
+        // The label is baked into Google's artwork, so spell it out for
+        // TalkBack rather than leaving the artwork to be announced.
+        accessibilityHint="Adds your business card to Google Wallet"
+        accessibilityState={{ disabled: saving }}
+      >
+        {saving ? (
+          // Dimming or tinting the button is not allowed, so the pending state
+          // replaces it with a spinner in a box of exactly the same footprint
+          // instead of drawing over it.
+          <View style={styles.pending}>
+            <ActivityIndicator />
+          </View>
+        ) : (
+          // Google's unmodified official primary button, as vector artwork.
+          // GPASS.md forbids recolouring it, altering its font, radius or
+          // padding, and free-scaling it, so it is drawn at its intrinsic
+          // 283x50 and never stretched to the footer width.
+          <AddToGoogleWalletButton
+            height={GOOGLE_WALLET_BUTTON.intrinsicHeight}
+          />
+        )}
+      </Pressable>
     ) : undefined}
   </BusinessCardActionsFooter>
 );

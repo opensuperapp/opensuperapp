@@ -15,6 +15,7 @@
 // under the License.
 import { Colors } from "@/constants/Colors";
 import { Styles } from "@/constants/Styles";
+import { Ionicons } from "@expo/vector-icons";
 import React, { ReactNode } from "react";
 import {
   Pressable,
@@ -34,6 +35,11 @@ type Props = {
   // going on what this device last did; on iOS PassKit answers directly and
   // this is a no-op the employee should never need.
   onAddAgain?: () => void;
+  // Opens the platform's wallet disclaimer. Passed only where there is a wallet
+  // download to disclose anything about: with the remote config flag off the
+  // card never reaches a wallet, so a notice explaining what a wallet does with
+  // it would be describing something that cannot happen.
+  onShowDisclaimer?: () => void;
   // The wallet affordance itself. Apple and Google both ship their own button
   // artwork with their own sizing rules, so each platform file supplies it and
   // only this chrome is shared. When the wallet pass is disabled there is no
@@ -46,6 +52,7 @@ const BusinessCardActionsFooter = ({
   onShareVCard,
   onSaveAsImage,
   onAddAgain,
+  onShowDisclaimer,
   children,
 }: Props) => {
   const colorScheme = useColorScheme() ?? "light";
@@ -107,6 +114,30 @@ const BusinessCardActionsFooter = ({
           </>
         )}
       </View>
+
+      {/* Its own row under the links rather than a fourth item in theirs. The
+          links are actions on the card; this one opens a document about it, and
+          squeezing it onto the end pushed the row off centre and left it
+          fighting "Share contact file · Save as image" for width. */}
+      {onShowDisclaimer && (
+        <View style={styles.disclaimerRow}>
+          <Pressable
+            onPress={onShowDisclaimer}
+            hitSlop={8}
+            style={styles.disclaimerButton}
+            accessibilityRole="button"
+            accessibilityLabel="view_wallet_disclaimer"
+            accessibilityHint="Shows what goes on your wallet card and how the details are handled"
+          >
+            <Ionicons
+              name="information-circle-outline"
+              size={16}
+              color={Colors.actionButtonTextColor}
+            />
+            <Text style={styles.secondaryActionText}>Privacy</Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 };
@@ -143,6 +174,17 @@ const createStyles = (colorScheme: "light" | "dark") =>
       alignItems: "center",
       justifyContent: "center",
       marginTop: 12,
+    },
+    disclaimerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: Styles.Padding.small,
+    },
+    disclaimerButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
     },
     secondaryActionText: {
       fontSize: 14,

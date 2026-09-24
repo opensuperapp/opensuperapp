@@ -40,8 +40,8 @@ export const useBusinessCardActions = (visible: boolean) => {
   const claims = useTokenClaims();
   const passRef = useRef<View>(null);
   const [qrVisible, setQrVisible] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [disclaimerVisible, setDisclaimerVisible] = useState(false);
+  const [saving, setSaving] = useState(false);
   const { walletDownloadEnabled } = useWalletPassConfig();
   // The pass serial number is the JWT `userid`, not the work email — the same
   // identity key the wallet service builds passes under.
@@ -61,13 +61,12 @@ export const useBusinessCardActions = (visible: boolean) => {
       return;
     }
 
-    // The sheet stays mounted while it is hidden, so a QR overlay left open
-    // would pop straight back up the next time the sheet is shown. Resetting
-    // here rather than in the close handlers covers every way the sheet can go
-    // away — on iOS the pageSheet swipe-to-dismiss never fires onRequestClose,
-    // and the parent can drop `visible` on its own at any time. The consent
-    // sheet is reset for the same reason, and because consent shown once is
-    // not consent given: it has to be asked again next time.
+    // The sheet stays mounted while it is hidden, so a QR overlay or a
+    // disclaimer left open would pop straight back up the next time the sheet
+    // is shown. Resetting here rather than in the close handlers covers every
+    // way the sheet can go away — on iOS the pageSheet swipe-to-dismiss never
+    // fires onRequestClose, and the parent can drop `visible` on its own at any
+    // time.
     setQrVisible(false);
     setDisclaimerVisible(false);
   }, [visible]);
@@ -78,6 +77,13 @@ export const useBusinessCardActions = (visible: boolean) => {
   };
 
   const closeQr = () => setQrVisible(false);
+
+  const showDisclaimer = () => {
+    setDisclaimerVisible(true);
+    logAnalyticsEvent("wallet_disclaimer_viewed");
+  };
+
+  const hideDisclaimer = () => setDisclaimerVisible(false);
 
   const shareContactFile = async () => {
     if (!data) {
@@ -101,11 +107,7 @@ export const useBusinessCardActions = (visible: boolean) => {
     }
   };
 
-  // Tapping the wallet button does not save anything. It asks first: the card
-  // carries employee personal data to a third-party wallet, and the point of
-  // the consent sheet is that the employee reads what that means before it
-  // happens, not after. The friction is the feature.
-  const savePass = () => {
+  const savePass = async () => {
     // The .vcf is a real answer to "I want this contact somewhere" while the
     // pass path is still gated behind the env flag and remote config.
     if (!walletDownloadEnabled) {
@@ -120,13 +122,6 @@ export const useBusinessCardActions = (visible: boolean) => {
       return;
     }
 
-    logAnalyticsEvent("wallet_disclaimer_shown");
-    setDisclaimerVisible(true);
-  };
-
-  const declineDisclaimer = () => setDisclaimerVisible(false);
-
-  const acceptDisclaimer = async () => {
     setSaving(true);
     try {
       const added = await saveBusinessCardPass(walletDownloadEnabled, logout);
@@ -134,10 +129,6 @@ export const useBusinessCardActions = (visible: boolean) => {
         logAnalyticsEvent("wallet_pass_added");
         await markAdded();
       }
-      // Only on the way out, so the consent sheet keeps its spinner for the
-      // whole call and a failure leaves the employee on the screen they can
-      // retry from rather than back on a card that looks untouched.
-      setDisclaimerVisible(false);
     } finally {
       setSaving(false);
     }
@@ -147,17 +138,17 @@ export const useBusinessCardActions = (visible: boolean) => {
     data,
     passRef,
     qrVisible,
-    saving,
     disclaimerVisible,
+    saving,
     walletDownloadEnabled,
     passInWallet: inWallet,
     openQr,
     closeQr,
+    showDisclaimer,
+    hideDisclaimer,
     shareContactFile,
     saveAsImage,
     savePass,
-    acceptDisclaimer,
-    declineDisclaimer,
     openWallet: openInWallet,
     addPassAgain: addAgain,
   };

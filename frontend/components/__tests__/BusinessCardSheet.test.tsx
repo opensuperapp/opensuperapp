@@ -15,7 +15,6 @@
 // under the License.
 import BusinessCardSheet from "@/components/BusinessCardSheet";
 import BusinessCardQrModal from "@/components/businessCard/BusinessCardQrModal";
-import WalletDisclaimerSheet from "@/components/businessCard/WalletDisclaimerSheet";
 import { saveBusinessCardPass } from "@/services/walletPassService";
 import React from "react";
 import { Modal, Text } from "react-native";
@@ -108,18 +107,6 @@ jest.mock("@/services/wallet/passPresence", () => ({
   openPassInWallet: jest.fn().mockResolvedValue(true),
 }));
 
-// Rendering the consent copy is WalletDisclaimerSheet's own suite's job. Here
-// the markdown body only has to mount.
-jest.mock("react-native-markdown-display", () => {
-  const { Text: RnText } = jest.requireActual("react-native");
-  return {
-    __esModule: true,
-    default: ({ children }: { children: string }) => (
-      <RnText>{children}</RnText>
-    ),
-  };
-});
-
 const render = (visible: boolean, onClose = jest.fn()) => {
   let root: ReturnType<typeof create> | undefined;
   act(() => {
@@ -135,14 +122,11 @@ const allText = (root: ReturnType<typeof create>): string[] =>
     .flat()
     .filter((value): value is string => typeof value === "string");
 
-// By component rather than by index into findAllByType(Modal): the sheet now
-// nests two overlays, and an index silently starts pointing at whichever one
+// By component rather than by index into findAllByType(Modal): the sheet
+// nests an overlay, and an index silently starts pointing at whichever one
 // happens to render first.
 const qrModal = (root: ReturnType<typeof create>) =>
   root.root.findByType(BusinessCardQrModal);
-
-const disclaimerSheet = (root: ReturnType<typeof create>) =>
-  root.root.findByType(WalletDisclaimerSheet);
 
 describe("BusinessCardSheet", () => {
   beforeEach(() => {
@@ -213,65 +197,21 @@ describe("BusinessCardSheet", () => {
     }
   });
 
-  // The whole point of the consent step: the wallet button asks, it does not
-  // save. A regression here would put employee data in a third-party wallet on
-  // a single tap, which is the thing the sheet exists to prevent.
-  it("asks for consent before building a pass, rather than saving on the tap", () => {
-    walletPassConfig.walletDownloadEnabled = true;
-    try {
-      const { root } = render(true);
-      expect(disclaimerSheet(root).props.visible).toBe(false);
-
-      act(() => {
-        root.root
-          .findAllByProps(
-            { accessibilityLabel: "save_business_card" },
-            { deep: false },
-          )[0]
-          .props.onPress();
-      });
-
-      expect(disclaimerSheet(root).props.visible).toBe(true);
-      expect(saveBusinessCardPass).not.toHaveBeenCalled();
-    } finally {
-      walletPassConfig.walletDownloadEnabled = false;
-    }
-  });
-
-  it("builds the pass only once consent is given, and not when it is declined", async () => {
+  it("builds the pass when the wallet button is tapped", async () => {
     walletPassConfig.walletDownloadEnabled = true;
     try {
       const { root } = render(true);
 
-      act(() => {
-        root.root
-          .findAllByProps(
-            { accessibilityLabel: "save_business_card" },
-            { deep: false },
-          )[0]
-          .props.onPress();
-      });
-
-      act(() => {
-        disclaimerSheet(root).props.onCancel();
-      });
-      expect(disclaimerSheet(root).props.visible).toBe(false);
-      expect(saveBusinessCardPass).not.toHaveBeenCalled();
-
-      act(() => {
-        root.root
-          .findAllByProps(
-            { accessibilityLabel: "save_business_card" },
-            { deep: false },
-          )[0]
-          .props.onPress();
-      });
       await act(async () => {
-        await disclaimerSheet(root).props.onProceed();
+        await root.root
+          .findAllByProps(
+            { accessibilityLabel: "save_business_card" },
+            { deep: false },
+          )[0]
+          .props.onPress();
       });
 
       expect(saveBusinessCardPass).toHaveBeenCalledTimes(1);
-      expect(disclaimerSheet(root).props.visible).toBe(false);
     } finally {
       walletPassConfig.walletDownloadEnabled = false;
     }
