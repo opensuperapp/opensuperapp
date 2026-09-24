@@ -27,6 +27,16 @@ public type CustomJwtPayload record {|
     *BaseJwtPayload;
     # User ID
     string userId;
+    # First name of the user
+    string? firstName;
+    # Last name of the user
+    string? lastName;
+    # Job title of the user
+    string? jobTitle;
+    # Mobile phone number of the user
+    string? mobile;
+    # Profile picture URL of the user
+    string? profileUrl;
 |};
 
 # JWT payload record.
@@ -34,5 +44,9 @@ public type JwtPayload record {|
     *BaseJwtPayload;
     # User ID
     string userid;
+    // The business-card claims (`given_name`, `family_name`, `jobtitle`, `phone_number`,
+    // `profile`) arrive through this rest field and are read with `optionalStringClaim`.
+    // Declaring them as typed fields would make `cloneWithType` — and so every authenticated
+    // request — fail if the IdP ever emitted one with an unexpected shape.
     json...;
 |};

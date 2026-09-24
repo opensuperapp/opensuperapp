@@ -15,6 +15,24 @@
 // under the License.
 import superapp_mobile_service.database;
 
+# Business card field set for an employee.
+public type BusinessCard record {|
+    # User id of the employee
+    string userId;
+    # First name of the employee
+    string firstName;
+    # Last name of the employee
+    string lastName;
+    # Work email of the employee
+    string workEmail;
+    # Job title of the employee
+    string? jobTitle;
+    # Mobile phone number of the employee
+    string? mobile;
+    # Profile picture URL of the employee
+    string? thumbnailUrl;
+|};
+
 # App scope record type.
 public type MicroAppScope record {|
     # Micro-app id
