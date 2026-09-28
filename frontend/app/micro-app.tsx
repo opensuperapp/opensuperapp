@@ -112,6 +112,15 @@ WebBrowser.maybeCompleteAuthSession();
 
 type NativeLogLevel = "info" | "warn" | "error";
 
+// Starting and stopping a stream are asynchronous and can overlap: a stop, an unmount,
+// or a second start can land while the first is still awaiting a permission dialog or
+// the OS opening the watch. Running them through one chain means each sees the finished
+// state of the last, so a watch or a foreground service can never be created after the
+// teardown that was meant to cancel it. The chain is module-level, not per screen, because
+// the background task, the buffer and the keep-awake tag are process-wide: opening another
+// micro app unmounts this screen, and its teardown must finish before the next app starts.
+let locationQueue: Promise<unknown> = Promise.resolve();
+
 const MicroApp = () => {
   const {
     webViewUri,
@@ -154,12 +163,6 @@ const MicroApp = () => {
   // Denial is sticky for the lifetime of the screen: re-prompting on every request
   // turns one "no" into a permission dialog loop.
   const locationPermissionDenied = useRef(false);
-  // Starting and stopping a stream are asynchronous and can overlap: a stop, an
-  // unmount, or a second start can land while the first is still awaiting a permission
-  // dialog or the OS opening the watch. Running them through one chain means each sees
-  // the finished state of the last, so a watch or a foreground service can never be
-  // created after the teardown that was meant to cancel it and then outlive the screen.
-  const locationQueue = useRef<Promise<unknown>>(Promise.resolve());
   const isDeveloper: boolean = appId.includes("developer");
   const isTotp: boolean = appId.includes("totp");
   const insets = useSafeAreaInsets();
@@ -932,10 +935,10 @@ const MicroApp = () => {
    */
   const enqueueLocationTask = useCallback(
     <T,>(task: () => Promise<T>): Promise<T> => {
-      const next = locationQueue.current.then(task, task);
+      const next = locationQueue.then(task, task);
       // Swallow the failure on the chain only: one rejected operation must not block
       // every operation queued after it, but the caller still sees its own rejection.
-      locationQueue.current = next.catch(() => undefined);
+      locationQueue = next.catch(() => undefined);
       return next;
     },
     []
