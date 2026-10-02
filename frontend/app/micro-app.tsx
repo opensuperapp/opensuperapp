@@ -58,8 +58,15 @@ import {
 import { MicroAppParams } from "@/types/navigation";
 import { injectedJavaScript, TOPIC } from "@/utils/bridge";
 import { qrScannerEmitter } from "@/utils/eventEmitter";
+import {
+  isBootstrapUri,
+  isWithinMicroAppBoundary,
+  resolveMicroAppBoundary,
+} from "@/utils/microAppOrigin";
+import { scopeMicroAppStorageKey } from "@/utils/microAppStorage";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Google from "expo-auth-session/providers/google";
+import * as DocumentPicker from "expo-document-picker";
 import { File, Paths } from "expo-file-system";
 import * as MailComposer from "expo-mail-composer";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
@@ -70,7 +77,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Keyboard,
-  KeyboardAvoidingView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -80,8 +86,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
+import { ShouldStartLoadRequest } from "react-native-webview/lib/WebViewTypes";
 import { useDispatch, useSelector } from "react-redux";
-import * as DocumentPicker from "expo-document-picker";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -119,6 +125,13 @@ const MicroApp = () => {
   const insets = useSafeAreaInsets();
   const shouldShowHeader: boolean = displayMode !== FULL_SCREEN_VIEWING_MODE;
   const { width, height } = useWindowDimensions();
+
+  // Where the micro app is served from, and the boundary every navigation and
+  // bridge message is matched against.
+  const microAppUri = isDeveloper
+    ? webUri
+    : `${Paths.document.uri}${webViewUri}`;
+  const microAppBoundary = resolveMicroAppBoundary(microAppUri);
 
   // Token and ID token states
   const [token, setToken] = useState<string | null>();
@@ -357,7 +370,10 @@ const MicroApp = () => {
    */
   const handleSaveToSecureStore = async (key: string, value: string) => {
     try {
-      await SecureStore.setItemAsync(key, value);
+      await SecureStore.setItemAsync(
+        scopeMicroAppStorageKey(appId, key),
+        value
+      );
       sendResponseToWeb("resolveSecureStorePersistence");
     } catch (error) {
       const errMessage =
@@ -373,7 +389,9 @@ const MicroApp = () => {
    */
   const handleGetFromSecureStore = async (key: string) => {
     try {
-      const value = await SecureStore.getItemAsync(key);
+      const value = await SecureStore.getItemAsync(
+        scopeMicroAppStorageKey(appId, key)
+      );
       sendResponseToWeb("resolveSecureStoreRetrieval", { value });
     } catch (error) {
       const errMessage =
@@ -389,7 +407,7 @@ const MicroApp = () => {
    */
   const handleDeleteFromSecureStore = async (key: string) => {
     try {
-      await SecureStore.deleteItemAsync(key);
+      await SecureStore.deleteItemAsync(scopeMicroAppStorageKey(appId, key));
       sendResponseToWeb("resolveSecureStoreDeletion");
     } catch (error) {
       const errMessage =
@@ -402,7 +420,7 @@ const MicroApp = () => {
   // Function to save data in device
   const handleSaveLocalData = async (key: string, value: string) => {
     try {
-      await AsyncStorage.setItem(key, value);
+      await AsyncStorage.setItem(scopeMicroAppStorageKey(appId, key), value);
       sendResponseToWeb("resolveSaveLocalData");
     } catch (error) {
       const errMessage =
@@ -414,7 +432,7 @@ const MicroApp = () => {
   //Function to delete data in device
   const handleDeleteLocalData = async (key: string) => {
     try {
-      await AsyncStorage.removeItem(key);
+      await AsyncStorage.removeItem(scopeMicroAppStorageKey(appId, key));
       sendResponseToWeb("resolveDeleteLocalData");
     } catch (error) {
       const errMessage =
@@ -426,7 +444,9 @@ const MicroApp = () => {
   // Function to get data from device
   const handleGetLocalData = async (key: string) => {
     try {
-      const value = await AsyncStorage.getItem(key);
+      const value = await AsyncStorage.getItem(
+        scopeMicroAppStorageKey(appId, key)
+      );
       sendResponseToWeb("resolveGetLocalData", { value });
     } catch (error) {
       const errMessage =
@@ -732,6 +752,13 @@ const MicroApp = () => {
   // Handle messages from WebView
   const onMessage = async (event: WebViewMessageEvent) => {
     try {
+      if (!isWithinMicroAppBoundary(event.nativeEvent.url, microAppBoundary)) {
+        console.warn(
+          "Ignored a bridge message from outside the micro app:",
+          event.nativeEvent.url
+        );
+        return;
+      }
       const { topic, data } = JSON.parse(event.nativeEvent.data);
       if (!topic) throw new Error("Invalid message format: Missing topic");
       switch (topic) {
@@ -886,6 +913,25 @@ const MicroApp = () => {
     }
   };
 
+  // Keeps the injected bridge inside the micro app's own bundle by handing any
+  // other document to the browser instead of loading it in the WebView
+  const handleShouldStartLoadWithRequest = (request: ShouldStartLoadRequest) => {
+    if (
+      isBootstrapUri(request.url) ||
+      isWithinMicroAppBoundary(request.url, microAppBoundary)
+    ) {
+      return true;
+    }
+
+    console.warn("Blocked a navigation outside the micro app:", request.url);
+    if (request.isTopFrame !== false && /^https?:\/\//i.test(request.url)) {
+      WebBrowser.openBrowserAsync(request.url).catch((error) => {
+        console.error("Error opening a URL outside the micro app:", error);
+      });
+    }
+    return false;
+  };
+
   const handleError = (syntheticEvent: any) => {
     setHasError(true);
     console.error("WebView error:", syntheticEvent.nativeEvent);
@@ -935,18 +981,18 @@ const MicroApp = () => {
           <WebView
             ref={webviewRef}
             originWhitelist={["*"]}
-            source={{
-              uri: isDeveloper
-                ? webViewUri
-                : `${Paths.document.uri}${webViewUri}`,
-            }}
+            source={{ uri: microAppUri }}
             allowFileAccess
             allowUniversalAccessFromFileURLs
-            allowingReadAccessToURL="file:///"
+            allowingReadAccessToURL={
+              isDeveloper
+                ? undefined
+                : microAppUri.slice(0, microAppUri.lastIndexOf("/") + 1)
+            }
             style={{ flex: 1 }}
             onMessage={onMessage}
             onError={handleError}
-            onShouldStartLoadWithRequest={() => true}
+            onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
             domStorageEnabled
             webviewDebuggingEnabled={isDeveloper}
             injectedJavaScriptBeforeContentLoaded={injectedJavaScript}

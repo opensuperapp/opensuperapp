@@ -218,12 +218,17 @@ public isolated function addFcmTokenQuery(string uuid, string fcmToken) returns 
         created_at = CURRENT_TIMESTAMP
 `;
 
-# Query to delete an FCM token.
+# Query to delete an FCM token owned by a specific user.
 #
+# + uuid - The user UUID used to fetch the corresponding `user_id` from `user_config`
 # + fcmToken - The FCM token to be deleted
-# + return - Generated query to remove the matching FCM token from the `device_token` table
-public isolated function deleteFcmTokenQuery(string fcmToken) returns sql:ParameterizedQuery =>
-    `DELETE FROM device_token WHERE fcm_token = ${fcmToken}`;
+# + return - Generated query to remove the matching FCM token of the given user from the `device_token` table
+public isolated function deleteFcmTokenQuery(string uuid, string fcmToken) returns sql:ParameterizedQuery => `
+    DELETE FROM device_token
+    WHERE
+        fcm_token = ${fcmToken}
+        AND user_id = (SELECT id FROM user_config WHERE uuid = ${uuid} AND config_key = ${DEFAULT_CONFIG_KEY})
+`;
 
 # Query to retrieve all application configurations.
 #
