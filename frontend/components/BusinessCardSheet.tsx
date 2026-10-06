@@ -37,17 +37,17 @@ const BusinessCardSheet = ({ visible, onClose }: Props) => {
     data,
     passRef,
     qrVisible,
-    saving,
     disclaimerVisible,
+    saving,
     walletDownloadEnabled,
     passInWallet,
     openQr,
     closeQr,
+    showDisclaimer,
+    hideDisclaimer,
     shareContactFile,
     saveAsImage,
     savePass,
-    acceptDisclaimer,
-    declineDisclaimer,
     openWallet,
     addPassAgain,
   } = useBusinessCardActions(visible);
@@ -80,17 +80,16 @@ const BusinessCardSheet = ({ visible, onClose }: Props) => {
               onAddAgain={addPassAgain}
               onShareVCard={shareContactFile}
               onSaveAsImage={saveAsImage}
-            />
-            <WalletDisclaimerSheet
-              visible={disclaimerVisible}
-              proceeding={saving}
-              onCancel={declineDisclaimer}
-              onProceed={acceptDisclaimer}
+              onShowDisclaimer={showDisclaimer}
             />
             <BusinessCardQrModal
               visible={qrVisible}
               data={data}
               onClose={closeQr}
+            />
+            <WalletDisclaimerSheet
+              visible={disclaimerVisible}
+              onClose={hideDisclaimer}
             />
           </>
         )}
