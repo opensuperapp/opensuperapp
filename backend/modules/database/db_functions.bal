@@ -195,12 +195,13 @@ public isolated function addFcmToken(string uuid, string fcmToken) returns Execu
     return result.cloneWithType(ExecutionSuccessResult);
 }
 
-# Delete an FCM token from the database.
+# Delete an FCM token owned by the given user from the database.
 #
+# + uuid - The UUID of the user the token belongs to
 # + fcmToken - The FCM token to be deleted
 # + return - `ExecutionSuccessResult` if the deletion is successful, or `error` if the operation fails
-public isolated function deleteFcmToken(string fcmToken) returns ExecutionSuccessResult|error {
-    sql:ExecutionResult result = check databaseClient->execute(deleteFcmTokenQuery(fcmToken));
+public isolated function deleteFcmToken(string uuid, string fcmToken) returns ExecutionSuccessResult|error {
+    sql:ExecutionResult result = check databaseClient->execute(deleteFcmTokenQuery(uuid, fcmToken));
     if result.affectedRowCount == 0 {
         return error("No matching FCM token found to delete.");
     }
