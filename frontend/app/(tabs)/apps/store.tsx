@@ -19,6 +19,10 @@ import SignInMessage from "@/components/SignInMessage";
 import SignInModal from "@/components/SignInModal";
 import { Colors } from "@/constants/Colors";
 import { NOT_DOWNLOADED } from "@/constants/Constants";
+import {
+  removeDownloading,
+  updateDownloadProgress,
+} from "@/context/slices/appSlice";
 import { AppDispatch, RootState } from "@/context/store";
 import {
   downloadMicroApp,
@@ -94,6 +98,16 @@ const Store = () => {
   }, [dispatch, accessToken]);
 
   const handleRemoveMicroApp = async (dispatch: AppDispatch, appId: string) => {
+    // A background version update can be writing the same files; removing
+    // underneath it leaves the app half-installed and re-marked as downloaded.
+    if (downloading.includes(appId) || activeDownloadsRef.current.has(appId)) {
+      Alert.alert(
+        "Please wait",
+        "This app is still installing. Try again once it finishes."
+      );
+      return;
+    }
+
     Alert.alert(
       "Confirm Removal",
       "Are you sure you want to remove this app?",
@@ -124,56 +138,39 @@ const Store = () => {
     }
   }, [searchQuery, apps]);
 
-  // Process the installation queue
+  // Process the installation queue, one app at a time
   useEffect(() => {
-    let isProcessing = false;
+    if (installationQueue.length === 0) return;
+
+    const currentItem = installationQueue[0];
+    // Another run of this effect already owns this download; leave it alone,
+    // and in particular do not clear its entry from activeDownloadsRef.
+    if (activeDownloadsRef.current.has(currentItem.appId)) return;
+    activeDownloadsRef.current.add(currentItem.appId);
+
     const processQueue = async () => {
-      if (
-        isProcessing ||
-        installationQueue.length === 0 ||
-        !isMountedRef.current
-      )
-        return;
-
-      isProcessing = true;
-      const currentItem = installationQueue[0];
-
       try {
-        if (!activeDownloadsRef.current.has(currentItem.appId)) {
-          activeDownloadsRef.current.add(currentItem.appId);
-
-          dispatch({
-            type: "SET_DOWNLOAD_PROGRESS",
-            payload: { appId: currentItem.appId, progress: 0 },
-          });
-          await downloadMicroApp(
-            dispatch,
-            currentItem.appId,
-            currentItem.downloadUrl,
-            logout
-          );
-          if (isMountedRef.current) {
-            setInstallationQueue((prev) =>
-              prev.filter((item) => item.appId !== currentItem.appId)
-            );
-          }
-        }
+        dispatch(
+          updateDownloadProgress({ appId: currentItem.appId, progress: 0 })
+        );
+        await downloadMicroApp(
+          dispatch,
+          currentItem.appId,
+          currentItem.downloadUrl,
+          logout
+        );
       } catch (error) {
         console.error("Installation failed:", error);
+        dispatch(removeDownloading(currentItem.appId));
         if (isMountedRef.current) {
           Alert.alert("Error", "Installation failed try again later");
-          dispatch({
-            type: "REMOVE_DOWNLOADING_APP",
-            payload: currentItem.appId,
-          });
+        }
+      } finally {
+        activeDownloadsRef.current.delete(currentItem.appId);
+        if (isMountedRef.current) {
           setInstallationQueue((prev) =>
             prev.filter((item) => item.appId !== currentItem.appId)
           );
-        }
-      } finally {
-        if (isMountedRef.current) {
-          activeDownloadsRef.current.delete(currentItem.appId);
-          isProcessing = false;
         }
       }
     };
@@ -197,12 +194,8 @@ const Store = () => {
     const isInDownloadingState = downloading.includes(appId);
 
     if (!isAlreadyQueued && !isCurrentlyDownloading && !isInDownloadingState) {
-      dispatch({
-        type: "SET_DOWNLOAD_PROGRESS",
-        payload: { appId, progress: 0 },
-      });
+      dispatch(updateDownloadProgress({ appId, progress: 0 }));
       setInstallationQueue((prev) => [...prev, { appId, downloadUrl }]);
-      dispatch({ type: "ADD_DOWNLOADING_APP", payload: appId });
     }
   };
 

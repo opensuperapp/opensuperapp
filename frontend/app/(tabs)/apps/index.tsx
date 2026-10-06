@@ -60,6 +60,8 @@ export default function HomeScreen() {
   const downloadProgress = useSelector(
     (state: RootState) => state.apps.downloadProgress
   );
+  const downloading = useSelector((state: RootState) => state.apps.downloading);
+  const removing = useSelector((state: RootState) => state.apps.removing);
   const { userId } = useSelector((state: RootState) => state.auth);
   const isForceUpdate = useSelector(
     (state: RootState) =>
@@ -88,6 +90,7 @@ export default function HomeScreen() {
   });
   const [updatingApps, setUpdatingApps] = useState<string[]>([]);
   const isCheckingUpdates = useRef(false);
+  const isSyncingApps = useRef(false);
   useTrackActiveScreen(ScreenPaths.MY_APPS);
   const updateCheckInterval = useSelector(
     (state: RootState) =>
@@ -197,42 +200,15 @@ export default function HomeScreen() {
     initializeApp();
   }, [userId]);
 
-  // Load saved app order from AsyncStorage on mount
+  // Reconcile what is on disk against the user's app list
   useEffect(() => {
-    const syncApps = async () => {
+    const syncApps = async (appsToRemove: string[], appsToInstall: string[]) => {
+      isSyncingApps.current = true;
       setSyncing(true);
-      setProgress({ done: 0, total: 0 });
       setCurrentAction(null);
+      setProgress({ done: 0, total: appsToRemove.length + appsToInstall.length });
 
       try {
-        const userConfigAppIds = userConfigurations.find(
-          (config) => config.configKey === APP_LIST_CONFIG_KEY
-        );
-
-        const allowedApps = (userConfigAppIds?.configValue as string[]) || [];
-
-        // Verify if the files actually exist on disk, not just trust the Redux status
-        const localAppIds: string[] = [];
-        for (const app of apps) {
-          if (app?.status === DOWNLOADED) {
-             const appDir = new Directory(Paths.document, MICRO_APP_STORAGE_DIR, "micro-apps", `${app.appId}-extracted`);
-             if (appDir.exists) {
-                localAppIds.push(app.appId);
-             }
-          }
-        }
-
-        const appsToRemove = localAppIds.filter(
-          (appId) => !allowedApps.includes(appId)
-        );
-        const appsToInstall = allowedApps.filter(
-          (appId) => !localAppIds.includes(appId)
-        );
-
-        const totalSteps = appsToRemove.length + appsToInstall.length;
-        setProgress({ done: 0, total: totalSteps });
-
-        // Remove apps
         for (const appId of appsToRemove) {
           const appData = apps.find((app) => app.appId === appId);
           setCurrentAction(`Removing ${appData?.name || appId}`);
@@ -240,41 +216,71 @@ export default function HomeScreen() {
           setProgress((prev) => ({ ...prev, done: prev.done + 1 }));
         }
 
-        let updatedApps = apps.filter(
-          (app) => localAppIds.includes(app.appId) && !appsToRemove.includes(app.appId)
-        );
-
-        // Install apps
         for (const appId of appsToInstall) {
           const appData = apps.find((app) => app.appId === appId);
-          if (appData) {
-            setCurrentAction(`Downloading ${appData.name}`);
-            const success = await downloadMicroApp(
-              dispatch,
-              appId,
-              appData.versions?.[0]?.downloadUrl,
-              logout
-            );
-            
-            if (success) {
-              updatedApps.push({
-                ...appData,
-                status: DOWNLOADED,
-              });
-            }
-            setProgress((prev) => ({ ...prev, done: prev.done + 1 }));
-          }
+          if (!appData) continue;
+          setCurrentAction(`Downloading ${appData.name}`);
+          await downloadMicroApp(
+            dispatch,
+            appId,
+            appData.versions?.[0]?.downloadUrl,
+            logout
+          );
+          setProgress((prev) => ({ ...prev, done: prev.done + 1 }));
         }
       } catch (error) {
         console.error("App sync failed:", error);
       } finally {
         setCurrentAction(null);
         setSyncing(false);
+        isSyncingApps.current = false;
       }
     };
 
-    if (userConfigurations && userConfigurations.length > 0 && apps && apps.length > 0) syncApps();
-  }, [dispatch, userConfigurations, apps]);
+    // This effect re-runs on every `apps` change, including the ones its own
+    // installs and removals produce, so it must be inert once disk and config
+    // agree — otherwise it fights whatever the user just did in the Store.
+    if (isSyncingApps.current) return;
+    if (!userConfigurations?.length || !apps?.length) return;
+
+    // An install or removal reaches its final state through several dispatches
+    // and a network round trip. Reconciling against a half-applied one is what
+    // made Store downloads vanish and Store removals reinstall themselves, so
+    // wait for the operation to finish; clearing its flag re-runs this effect.
+    if (downloading.length > 0 || removing.length > 0) return;
+
+    const userConfigAppIds = userConfigurations.find(
+      (config) => config.configKey === APP_LIST_CONFIG_KEY
+    );
+    const allowedApps = (userConfigAppIds?.configValue as string[]) || [];
+
+    // Verify if the files actually exist on disk, not just trust the Redux status
+    const localAppIds: string[] = [];
+    for (const app of apps) {
+      if (app?.status === DOWNLOADED) {
+        const appDir = new Directory(
+          Paths.document,
+          MICRO_APP_STORAGE_DIR,
+          "micro-apps",
+          `${app.appId}-extracted`
+        );
+        if (appDir.exists) {
+          localAppIds.push(app.appId);
+        }
+      }
+    }
+
+    const appsToRemove = localAppIds.filter(
+      (appId) => !allowedApps.includes(appId)
+    );
+    const appsToInstall = allowedApps.filter(
+      (appId) => !localAppIds.includes(appId)
+    );
+
+    if (appsToRemove.length === 0 && appsToInstall.length === 0) return;
+
+    syncApps(appsToRemove, appsToInstall);
+  }, [dispatch, userConfigurations, apps, downloading, removing]);
 
   // Filter apps based on search query
   useEffect(() => {
