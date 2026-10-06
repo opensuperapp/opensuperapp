@@ -38,6 +38,7 @@ type ListItemProps = {
   webViewUri?: string | null;
   clientId?: string | null;
   exchangedToken?: string | null;
+  exchangedIdToken?: string | null;
   versions: Version[];
   description: string;
   iconUrl: string;
@@ -57,6 +58,7 @@ const ListItem = React.memo(
     webViewUri,
     clientId,
     exchangedToken,
+    exchangedIdToken,
     versions,
     description,
     iconUrl,
@@ -80,6 +82,7 @@ const ListItem = React.memo(
           appName: name,
           clientId,
           exchangedToken,
+          exchangedIdToken,
           appId,
           displayMode,
         },

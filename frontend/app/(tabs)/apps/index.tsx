@@ -21,7 +21,9 @@ import {
   APP_LIST_CONFIG_KEY,
   APP_UPDATE_CHECK_TIMESTAMP_KEY,
   DOWNLOADED,
+  MICRO_APP_STORAGE_DIR,
 } from "@/constants/Constants";
+import { Directory, Paths } from "expo-file-system";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { MicroApp } from "@/context/slices/appSlice";
 import { getUserConfigurations } from "@/context/slices/userConfigSlice";
@@ -58,7 +60,7 @@ export default function HomeScreen() {
   const downloadProgress = useSelector(
     (state: RootState) => state.apps.downloadProgress
   );
-  const { email } = useSelector((state: RootState) => state.auth);
+  const { userId } = useSelector((state: RootState) => state.auth);
   const isForceUpdate = useSelector(
     (state: RootState) =>
       state.appConfig.configs.find(
@@ -115,7 +117,7 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       const checkForUpdates = async () => {
-        if (isCheckingUpdates.current || !email || !isForceUpdate) {
+        if (isCheckingUpdates.current || !userId || !isForceUpdate) {
           return;
         }
 
@@ -159,12 +161,14 @@ export default function HomeScreen() {
       return () => {
         isCheckingUpdates.current = false;
       };
-    }, [dispatch, email, isForceUpdate, updateCheckIntervalMs])
+    }, [dispatch, userId, isForceUpdate, updateCheckIntervalMs])
   );
 
   // Load micro apps and user configurations if they haven't been initialized yet
   useEffect(() => {
     const initializeApp = async () => {
+      if (!userId) return; // Prevent loading micro apps into UI when logged out
+
       try {
         if (!apps || apps.length === 0) {
           await loadMicroAppDetails(
@@ -191,7 +195,7 @@ export default function HomeScreen() {
     };
 
     initializeApp();
-  }, [email]);
+  }, [userId]);
 
   // Load saved app order from AsyncStorage on mount
   useEffect(() => {
@@ -207,11 +211,17 @@ export default function HomeScreen() {
 
         const allowedApps = (userConfigAppIds?.configValue as string[]) || [];
 
-        const localApps: MicroApp[] = apps.filter(
-          (app) => app?.status === DOWNLOADED
-        );
+        // Verify if the files actually exist on disk, not just trust the Redux status
+        const localAppIds: string[] = [];
+        for (const app of apps) {
+          if (app?.status === DOWNLOADED) {
+             const appDir = new Directory(Paths.document, MICRO_APP_STORAGE_DIR, "micro-apps", `${app.appId}-extracted`);
+             if (appDir.exists) {
+                localAppIds.push(app.appId);
+             }
+          }
+        }
 
-        const localAppIds = localApps.map((app) => app.appId);
         const appsToRemove = localAppIds.filter(
           (appId) => !allowedApps.includes(appId)
         );
@@ -230,8 +240,8 @@ export default function HomeScreen() {
           setProgress((prev) => ({ ...prev, done: prev.done + 1 }));
         }
 
-        let updatedApps = localApps.filter(
-          (app) => !appsToRemove.includes(app.appId)
+        let updatedApps = apps.filter(
+          (app) => localAppIds.includes(app.appId) && !appsToRemove.includes(app.appId)
         );
 
         // Install apps
@@ -239,16 +249,19 @@ export default function HomeScreen() {
           const appData = apps.find((app) => app.appId === appId);
           if (appData) {
             setCurrentAction(`Downloading ${appData.name}`);
-            await downloadMicroApp(
+            const success = await downloadMicroApp(
               dispatch,
               appId,
               appData.versions?.[0]?.downloadUrl,
               logout
             );
-            updatedApps.push({
-              ...appData,
-              status: DOWNLOADED,
-            });
+            
+            if (success) {
+              updatedApps.push({
+                ...appData,
+                status: DOWNLOADED,
+              });
+            }
             setProgress((prev) => ({ ...prev, done: prev.done + 1 }));
           }
         }
@@ -260,8 +273,8 @@ export default function HomeScreen() {
       }
     };
 
-    if (userConfigurations && userConfigurations.length > 0) syncApps();
-  }, [dispatch, userConfigurations]);
+    if (userConfigurations && userConfigurations.length > 0 && apps && apps.length > 0) syncApps();
+  }, [dispatch, userConfigurations, apps]);
 
   // Filter apps based on search query
   useEffect(() => {
@@ -309,6 +322,7 @@ export default function HomeScreen() {
               appName={item.name}
               clientId={item.clientId ?? ""}
               exchangedToken={item.exchangedToken ?? ""}
+              exchangedIdToken={item.exchangedIdToken ?? ""}
               appId={item.appId}
               displayMode={item.displayMode}
               version={item.versions?.[0]?.version}

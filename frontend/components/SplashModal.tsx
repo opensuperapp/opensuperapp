@@ -38,15 +38,11 @@ const SplashModal = ({
         }}
       >
         <LottieView
-          source={
-            colorScheme == "dark"
-              ? require("../assets/animation/animation-dark.json")
-              : require("../assets/animation/animation-light.json")
-          }
+          source={require("../assets/animation/animation.json")}
           autoPlay
           loop
           resizeMode="contain"
-          style={{ width: "50%", height: 500 }}
+          style={{ width: "25%", height: 200 }}
         />
       </View>
     </Modal>

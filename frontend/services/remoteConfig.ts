@@ -1,0 +1,112 @@
+// Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+import { REMOTE_CONFIG_INITIAL_VALUES } from "@/config/remoteConfig";
+import {
+  activate,
+  fetchAndActivate,
+  getRemoteConfig,
+  getValue,
+  onConfigUpdate,
+  setDefaults,
+} from "@react-native-firebase/remote-config";
+
+/**
+ * Sets the default values for the remote config.
+ * @returns void
+ */
+export const setRemoteConfigDefaults = async () => {
+  try {
+    await setDefaults(getRemoteConfig(), REMOTE_CONFIG_INITIAL_VALUES);
+  } catch (error) {
+    console.error("Error setting remote config defaults:", error);
+  }
+};
+
+//Fetches the latest remote config values from Firebase.
+export const fetchAndActivateRemoteConfig = async () => {
+  try {
+    await fetchAndActivate(getRemoteConfig());
+  } catch (error) {
+    console.error("Error fetching and activating remote config:", error);
+  }
+};
+
+/**
+ * Retrieves a remote config value as a string.
+ * @param key - The remote config parameter key
+ * @returns The string value of the remote config parameter
+ */
+export const getRemoteConfigValueAsString = (key: string): string => {
+  return getValue(getRemoteConfig(), key).asString();
+};
+
+/**
+ * Retrieves a remote config value as a boolean.
+ * @param key - The remote config parameter key
+ * @returns The boolean value of the remote config parameter
+ */
+export const getRemoteConfigValueAsBoolean = (key: string): boolean => {
+  return getValue(getRemoteConfig(), key).asBoolean();
+};
+
+/**
+ * Retrieves a remote config value as a number.
+ * @param key - The remote config parameter key
+ * @returns The number value of the remote config parameter
+ */
+export const getRemoteConfigValueAsNumber = (key: string): number => {
+  return getValue(getRemoteConfig(), key).asNumber();
+};
+
+/**
+ * Retrieves a remote config value as a parsed JSON object.
+ * @param key - The remote config parameter key
+ * @returns The parsed JSON value of the remote config parameter
+ * @throws {SyntaxError} If the stored value is not valid JSON
+ */
+export const getRemoteConfigValueAsJson = <T>(key: string): T => {
+  const jsonString = getValue(getRemoteConfig(), key).asString();
+  return JSON.parse(jsonString) as T;
+};
+
+/**
+ * Listens for remote config changes.
+ * @param callback - The callback function to call when the remote config changes.
+ * @returns An unsubscribe function.
+ */
+export const onRemoteConfigChange = (
+  callback: (error: Error | null, updatedKeys: Set<string> | null) => void
+) => {
+  const unsubscribe = onConfigUpdate(getRemoteConfig(), {
+    next: async (update) => {
+      try {
+        await activate(getRemoteConfig());
+        callback(null, update.getUpdatedKeys());
+      } catch (error) {
+        console.error("Error activating remote config:", error);
+        callback(error as Error, null);
+      }
+    },
+    error: (error) => {
+      console.error("Error fetching remote config:", error);
+      callback(error as Error, null);
+    },
+    complete: () => {
+      callback(null, null);
+    },
+  });
+  return unsubscribe;
+};

@@ -39,6 +39,7 @@ type WidgetProps = {
   appName: string;
   clientId: string;
   exchangedToken: string;
+  exchangedIdToken: string;
   appId: string;
   displayMode?: DisplayMode;
   version?: string;
@@ -54,6 +55,7 @@ const Widget = React.memo(
     appName,
     clientId,
     exchangedToken,
+    exchangedIdToken,
     appId,
     displayMode,
     version,
@@ -71,6 +73,7 @@ const Widget = React.memo(
           appName,
           clientId,
           exchangedToken,
+          exchangedIdToken,
           appId,
           displayMode,
           version,

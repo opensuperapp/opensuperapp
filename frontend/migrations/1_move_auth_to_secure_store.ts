@@ -28,6 +28,7 @@ import {
 } from "@/utils/authTokenStore";
 import {
   persistAppsWithoutTokens,
+  saveExchangedIdToken,
   saveExchangedToken,
 } from "@/utils/exchangedTokenStore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -87,6 +88,9 @@ export const migrateAppExchangesToSecureStore = async () => {
       for (const app of parsedApps) {
         if (app.exchangedToken) {
           await saveExchangedToken(app.appId, app.exchangedToken);
+        }
+        if (app.exchangedIdToken) {
+          await saveExchangedIdToken(app.appId, app.exchangedIdToken);
         }
       }
       await persistAppsWithoutTokens(parsedApps);

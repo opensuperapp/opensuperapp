@@ -238,6 +238,7 @@ cp .env.example .env
 
 - This will create a `.env` file. Make sure to update the values according to your project requirements.
 - Please note that the authenticator app–related URL in `.env` is only required if your IAM provider needs it for the authenticator app flow. If your app does not need it, you can safely remove those variables.
+- For **EAS Build** and **over-the-air updates**, set `EAS_PROJECT_ID` and, for local native builds, `EXPO_PUBLIC_UPDATES_CHANNEL` (`development` or `production`). See [Over-the-air (OTA) updates](#over-the-air-ota-updates-eas-update).
 
 #### 1.1. (Optional) How to add/remove Firebase plugins if you are using Firebase.
 
@@ -286,6 +287,24 @@ base64 -w 0 path/to/your/google-services.json
 ```
 
 Paste the generated strings into the `FIREBASE_IOS_PLIST_B64` and `FIREBASE_ANDROID_JSON_B64` variables in your `.env` file.
+
+#### 1.4. (Optional) If you are using the `Wallet pass` feature for the digital business card, enable the feature flag in the `.env` file:
+
+```bash
+EXPO_PUBLIC_ENABLE_WALLET_PASS=true
+```
+
+This is the build-time switch for the "Save Business Card" action that adds the card to Apple Wallet or Google Wallet. It needs a wallet-pass-service deployment behind `EXPO_PUBLIC_WALLET_SERVICE_BASE_URL`; left unset, the action is disabled and the app never calls the service.
+
+Rollout per operating system is done with Firebase Remote Config, so either platform can be turned on (or pulled) without a release. Create a single JSON parameter named `wallet_pass_enabled` in **Firebase Console > Remote Config**:
+
+```json
+{ "ios": true, "android": false }
+```
+
+`ios` controls the Apple Wallet `.pkpass` path and `android` the Google Wallet save-link path; the two depend on separate certificates and separate console onboarding, which is why either has to be switchable on its own. Fields are keyed by `Platform.OS`, so a platform that is absent — or set to anything other than `true` — is off. The schema lives in `types/remoteConfig.types.ts` (`WalletPassConfig`) and defaults to both off in `config/remoteConfig.ts`.
+
+The env flag and the remote config both have to say yes: either one off disables the feature. That is also what happens when `EXPO_PUBLIC_ENABLE_FIREBASE` is false, since the config then falls back to its `false` defaults.
 
 ### 2. Update the `app.config.ts` file with plugins
 
@@ -353,6 +372,89 @@ You can start development by editing the files inside the **app** directory. Thi
 
 ---
 
+## Over-the-air (OTA) updates (EAS Update)
+
+The Super App shell (JavaScript bundle and assets) can be updated **without** resubmitting to the App Store or Play Store using [EAS Update](https://docs.expo.dev/eas-update/introduction/). This is separate from:
+
+- **Micro-app updates** — web bundles re-downloaded from your backend store.
+- **Native force update** — the `update` screen that sends users to the store when a new native binary is required.
+
+### Channels and build profiles
+
+OTA updates use **two channels only**, defined in `eas.json`:
+
+| EAS build profile | Update channel   | Typical use                          |
+| ----------------- | ---------------- | ------------------------------------ |
+| `development`     | `development`    | Internal builds, dev client, testing |
+| `production`      | `production`     | Store / production releases          |
+
+A binary only receives updates published to **its** channel. A `development` build never sees `production` updates, and vice versa.
+
+### Required environment variables
+
+Set these in `.env` (see `.env.example`):
+
+| Variable | Purpose |
+| -------- | ------- |
+| `EAS_PROJECT_ID` | Links the app to your Expo project; used in `app.config.ts` for the updates URL (`https://u.expo.dev/<project-id>`). |
+| `EXPO_PUBLIC_UPDATES_CHANNEL` | **`development`** or **`production`**. Required for **local** native builds so `plugins/withUpdatesChannel.ts` embeds the correct channel in the binary. EAS cloud builds set the channel from `eas.json` automatically. |
+
+`runtimeVersion` uses the **`appVersion`** policy (from `APP_VERSION` in `.env`). OTA updates only apply to binaries whose runtime version matches the update. Bump `APP_VERSION` and ship a new native build when you change native code or dependencies that require a rebuild.
+
+### Build native binaries
+
+Use EAS Build with the matching profile (channel is applied automatically):
+
+```bash
+# Development (dev client, internal distribution)
+npx --yes @dotenvx/dotenvx run -f .env -- eas build --profile development --platform android
+npx --yes @dotenvx/dotenvx run -f .env -- eas build --profile development --platform ios
+
+# Production
+npx --yes @dotenvx/dotenvx run -f .env -- eas build --profile production --platform android
+npx --yes @dotenvx/dotenvx run -f .env -- eas build --profile production --platform ios
+```
+
+**Local builds:** set `EXPO_PUBLIC_UPDATES_CHANNEL` to the same channel as the profile (`development` or `production`), then run prebuild/build. Example npm scripts:
+
+```bash
+npm run build:android:development:apk   # development channel
+npm run build:ios:development
+npm run build:ios:production
+```
+
+### Publish an OTA update
+
+Publish JavaScript/asset changes to a channel (both platforms):
+
+```bash
+# Development channel
+MESSAGE="Fix login redirect" npm run update:development
+
+# Production channel
+MESSAGE="1.0.1 bug fixes" npm run update:production
+```
+
+`MESSAGE` is required and describes the update in the Expo dashboard.
+
+The app checks for updates **on load** (`checkAutomatically: "ON_LOAD"` in `app.config.ts`). Users get the new bundle on the next cold start after the update is downloaded.
+
+### When you need a new native build (not OTA)
+
+Publish a new **EAS Build** (and store submission if applicable) when you change:
+
+- Native modules, `app.config.ts` plugins, or permissions
+- `APP_VERSION` / runtime version (if you want OTA to target only new binaries)
+- Anything that is not delivered as JS/assets via EAS Update
+
+### Further reading
+
+- [EAS Update — Getting started](https://docs.expo.dev/eas-update/getting-started/)
+- [Runtime versions](https://docs.expo.dev/eas-update/runtime-versions/)
+- [Deploy updates](https://docs.expo.dev/eas-update/deployment/)
+
+---
+
 ## 🛠️ Debugging & Common Issues
 
 ### Authentication Issues
@@ -385,3 +487,44 @@ You can start development by editing the files inside the **app** directory. Thi
 ❌ **Problem**: The build fails with an error caused by a firebase plugin during `npx expo prebuild` or `npx expo prebuild --clean`
 
 ✅ **Solution**: It was noticed that some firebase modules don't need to be added into the plugin list in the `app.config.js`. Remove the package and try re-running the commands
+
+---
+
+## 🤖 AI Chat Agent Integration
+
+The Super App includes an AI-powered chat feature that connects to a [Chat Agent backend](../chat-agent/README.md) built with FastAPI and LangChain.
+
+### Chat Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant C as Chat Screen
+    participant S as Chat Service
+    participant A as Chat Agent (FastAPI)
+    participant L as LangChain + GPT-4o
+    participant T as IAM Provider
+    participant M as Meals Backend
+
+    U->>C: Types message
+    C->>S: sendChatMessage(message)
+    S->>S: Check token expiry & refresh if needed
+    S->>A: POST /chat (Bearer token)
+    A->>L: Process with system prompt
+    L-->>A: Tool call: get_todays_menu
+    A->>T: Token exchange (RFC 8693)
+    T-->>A: Meals-scoped token
+    A->>M: GET /menu (Bearer token)
+    M-->>A: Menu data
+    A->>L: Tool result
+    L-->>A: Formatted response
+    A-->>S: { reply: "..." }
+    S-->>C: Display with markdown
+    C-->>U: Rendered chat bubble
+```
+
+### Configuration
+
+Set `EXPO_PUBLIC_CHAT_AGENT_URL` in your `.env` file to point to your chat agent instance (e.g., `http://<your-lan-ip>:8000` for local development).
+
+See the [Chat Agent README](../chat-agent/README.md) for backend setup instructions.

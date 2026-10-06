@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 import { removeGoogleAuthState } from "@/services/googleService";
+import { syncMicroAppCacheForUser } from "@/utils/microAppCacheStore";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { getItemAsync, setItemAsync } from "expo-secure-store";
 import {
@@ -29,6 +30,7 @@ interface AuthState {
   refreshToken: string | null;
   idToken: string | null;
   email: AuthData["email"] | null;
+  userId: AuthData["userId"] | null;
   isLoading: boolean;
 }
 
@@ -37,6 +39,7 @@ const initialState: AuthState = {
   refreshToken: null,
   idToken: null,
   email: null,
+  userId: null,
   isLoading: false,
 };
 
@@ -81,6 +84,11 @@ export const setAuthWithCheck = createAsyncThunk(
     }
 
     await setItemAsync("authMail", JSON.stringify(authPayload.email));
+
+    if (authPayload.userId) {
+      await syncMicroAppCacheForUser(dispatch, authPayload.userId);
+    }
+
     dispatch(setAuth(authPayload));
   }
 );
@@ -94,6 +102,7 @@ const authSlice = createSlice({
       state.refreshToken = action.payload.refreshToken;
       state.idToken = action.payload.idToken;
       state.email = action.payload.email;
+      state.userId = action.payload.userId;
       state.isLoading = false;
     },
     resetAll: () => initialState,
@@ -106,6 +115,7 @@ const authSlice = createSlice({
           state.refreshToken = action.payload.refreshToken;
           state.idToken = action.payload.idToken;
           state.email = action.payload.email;
+          state.userId = action.payload.userId;
         }
         state.isLoading = false;
       })

@@ -37,3 +37,39 @@ public isolated function searchUsers(string group) returns User[]|error {
     }
     return users;
 }
+
+# Searches for Internal users by email from the SCIM operations service.
+#
+# + email - Email of the user to search for
+# + return - A User record or nil, or an error if the operation fails
+public isolated function searchInternalUsers(string email) returns User|error? {
+    UserSearchResult usersResult = check scimClient->/organizations/internal/users/search.post({
+        domain: "DEFAULT",
+        attributes: ["userName", "id"],
+        filter: string `userName eq ${email}`
+    });
+
+    if usersResult.Resources.length() >= 1 {
+        return usersResult.Resources[0];
+    }
+
+    return ();
+}
+
+# Searches for External users by email from the SCIM operations service.
+#
+# + email - Email of the user to search for
+# + return - A User record or nil, or an error if the operation fails
+public isolated function searchExternalUsers(string email) returns User|error? {
+    UserSearchResult usersResult = check scimClient->/organizations/'external/users/search.post({
+        domain: "DEFAULT",
+        attributes: ["userName", "id"],
+        filter: string `userName eq ${email}`
+    });
+
+    if usersResult.Resources.length() >= 1 {
+        return usersResult.Resources[0];
+    }
+
+    return ();
+}

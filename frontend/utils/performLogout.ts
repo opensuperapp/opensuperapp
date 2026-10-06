@@ -13,8 +13,9 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { APPS, USER_INFO } from "@/constants/Constants";
+import { USER_INFO } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
+import { setApps } from "@/context/slices/appSlice";
 import { resetAll } from "@/context/slices/authSlice";
 import {
   clearDeviceState,
@@ -24,7 +25,6 @@ import { persistor } from "@/context/store";
 import { logout } from "@/services/authService";
 import { clearNotifications } from "@/services/scheduledNotifications";
 import { clearAuthDataFromSecureStore } from "@/utils/authTokenStore";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { router } from "expo-router";
 import { deleteItemAsync } from "expo-secure-store";
@@ -38,11 +38,11 @@ export const performLogout = createAsyncThunk(
       await logout(); // Call Asgardeo logout
       await clearAuthDataFromSecureStore();
       await persistor.purge(); // Clear redux-persist storage
-      dispatch(resetAll()); // Reset Redux state completely
+      dispatch(resetAll()); // Reset auth Redux state completely
+      dispatch(setApps([])); // Hide all downloaded apps from the UI
       dispatch(clearDeviceState()); // Reset device state
       dispatch(clearLastSentFcmToken()); // Clear last sent FCM token
 
-      await AsyncStorage.removeItem(APPS);
       await deleteItemAsync(USER_INFO);
       // Clear all scheduled notifications and stored notification data
       await clearNotifications();

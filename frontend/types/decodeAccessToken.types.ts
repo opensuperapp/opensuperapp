@@ -13,8 +13,18 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+
+// Wire claim names, looked up by the exact key the token carries — `jobtitle`
+// and `userid` are Asgardeo's own spellings, not OIDC standard ones, so do not
+// camelCase them.
 export type DecodedAccessToken = {
   email?: string;
   given_name?: string;
   family_name?: string;
+  userid?: string;
+  jobtitle?: string;
+  /** E.164. HR exposes no work number, so the card renders this as the mobile. */
+  phone_number?: string;
+  /** Avatar URL; Google photos carry an `=s100` suffix that callers strip. */
+  profile?: string;
 };

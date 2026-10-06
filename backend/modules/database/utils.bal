@@ -13,6 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import ballerina/sql;
 
 # Parse the configuration value from a given `AppConfig` row based on its type.
 #
@@ -26,4 +27,24 @@ public isolated function parseConfigValue(AppConfig row) returns boolean|string|
     } else {
         return row.value;
     }
+}
+
+# Generates filter for target roles.
+#
+# + groups - Array of user groups to match against target_roles
+# + return - Generated filter query
+isolated function generateTargetRolesFilters(string[] groups) returns sql:ParameterizedQuery {
+    sql:ParameterizedQuery filterQuery = `FIND_IN_SET(${groups[0]}, target_roles) > 0`;
+    foreach int i in 1 ..< groups.length() {
+        filterQuery = sql:queryConcat(filterQuery, ` OR FIND_IN_SET(${groups[i]}, target_roles) > 0`);
+    }
+    return filterQuery;
+}
+
+# Generates filter for target users.
+#
+# + userId - User UUID to match against target_users
+# + return - Generated filter query
+isolated function generateTargetUsersFilter(string userId) returns sql:ParameterizedQuery {
+    return `FIND_IN_SET(${userId}, target_users) > 0`;
 }

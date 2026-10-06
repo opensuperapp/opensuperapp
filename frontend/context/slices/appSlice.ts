@@ -15,8 +15,10 @@
 // under the License.
 import { DisplayMode } from "@/types/navigation";
 import {
+  deleteExchangedIdToken,
   deleteExchangedToken,
   persistAppsWithoutTokens,
+  saveExchangedIdToken,
   saveExchangedToken,
 } from "@/utils/exchangedTokenStore";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
@@ -42,6 +44,7 @@ export type MicroApp = {
   webViewUri?: string | "";
   clientId?: string | "";
   exchangedToken?: string | "";
+  exchangedIdToken?: string | "";
   displayMode?: DisplayMode;
 };
 
@@ -88,6 +91,7 @@ const appsSlice = createSlice({
         webViewUri: string;
         clientId: string;
         exchangedToken?: string;
+        exchangedIdToken?: string;
         displayMode?: DisplayMode;
       }>
     ) => {
@@ -97,6 +101,7 @@ const appsSlice = createSlice({
         webViewUri,
         clientId,
         exchangedToken,
+        exchangedIdToken,
         displayMode,
       } = action.payload;
       const app = state.apps.find((app) => app.appId === appId);
@@ -110,6 +115,12 @@ const appsSlice = createSlice({
           void (exchangedToken
             ? saveExchangedToken(appId, exchangedToken)
             : deleteExchangedToken(appId));
+        }
+        if (exchangedIdToken !== undefined) {
+          app.exchangedIdToken = exchangedIdToken;
+          exchangedIdToken
+            ? saveExchangedIdToken(appId, exchangedIdToken)
+            : deleteExchangedIdToken(appId);
         }
       }
       // persist without tokens
@@ -128,6 +139,19 @@ const appsSlice = createSlice({
       }
       void persistAppsWithoutTokens(state.apps); // strip tokens when saving
     },
+
+    updateExchangedIdToken: (
+      state,
+      action: PayloadAction<{ appId: string; exchangedIdToken: string }>
+    ) => {
+      const { appId, exchangedIdToken } = action.payload;
+      const app = state.apps.find((app) => app.appId === appId);
+      if (app) {
+        app.exchangedIdToken = exchangedIdToken;
+        void saveExchangedIdToken(appId, exchangedIdToken); // secure store
+      }
+      void persistAppsWithoutTokens(state.apps); // strip tokens when saving
+    },
   },
 });
 
@@ -138,5 +162,6 @@ export const {
   updateDownloadProgress,
   updateAppStatus,
   updateExchangedToken,
+  updateExchangedIdToken,
 } = appsSlice.actions;
 export default appsSlice.reducer;

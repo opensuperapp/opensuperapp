@@ -7,17 +7,12 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "env": { "EAS_BUILD_PROFILE": "development" },
-      "android": {
-        "buildType": "apk"
-      }
-    },
-    "staging": {
-      "distribution": "internal",
-      "env": { "EAS_BUILD_PROFILE": "staging" }
+      "channel": "development",
+      "env": { "EAS_BUILD_PROFILE": "development"}
     },
     "production": {
       "autoIncrement": true,
+      "channel": "production",
       "env": { "EAS_BUILD_PROFILE": "production" }
     }
   },
