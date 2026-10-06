@@ -17,7 +17,7 @@ import { BASE_URL, USER_CONFIGURATIONS } from "@/constants/Constants";
 import { removeDuplicatesFromUserConfigs } from "@/utils/removeDuplicates";
 import { apiRequest } from "@/utils/requestHandler";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 interface AppArrangement {
   name: string;
@@ -86,6 +86,27 @@ const userConfigSlice = createSlice({
     clearUserConfigurations: (state) => {
       state.configurations = [];
     },
+    // Mirrors a single config entry that has already been written to
+    // AsyncStorage/the server back into Redux, so in-memory readers don't work
+    // off a boot-time snapshot. Only the named key is touched; every other
+    // entry (and its uuid) is left as-is.
+    setUserConfigValue: (
+      state,
+      action: PayloadAction<{
+        configKey: string;
+        configValue: UserConfig["configValue"];
+      }>
+    ) => {
+      const { configKey, configValue } = action.payload;
+      const existing = state.configurations.find(
+        (config) => config.configKey === configKey
+      );
+      if (existing) {
+        existing.configValue = configValue;
+      } else {
+        state.configurations.push({ configKey, configValue, isActive: 1 });
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -102,6 +123,7 @@ const userConfigSlice = createSlice({
   },
 });
 
-export const { clearUserConfigurations } = userConfigSlice.actions;
+export const { clearUserConfigurations, setUserConfigValue } =
+  userConfigSlice.actions;
 
 export default userConfigSlice.reducer;
