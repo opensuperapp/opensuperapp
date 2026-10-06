@@ -44,24 +44,21 @@ const renderHook = (): boolean => {
 };
 
 /**
- * Loads the hook with the env flag, the service base URL and the platform set,
- * and the remote config hook handing back `config` verbatim — including shapes
- * Firebase could actually serve if someone edits the JSON badly.
+ * Loads the hook with the env flag and the platform set, and the remote config
+ * hook handing back `config` verbatim — including shapes Firebase could
+ * actually serve if someone edits the JSON badly.
  */
 const setup = ({
   envEnabled,
   platform,
   config,
-  serviceBaseUrl = "https://wallet.example.com",
 }: {
   envEnabled: boolean;
   platform: "ios" | "android";
   config: unknown;
-  serviceBaseUrl?: string;
 }) => {
   jest.resetModules();
   process.env.EXPO_PUBLIC_ENABLE_WALLET_PASS = envEnabled ? "true" : "false";
-  process.env.EXPO_PUBLIC_WALLET_SERVICE_BASE_URL = serviceBaseUrl;
 
   jest.doMock("react-native", () => ({ Platform: { OS: platform } }));
 
@@ -75,11 +72,9 @@ const setup = ({
 
 describe("useWalletPassEnabled", () => {
   const originalEnv = process.env.EXPO_PUBLIC_ENABLE_WALLET_PASS;
-  const originalBaseUrl = process.env.EXPO_PUBLIC_WALLET_SERVICE_BASE_URL;
 
   afterAll(() => {
     process.env.EXPO_PUBLIC_ENABLE_WALLET_PASS = originalEnv;
-    process.env.EXPO_PUBLIC_WALLET_SERVICE_BASE_URL = originalBaseUrl;
   });
 
   it("is enabled on iOS when the env flag and the config's ios field are both on", () => {
@@ -133,20 +128,6 @@ describe("useWalletPassEnabled", () => {
       envEnabled: false,
       platform: "ios",
       config: { ios: true, android: true },
-    });
-
-    expect(renderHook()).toBe(false);
-  });
-
-  // The failure this gate exists for: everything switched on, but the URL the
-  // service would call never made it into .env, so the button would only fire
-  // a request axios reports as a bare "Network Error".
-  it("stays off when there is no wallet service base URL to call", () => {
-    setup({
-      envEnabled: true,
-      platform: "ios",
-      config: { ios: true, android: true },
-      serviceBaseUrl: "",
     });
 
     expect(renderHook()).toBe(false);

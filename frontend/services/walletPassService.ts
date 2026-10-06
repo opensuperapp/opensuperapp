@@ -13,18 +13,14 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import {
-  IS_WALLET_SERVICE_CONFIGURED,
-  isIos,
-  WALLET_SERVICE_BASE_URL,
-} from "@/constants/Constants";
+import { BASE_URL, isIos } from "@/constants/Constants";
 import { presentApplePass } from "@/services/wallet/applePassPresenter";
 import { apiRequest } from "@/utils/requestHandler";
 import { File, Paths } from "expo-file-system";
 import { Alert, Linking } from "react-native";
 
-const PKPASS_URL = `${WALLET_SERVICE_BASE_URL}/api/v1/business-card/pkpass`;
-const GOOGLE_SAVE_URL_ENDPOINT = `${WALLET_SERVICE_BASE_URL}/api/v1/business-card/google-save-url`;
+const PKPASS_URL = `${BASE_URL}/business-card/pkpass`;
+const GOOGLE_SAVE_URL_ENDPOINT = `${BASE_URL}/business-card/google-save-url`;
 
 type GoogleSaveUrlResponse = {
   saveUrl: string;
@@ -40,24 +36,11 @@ const isSuccessStatus = (status: number | undefined): boolean =>
 const hasPassBytes = (data: unknown): boolean =>
   ((data as ArrayBuffer | undefined)?.byteLength ?? 0) > 0;
 
-// Repeated at the call site so no caller can fire a request that axios cannot
-// resolve, independent of the button-level gate in useWalletPassEnabled.
-const isWalletServiceConfigured = (): boolean => {
-  if (!IS_WALLET_SERVICE_CONFIGURED) {
-    console.warn(
-      "EXPO_PUBLIC_WALLET_SERVICE_BASE_URL is not set; skipping the wallet pass request."
-    );
-    return false;
-  }
-
-  return true;
-};
-
 export const addToAppleWallet = async (
   enabled: boolean,
   onLogout: () => Promise<void>
 ): Promise<boolean> => {
-  if (!enabled || !isWalletServiceConfigured()) {
+  if (!enabled) {
     return false;
   }
 
@@ -100,7 +83,7 @@ export const addToGoogleWallet = async (
   enabled: boolean,
   onLogout: () => Promise<void>
 ): Promise<boolean> => {
-  if (!enabled || !isWalletServiceConfigured()) {
+  if (!enabled) {
     return false;
   }
 
