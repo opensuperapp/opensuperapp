@@ -27,4 +27,6 @@ export type DecodedAccessToken = {
   phone_number?: string;
   /** Avatar URL; Google photos carry an `=s100` suffix that callers strip. */
   profile?: string;
+  /** Group memberships used to gate the business card, among other things. */
+  groups?: string[];
 };

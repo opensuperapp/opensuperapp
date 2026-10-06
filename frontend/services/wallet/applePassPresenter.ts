@@ -13,29 +13,9 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import { loadWalletManager } from "@/services/wallet/walletManager";
 import * as Sharing from "expo-sharing";
 import { Alert } from "react-native";
-
-type WalletManager = {
-  canAddPasses: () => Promise<boolean>;
-  showAddPassControllerFromFile: (filePath: string) => Promise<boolean>;
-};
-
-// A guarded require rather than a top-level import: the module calls
-// TurboModuleRegistry.getEnforcing while it is evaluated, so on a dev client
-// built before this dependency landed the import itself throws.
-const loadWalletManager = (): WalletManager | null => {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return require("react-native-wallet-manager").default as WalletManager;
-  } catch (error) {
-    console.warn(
-      "Native Wallet module unavailable; falling back to the share sheet.",
-      error
-    );
-    return null;
-  }
-};
 
 // PKAddPassesViewController wants a filesystem path, not a URL: its
 // URL(fileURLWithPath:) call reads a "file://" prefix as part of the path.

@@ -13,8 +13,8 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import PassField from "@/components/businessCard/PassField";
-import { walletPassStyles as styles } from "@/components/businessCard/walletPassStyles";
+import ApplePassField from "@/components/businessCard/ApplePassField";
+import { applePassStyles as styles } from "@/components/businessCard/applePassStyles";
 import { PASS } from "@/constants/BusinessCard";
 import { BusinessCardData } from "@/types/businessCard.types";
 import { buildVCard } from "@/utils/vcard";
@@ -75,19 +75,19 @@ const WalletPassView = forwardRef<View, Props>(
 
         {data.jobTitle && (
           <View style={styles.secondaryRow}>
-            <PassField label="Title" value={data.jobTitle} size="secondary" />
+            <ApplePassField label="Title" value={data.jobTitle} size="secondary" />
           </View>
         )}
 
         <View style={styles.auxiliaryRow}>
-          <PassField
+          <ApplePassField
             label="Email"
             value={data.workEmail}
             size="auxiliary"
             style={styles.auxiliaryColumn}
           />
           {frontPhone && (
-            <PassField
+            <ApplePassField
               label="Phone"
               value={frontPhone}
               size="auxiliary"

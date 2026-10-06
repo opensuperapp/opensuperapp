@@ -1,0 +1,61 @@
+Open Super App
+Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com)
+
+This product is licensed under the Apache License, Version 2.0. See the
+LICENSE file at the root of this repository for the full text.
+
+================================================================================
+Third-party trademarks and brand assets
+================================================================================
+
+The Apache License, Version 2.0 does not grant permission to use the trade
+names, trademarks, service marks or product names of any contributor or third
+party (Section 6). The items listed below are third-party trademarks that
+appear in this repository. They are NOT covered by the Apache-2.0 grant, and
+the permission to redistribute or modify that the License gives you for the
+rest of this work does not extend to them.
+
+--------------------------------------------------------------------------
+"Add to Google Wallet" button artwork
+--------------------------------------------------------------------------
+
+File:   frontend/components/wallet/AddToGoogleWalletButton.tsx
+Owner:  Google LLC
+Terms:  https://developers.google.com/wallet/generic/resources/brand-guidelines
+
+The SVG geometry, gradients, brand colours and wordmark in that file are a
+reproduction of Google's official "Add to Google Wallet" primary button
+(enGB), transcribed unmodified from the assets Google publishes with its
+Wallet brand guidelines. Google's Android SDK ships no button control, so
+integrators are directed to embed the vector asset themselves.
+
+Google LLC retains all rights in this artwork. WSO2 LLC. claims no authorship
+of it. Use of it is governed by Google's Wallet brand guidelines, not by the
+Apache License: in particular, the artwork must not be edited, recoloured,
+relabelled or otherwise altered. Only the surrounding code in that file is
+offered under Apache-2.0.
+
+--------------------------------------------------------------------------
+"Add to Apple Wallet" button
+--------------------------------------------------------------------------
+
+Files:  frontend/modules/apple-wallet-button/**
+        frontend/components/wallet/AddToAppleWalletButton.tsx
+Owner:  Apple Inc.
+Terms:  https://developer.apple.com/wallet/add-to-apple-wallet-guidelines/
+
+No Apple artwork is reproduced in this repository. Apple's guidelines restrict
+the "Add to Apple Wallet" badge to web pages, email and print, and direct apps
+to use the PKAddPassButton control instead. These files are an original Expo
+module that wraps that system control, so the button is drawn entirely by iOS
+at runtime. The code is offered under Apache-2.0; the mark and the artwork the
+system draws remain the property of Apple Inc.
+
+--------------------------------------------------------------------------
+Other marks
+--------------------------------------------------------------------------
+
+"WSO2" is a trademark of WSO2 LLC. "Google", "Google Wallet" and "Google Play"
+are trademarks of Google LLC. "Apple", "Apple Wallet" and "PassKit" are
+trademarks of Apple Inc. All other trademarks are the property of their
+respective owners.

@@ -294,17 +294,47 @@ Paste the generated strings into the `FIREBASE_IOS_PLIST_B64` and `FIREBASE_ANDR
 EXPO_PUBLIC_ENABLE_WALLET_PASS=true
 ```
 
-This is the build-time switch for the "Save Business Card" action that adds the card to Apple Wallet or Google Wallet. It needs a wallet-pass-service deployment behind `EXPO_PUBLIC_WALLET_SERVICE_BASE_URL`; left unset, the action is disabled and the app never calls the service.
+This is the build-time switch for the "Save Business Card" action that adds the card to Apple Wallet or Google Wallet. The passes come from `GET /business-card/pkpass` and `GET /business-card/google-save-url` on the app backend, which proxies a wallet-pass-service deployment, so no extra URL is configured here. Left unset, the action is disabled and the app never makes the request.
 
 Rollout per operating system is done with Firebase Remote Config, so either platform can be turned on (or pulled) without a release. Create a single JSON parameter named `wallet_pass_enabled` in **Firebase Console > Remote Config**:
 
 ```json
-{ "ios": true, "android": false }
+{
+  "ios":     { "enabled": true, "walletDownload": true },
+  "android": { "enabled": true, "walletDownload": false }
+}
 ```
 
-`ios` controls the Apple Wallet `.pkpass` path and `android` the Google Wallet save-link path; the two depend on separate certificates and separate console onboarding, which is why either has to be switchable on its own. Fields are keyed by `Platform.OS`, so a platform that is absent — or set to anything other than `true` — is off. The schema lives in `types/remoteConfig.types.ts` (`WalletPassConfig`) and defaults to both off in `config/remoteConfig.ts`.
+Fields are keyed by `Platform.OS`, and each platform carries two flags that gate different things. The Apple `.pkpass` path and the Google save-link path depend on separate certificates and separate console onboarding, which is why every flag is per-OS.
 
-The env flag and the remote config both have to say yes: either one off disables the feature. That is also what happens when `EXPO_PUBLIC_ENABLE_FIREBASE` is false, since the config then falls back to its `false` defaults.
+`enabled` shows or hides the business card entry point — the card icon in the Profile screen's header. With it off, there is no way into the card sheet on that OS at all.
+
+`walletDownload` decides what the card sheet's footer leads with:
+
+| `walletDownload` | Primary action | Secondary actions |
+| --- | --- | --- |
+| `true` | Add to Apple Wallet / Add to Google Wallet | Share contact file · Save as image |
+| `false` | Save image | Share contact file |
+
+`enabled: false` wins over `walletDownload: true` — a hidden card icon cannot produce a wallet button anywhere.
+
+The two flags fail in deliberately opposite directions, because they are not equally dangerous to get wrong:
+
+- `enabled` **fails open**. Only the boolean `false` hides the icon. A missing platform key, a missing field, `{}`, a stringly-typed `"false"`, `null` — all leave it visible, because the card sheet also does vCard sharing, a QR and image export, none of which need a wallet, and a bad console edit must not delete a working feature.
+- `walletDownload` **fails closed**. Only the boolean `true` turns it on; anything else falls back to the "Save image" primary.
+
+The build-time env flag gates only `walletDownload`, never `enabled`: `EXPO_PUBLIC_ENABLE_WALLET_PASS` decides whether this build ships the wallet pass path, and the business card works without it. That is also what happens when `EXPO_PUBLIC_ENABLE_FIREBASE` is false — the config falls back to its defaults, which are card icon visible and wallet download off, exactly matching a build that never had the wallet feature.
+
+The earlier bare-boolean shape is still accepted: `{ "ios": true }` means the same as `{ "enabled": true, "walletDownload": true }`, and `false` the same as `{ "enabled": true, "walletDownload": false }` — it only ever meant "wallet off", never "hide the card". The schema and the defaults live in `types/remoteConfig.types.ts` (`WalletPassConfig`, `DEFAULT_WALLET_PASS_CONFIG`), resolved in `hooks/useWalletPassConfig.ts`.
+
+On top of all of the above, the business card is also gated by the signed-in user's identity, ANDed with the `enabled` flag rather than replacing it:
+
+```bash
+EXPO_PUBLIC_BUSINESS_CARD_ALLOWED_DOMAINS=wso2.com
+EXPO_PUBLIC_BUSINESS_CARD_ALLOWED_GROUPS=wso2-employees
+```
+
+Both are comma-separated allow-lists, matched case-insensitively: the email domain (the part after the last `@` in the access token's `email` claim) must be in `EXPO_PUBLIC_BUSINESS_CARD_ALLOWED_DOMAINS`, **and** the token's `groups` claim must contain at least one entry from `EXPO_PUBLIC_BUSINESS_CARD_ALLOWED_GROUPS`. Missing either the email or the groups claim fails the check. Left unset or blank, each falls back to its single default shown above. See `utils/businessCardAccess.ts` (`hasBusinessCardAccess`), wired into `hooks/useWalletPassConfig.ts`.
 
 ### 2. Update the `app.config.ts` file with plugins
 

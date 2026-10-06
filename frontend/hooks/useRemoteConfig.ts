@@ -18,6 +18,7 @@ import { TAB_VISIBILITY_RULES_KEY } from "@/constants/RemoteConfigDefaults";
 import {
   getRemoteConfigValueAsJson,
   getRemoteConfigValueAsString,
+  initializeRemoteConfig,
   onRemoteConfigChange,
 } from "@/services/remoteConfig";
 import { DEFAULT_TAB_CONFIG, TabVisibilityConfig } from "@/types/remoteConfig.types";
@@ -49,6 +50,9 @@ export const useRemoteConfig = <T>(
 
     try {
       setLoading(true);
+      // Mounting races the app's startup effect, and reading before the fetch
+      // has been activated returns the previous launch's cached value.
+      await initializeRemoteConfig();
       const result = await getRemoteConfigValueAsString(key);
 
       if (result == null) {
