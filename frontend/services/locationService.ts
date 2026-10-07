@@ -60,10 +60,12 @@ export const ensureLocationPermissions = async (
   needsBackground: boolean
 ): Promise<LocationRejectReason | null> => {
   try {
+    // Checked first: iOS reports every app as denied while Location Services is off
+    // device-wide, which would surface as a sticky "permission_denied" instead.
+    if (!(await hasServicesEnabledAsync())) return "services_disabled";
+
     const { status } = await requestForegroundPermissionsAsync();
     if (status !== GRANTED) return "permission_denied";
-
-    if (!(await hasServicesEnabledAsync())) return "services_disabled";
 
     if (needsBackground) {
       const background = await requestBackgroundPermissionsAsync();
