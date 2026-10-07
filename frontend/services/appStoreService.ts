@@ -32,6 +32,7 @@ import {
 import { AppDispatch, store } from "@/context/store";
 import { buildAppsWithTokens } from "@/utils/exchangedTokenRehydrator";
 import { persistAppsWithoutTokens } from "@/utils/exchangedTokenStore";
+import { parseRequiredPermissions } from "@/utils/microAppManifest";
 import { apiRequest } from "@/utils/requestHandler";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Directory, File, Paths } from "expo-file-system";
@@ -239,17 +240,6 @@ const EMPTY_MICRO_APP_CONFIG = {
   displayMode: DEFAULT_VIEWING_MODE,
   requiredPermissions: [] as string[],
 };
-
-/**
- * Reads the `requiredPermissions` field of a microapp.json, ignoring anything that is
- * not an array of strings. A malformed field must grant nothing rather than everything.
- * @param value The raw value read from microapp.json.
- * @returns The declared permissions, or an empty list.
- */
-const parseRequiredPermissions = (value: unknown): string[] =>
-  Array.isArray(value)
-    ? value.filter((entry): entry is string => typeof entry === "string")
-    : [];
 
 export const removeMicroApp = async (
   dispatch: AppDispatch,

@@ -73,6 +73,7 @@ import {
   clearLocationBuffer,
   drainLocationBuffer,
 } from "@/utils/locationBuffer";
+import { fetchDevServerPermissions } from "@/utils/microAppManifest";
 import { qrScannerEmitter } from "@/utils/eventEmitter";
 import {
   isBootstrapUri,
@@ -163,6 +164,10 @@ const MicroApp = () => {
   // Denial is sticky for the lifetime of the screen: re-prompting on every request
   // turns one "no" into a permission dialog loop.
   const locationPermissionDenied = useRef(false);
+  // What the Developer app's dev server declares in its microapp.json. Held as a promise
+  // so a request sent while the manifest is still loading waits for it instead of being
+  // rejected as undeclared.
+  const devServerPermissions = useRef<Promise<string[]>>(Promise.resolve([]));
   const isDeveloper: boolean = appId.includes("developer");
   const isTotp: boolean = appId.includes("totp");
   const insets = useSafeAreaInsets();
@@ -857,8 +862,12 @@ const MicroApp = () => {
       const options: LocationRequestOptions = requested ?? {};
 
       // A host-level OS permission must not become an implicit grant to every micro
-      // app: only an app that declared the capability may open a stream.
-      if (!requiredPermissions?.includes(LOCATION_PERMISSION)) {
+      // app: only an app that declared the capability may open a stream. The Developer
+      // app has no installed manifest, so its dev server's stands in for it.
+      const declaredPermissions = isDeveloper
+        ? await devServerPermissions.current
+        : requiredPermissions;
+      if (!declaredPermissions?.includes(LOCATION_PERMISSION)) {
         sendResponseToWeb(
           "rejectLocationUpdates",
           "not_declared" as LocationRejectReason
@@ -915,6 +924,7 @@ const MicroApp = () => {
     [
       appName,
       deliverLocationFix,
+      isDeveloper,
       requiredPermissions,
       sendResponseToWeb,
       shouldShowHeader,
@@ -964,6 +974,18 @@ const MicroApp = () => {
       void enqueueLocationTask(teardownLocationStream);
     };
   }, [enqueueLocationTask, teardownLocationStream]);
+
+  // A new Developer app URL is a new app: re-read what it declares, and close any stream
+  // the previous page opened. Only this screen's own stream - the background task is
+  // shared, so stopping it unconditionally would end another screen's stream.
+  useEffect(() => {
+    if (!isDeveloper) return;
+
+    devServerPermissions.current = fetchDevServerPermissions(webUri);
+    void enqueueLocationTask(async () => {
+      if (locationOptions.current) await stopLocationUpdates();
+    });
+  }, [enqueueLocationTask, isDeveloper, stopLocationUpdates, webUri]);
 
   // Handle messages from WebView
   const onMessage = async (event: WebViewMessageEvent) => {

@@ -198,6 +198,12 @@ though the Super App itself holds the OS permission. This keeps the blast radius
 permission to apps that asked for it rather than handing a position stream to every
 installed micro app. Declared permissions are shown on the Store listing before install.
 
+The Developer app loads a live dev server rather than an installed zip, so it reads
+`microapp.json` from that server, beside the page it loads (`http://host:3000/` →
+`http://host:3000/microapp.json`). Put the file where your dev server serves it, such as
+`public/`. It is re-read whenever the App URL changes, which also stops any open stream.
+If it cannot be fetched, nothing is declared and requests are rejected with `"not_declared"`.
+
 ### Use the bridge, not `navigator.geolocation`
 
 `navigator.geolocation` is **not** the supported path for an embedded micro app. A
