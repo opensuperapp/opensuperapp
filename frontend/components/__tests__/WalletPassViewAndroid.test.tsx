@@ -141,32 +141,14 @@ describe("WalletPassView (Android) — card geometry", () => {
     expect(style.borderRadius).toBe(GOOGLE_PASS.logoSize / 2);
   });
 
-  it("renders the photo as the full-width hero image, not a thumbnail beside the name", () => {
+  // The pass class carries no hero image, so the preview draws the logo and
+  // nothing else — no photo, in any position.
+  it("renders no image beyond the logo, even when the employee has a photo", () => {
     const { root } = render(baseData);
-    const hero = root.root
+    const remote = root.root
       .findAllByType(Image)
-      .find((node) => node.props.source?.uri === baseData.photoUri);
-
-    const style = flatten(hero!.props.style);
-    expect(style.width).toBe("100%");
-    // The hero aspect ratio Google documents, 1032:812.
-    expect(style.aspectRatio).toBeCloseTo(1032 / 812);
-    expect(style.borderRadius).toBeUndefined();
-  });
-
-  it("puts the hero image last, after the barcode caption", () => {
-    const { root } = render(baseData);
-    // findAll walks the tree in render order.
-    const nodes = root.root.findAll(() => true, { deep: true });
-    const heroIndex = nodes.findIndex(
-      (node) => node.props?.source?.uri === baseData.photoUri
-    );
-    const captionIndex = nodes.findIndex(
-      (node) => node.props?.children === baseData.workEmail
-    );
-
-    expect(heroIndex).toBeGreaterThan(-1);
-    expect(heroIndex).toBeGreaterThan(captionIndex);
+      .filter((node) => node.props.source?.uri !== undefined);
+    expect(remote).toHaveLength(0);
   });
 
   it("renders no image beyond the logo when the employee has no photo", () => {

@@ -17,20 +17,18 @@ import { Colors } from "@/constants/Colors";
 import { StyleSheet } from "react-native";
 
 /**
- * Typography for the wallet consent copy.
+ * Typography for the wallet disclaimer copy.
  *
  * The two platform sheets disclose different things and are laid out
  * differently — a page sheet on iOS, a bottom sheet on Android — but the prose
- * between the header and the button is the same document in both, so the
- * reading experience is defined once here rather than drifting apart in two
- * component files.
+ * under the header is the same document in both, so the reading experience is
+ * defined once here rather than drifting apart in two component files.
  *
- * This is consent text, so it is sized to actually be read: body copy at the
+ * This is a disclosure, so it is sized to actually be read: body copy at the
  * size of body copy, generous line height, and headings that separate "what
  * goes on the card" from "how it works" clearly enough that someone skimming
  * still lands on the right section. Links take the app's action colour so they
- * read as tappable — the policy links and the DPO address are the escape
- * hatches this screen promises.
+ * read as tappable — the DPO address is the escape hatch this screen promises.
  *
  * @param colorScheme - The active colour scheme.
  * @returns The style object for `<Markdown style={...}>`.

@@ -114,17 +114,17 @@ beforeEach(() => {
 });
 
 describe("useBusinessCardActions", () => {
-  // `saving` only disables Continue on the render it schedules, so taps that
-  // queue while the JS thread is busy all land on an enabled button. Two of
-  // them through the save would be two passes issued and two audit rows.
-  it("ignores a second Continue while the first save is still running", async () => {
+  // `saving` only disables the wallet badge on the render it schedules, so
+  // taps that queue while the JS thread is busy all land on an enabled badge.
+  // Two of them through the save would be two passes issued and two audit rows.
+  it("ignores a second tap while the first save is still running", async () => {
     const settle = pendingSave();
     const actions = await renderActions();
-    const accept = actions().acceptDisclaimer;
+    const save = actions().savePass;
 
     let taps: Promise<void>[] = [];
     await act(async () => {
-      taps = [accept(), accept()];
+      taps = [save(), save()];
     });
 
     expect(mockSaveBusinessCardPass).toHaveBeenCalledTimes(1);
@@ -140,7 +140,7 @@ describe("useBusinessCardActions", () => {
   });
 
   // The guard is about the in-flight call, not a one-shot: a save that failed
-  // leaves the consent sheet up precisely so it can be retried.
+  // has to stay retryable.
   it("lets the employee retry once the save has settled", async () => {
     mockSaveBusinessCardPass.mockResolvedValue(false);
     const actions = await renderActions();
@@ -153,10 +153,10 @@ describe("useBusinessCardActions", () => {
     expect(actions().disclaimerVisible).toBe(true);
 
     await act(async () => {
-      await actions().acceptDisclaimer();
+      await actions().savePass();
     });
     await act(async () => {
-      await actions().acceptDisclaimer();
+      await actions().savePass();
     });
 
     expect(mockSaveBusinessCardPass).toHaveBeenCalledTimes(2);

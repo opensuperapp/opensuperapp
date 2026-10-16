@@ -78,14 +78,6 @@ export const googlePassStyles = StyleSheet.create({
     fontSize: 15,
     color: PASS_FOREGROUND_COLOR,
   },
-  hero: {
-    width: "100%",
-    // "Include 20dp padding on the top and bottom for visual breathing room."
-    marginTop: 20,
-    marginBottom: 20,
-    // The documented hero aspect ratio, 1032:812.
-    aspectRatio: 1032 / 812,
-  },
   barcode: {
     alignSelf: "center",
     marginTop: GOOGLE_PASS.rowGap,
