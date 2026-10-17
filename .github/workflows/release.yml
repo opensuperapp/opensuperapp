@@ -1,0 +1,178 @@
+# Release pipeline — EAS Build (native binaries) + EAS Update (OTA bundles).
+#
+# Everything is routed by the prefix of the pushed git tag. Nothing about the
+# channel lives in this file beyond the prefix mapping below.
+#
+#   Tag prefix         Channel       Native build?   Effect
+#   ----------------   -----------   -------------   -----------------------------------------
+#   dev/*              development   no              OTA-only: ship JS/TS to dev users
+#   dev-native/*       development   yes             New native binary for dev, then OTA
+#   release/*          production    no              OTA-only: ship JS/TS to prod users
+#   release-native/*   production    yes             New native binary for prod, then OTA
+#
+# Push a tag to trigger, e.g. `git tag dev/1.0.1 && git push origin dev/1.0.1`.
+# Or run manually via "Run workflow" and type the tag name into the `tag` input.
+#
+# NOTE: This repo is a monorepo; the Expo app lives in `frontend/`. The workflow
+# is at the repo root (GitHub only reads workflows from the root) and every step
+# that touches the app runs with working-directory: frontend (see `defaults`).
+
+name: release
+
+on:
+  push:
+    tags:
+      - 'dev/*'
+      - 'dev-native/*'
+      - 'release/*'
+      - 'release-native/*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to push (e.g. dev/1.0.0, dev-native/1.0.0, release/1.0.0, release-native/1.0.0)'
+        required: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: frontend
+
+jobs:
+  # Always runs, for every tag pattern.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      # package.json defines "test": "jest --watchAll", which never exits and would
+      # hang CI. We don't modify package.json; instead we pass CI-safe flags at call
+      # time — the later --watchAll=false wins over the script's --watchAll.
+      - name: Run tests
+        run: npm test -- --watchAll=false --ci --passWithNoTests
+
+  # Parse the tag once and expose routing decisions to the downstream jobs.
+  determine-context:
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      channel: ${{ steps.vars.outputs.channel }}
+      native: ${{ steps.vars.outputs.native }}
+      message: ${{ steps.vars.outputs.message }}
+      eas_profile: ${{ steps.vars.outputs.eas_profile }}
+    steps:
+      - name: Parse tag into routing outputs
+        id: vars
+        # On push, the tag is in github.ref_name. On manual dispatch there is no
+        # pushed ref, so fall back to the typed input.
+        env:
+          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          echo "Routing tag: $TAG"
+
+          # `-native` variants are checked first for clarity; the prefixes are
+          # already mutually exclusive ("dev-native/" never matches "dev/").
+          if [[ "$TAG" == dev-native/* ]]; then
+            channel=development; native=true
+          elif [[ "$TAG" == dev/* ]]; then
+            channel=development; native=false
+          elif [[ "$TAG" == release-native/* ]]; then
+            channel=production; native=true
+          elif [[ "$TAG" == release/* ]]; then
+            channel=production; native=false
+          else
+            echo "::error::Unrecognized tag '$TAG'. Expected one of: dev/*, dev-native/*, release/*, release-native/*."
+            exit 1
+          fi
+
+          if [[ "$channel" == "development" ]]; then
+            eas_profile=development
+          else
+            eas_profile=production
+          fi
+
+          {
+            echo "channel=$channel"
+            echo "native=$native"
+            echo "message=$TAG"
+            echo "eas_profile=$eas_profile"
+          } >> "$GITHUB_OUTPUT"
+
+  # OTA-only path: dev/* and release/*. No new binary, just a JS/TS bundle.
+  eas-update:
+    needs: determine-context
+    if: needs.determine-context.outputs.native == 'false'
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      # The CLI evaluates app.config.ts on the runner to resolve the project and
+      # the updates.url. These must be present or --non-interactive fails. They
+      # are non-secret identifiers, so they live in repo variables, not secrets.
+      # APP_VERSION is intentionally absent: appVersionSource is "remote", so EAS
+      # owns the version (and thus the appVersion runtimeVersion).
+      EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID }}
+      APP_OWNER: ${{ vars.APP_OWNER }}
+      APP_SLUG: ${{ vars.APP_SLUG }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Publish OTA update
+        run: |
+          eas update --channel ${{ needs.determine-context.outputs.channel }} \
+            --message "${{ needs.determine-context.outputs.message }}" \
+            --non-interactive
+
+  # Native path: dev-native/* and release-native/*. Builds binaries, then ships
+  # an OTA bundle to the same channel.
+  eas-native-build:
+    needs: determine-context
+    if: needs.determine-context.outputs.native == 'true'
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      # Needed on the runner so the CLI can resolve which project to queue the
+      # build under (build-time app env is injected by EAS on the cloud builder).
+      EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID }}
+      APP_OWNER: ${{ vars.APP_OWNER }}
+      APP_SLUG: ${{ vars.APP_SLUG }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Build native binaries (iOS + Android)
+        run: |
+          eas build --profile ${{ needs.determine-context.outputs.eas_profile }} \
+            --platform all \
+            --non-interactive
+      # OTA follows the native build so the channel immediately has a bundle that
+      # matches the new binary's runtime version — otherwise the freshly shipped
+      # app would have no update to pull on first cold start.
+      - name: Publish OTA update for the new runtime
+        run: |
+          eas update --channel ${{ needs.determine-context.outputs.channel }} \
+            --message "${{ needs.determine-context.outputs.message }}" \
+            --non-interactive
