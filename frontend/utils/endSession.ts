@@ -42,7 +42,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { router } from "expo-router";
 import { deleteItemAsync } from "expo-secure-store";
-import { Alert } from "react-native";
 import { logout as appLogout } from "react-native-app-auth";
 
 // Each step runs whatever happened to the one before: a keychain error must not leave
@@ -141,17 +140,7 @@ export const endSession = createAsyncThunk<
       );
     }
 
-    Alert.alert(
-      "Logout Successful",
-      "You have been logged out successfully.",
-      [
-        {
-          text: "OK",
-          onPress: () => router.navigate(ScreenPaths.FEED),
-        },
-      ],
-      { cancelable: false }
-    );
+    router.navigate(ScreenPaths.FEED);
   },
   {
     condition: (_, { getState }) => !selectHasSessionEnded(getState()),

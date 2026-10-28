@@ -17,6 +17,7 @@
 // The rule this suite pins down: ending a session locally never depends on the
 // network. Everything on the device is cleared first, each step whatever
 // happened to the one before, and only then is Asgardeo told, best effort.
+import { ScreenPaths } from "@/constants/ScreenPaths";
 import authReducer, { setAuth } from "@/context/slices/authSlice";
 import { clearNotifications } from "@/services/scheduledNotifications";
 import { forgetUnsavedTokens } from "@/services/tokenRefresh";
@@ -146,6 +147,7 @@ beforeEach(async () => {
   (appLogout as jest.Mock).mockResolvedValue(undefined);
   for (const step of localSteps()) step.mockResolvedValue(undefined);
   jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
+  mockNavigate.mockReset();
   jest.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -186,7 +188,8 @@ describe("endSession('signedOut')", () => {
     const { auth } = store.getState();
     expect(auth.sessionStatus).toBe("signedOut");
     expect(auth.accessToken).toBeNull();
-    expect(alertMock().mock.calls[0][0]).toBe("Logout Successful");
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith(ScreenPaths.FEED);
   });
 
   it("still signs out locally, without an error dialog, when Asgardeo cannot be reached", async () => {
@@ -230,6 +233,7 @@ describe("endSession('expired')", () => {
     }
     expect(appLogout).not.toHaveBeenCalled();
     expect(Alert.alert).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
     expect(store.getState().auth.sessionStatus).toBe("expired");
     expect(store.getState().auth.accessToken).toBeNull();
   });
