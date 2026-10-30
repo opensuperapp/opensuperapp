@@ -14,9 +14,10 @@
 // specific language governing permissions and limitations
 // under the License.
 import SessionExpiredPrompt from "@/components/SessionExpiredPrompt";
+import { ScreenPaths } from "@/constants/ScreenPaths";
 import { SessionStatus } from "@/types/auth.types";
+import { router } from "expo-router";
 import React from "react";
-import { Modal, Text } from "react-native";
 import { Provider } from "react-redux";
 import { createStore } from "redux";
 import { act, create, ReactTestRenderer } from "react-test-renderer";
@@ -25,17 +26,12 @@ jest.mock("@react-native-async-storage/async-storage", () =>
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require("@react-native-async-storage/async-storage/jest/async-storage-mock")
 );
-// Forwarded rather than returned: the factory runs while the component is imported,
-// before this const is initialised.
-const mockSignIn = jest.fn();
-jest.mock("@/hooks/useSignInWithAsgardeo", () => ({
-  useSignInWithAsgardeo:
-    () =>
-    (...args: unknown[]) =>
-      mockSignIn(...args),
-}));
-jest.mock("@expo/vector-icons", () => ({
-  Ionicons: () => null,
+// The root navigator's key, or undefined before the root stack has mounted.
+let mockNavigationKey: string | undefined;
+jest.mock("expo-router", () => ({
+  router: { push: jest.fn() },
+  useRootNavigationState: () =>
+    mockNavigationKey === undefined ? undefined : { key: mockNavigationKey },
 }));
 // react-redux's package.json "react-native" export condition points at an
 // ESM build this project's Jest transform can't parse; the "default"
@@ -48,76 +44,84 @@ jest.mock("react-redux", () =>
 type AuthSnapshot = {
   sessionStatus: SessionStatus;
   rotationLost: boolean;
-  isEndingSession?: boolean;
+  isEndingSession: boolean;
 };
-type SetAuth = { type: "set"; auth: AuthSnapshot };
+type SetAuth = { type: "set"; auth: Partial<AuthSnapshot> };
 
 const buildStore = (auth: AuthSnapshot) =>
   createStore(
     (
       state: { auth: AuthSnapshot } = { auth },
       action: SetAuth | { type: string }
-    ) => (action.type === "set" ? { auth: (action as SetAuth).auth } : state)
+    ) =>
+      action.type === "set"
+        ? { auth: { ...state.auth, ...(action as SetAuth).auth } }
+        : state
   );
 
 const mount = (
   sessionStatus: SessionStatus,
-  rotationLost = false,
-  isEndingSession = false
+  { isEndingSession = false, rotationLost = false } = {}
 ) => {
   const store = buildStore({ sessionStatus, rotationLost, isEndingSession });
+  const render = () => (
+    <Provider store={store}>
+      <SessionExpiredPrompt />
+    </Provider>
+  );
   let tree!: ReactTestRenderer;
   act(() => {
-    tree = create(
-      <Provider store={store}>
-        <SessionExpiredPrompt />
-      </Provider>
-    );
+    tree = create(render());
   });
+  const setAuth = (auth: Partial<AuthSnapshot>) =>
+    act(() => {
+      store.dispatch({ type: "set", auth });
+    });
   const setStatus = (status: SessionStatus) =>
+    setAuth({ sessionStatus: status });
+  // useRootNavigationState re-renders its caller when the root stack mounts; the mock
+  // can't, so the test re-renders by hand.
+  const rerender = () =>
     act(() => {
-      store.dispatch({
-        type: "set",
-        auth: { sessionStatus: status, rotationLost },
-      });
+      tree.update(render());
     });
-  const finishEnding = () =>
-    act(() => {
-      store.dispatch({
-        type: "set",
-        auth: { sessionStatus, rotationLost, isEndingSession: false },
-      });
-    });
-  return { tree, setStatus, finishEnding };
+  const navigationBecomesReady = () => {
+    mockNavigationKey = "root-stack";
+    rerender();
+  };
+  return { tree, setAuth, setStatus, rerender, navigationBecomesReady };
 };
 
-const texts = (tree: ReactTestRenderer) =>
-  tree.root.findAllByType(Text).map((node) => String(node.props.children));
-
-const isShown = (tree: ReactTestRenderer) => texts(tree).length > 0;
-
-// Async, so the sign-in button's own loading state settles inside act.
-const press = async (tree: ReactTestRenderer, label: string) => {
-  const [button] = tree.root.findAll(
-    (node) =>
-      node.props.accessibilityLabel === label &&
-      typeof node.props.onPress === "function"
-  );
-  await act(async () => {
-    await button.props.onPress();
-  });
+const push = router.push as jest.Mock;
+const expiredSheet = {
+  pathname: ScreenPaths.SIGN_IN,
+  params: { reason: "expired" },
 };
 
 beforeEach(() => {
-  mockSignIn.mockReset().mockResolvedValue(undefined);
+  push.mockReset();
+  mockNavigationKey = "root-stack";
 });
 
 describe("SessionExpiredPrompt", () => {
-  it("asks the user to sign in again when the session has expired", () => {
-    const { tree } = mount("expired");
+  it("opens the session-expired sheet when the session expires", () => {
+    const { setStatus } = mount("authenticated");
+    expect(push).not.toHaveBeenCalled();
 
-    expect(isShown(tree)).toBe(true);
-    expect(texts(tree).join(" ")).toMatch(/session has expired/i);
+    setStatus("expired");
+
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledWith(expiredSheet);
+  });
+
+  it("opens the sheet when the app starts with an expired session", () => {
+    mount("expired");
+
+    expect(push).toHaveBeenCalledWith(expiredSheet);
+  });
+
+  it("renders nothing itself", () => {
+    expect(mount("expired").tree.toJSON()).toBeNull();
   });
 
   it.each<SessionStatus>([
@@ -128,81 +132,60 @@ describe("SessionExpiredPrompt", () => {
     "refreshing",
   ])("stays out of the way when the session is %s", (status) => {
     // A sign-out was the user's own doing, and a degraded session is still theirs.
-    expect(isShown(mount(status).tree)).toBe(false);
+    mount(status);
+
+    expect(push).not.toHaveBeenCalled();
   });
 
-  it("waits for the expired session to be cleared before offering a sign-in", () => {
-    const { tree, finishEnding } = mount("expired", false, true);
-    expect(isShown(tree)).toBe(false);
+  it("waits for the expired session to be cleared before opening", () => {
+    const { setAuth } = mount("expired", { isEndingSession: true });
+    expect(push).not.toHaveBeenCalled();
 
-    finishEnding();
+    setAuth({ isEndingSession: false });
 
-    expect(isShown(tree)).toBe(true);
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledWith(expiredSheet);
   });
 
-  it("says the sign-in was lost to the connection when that is what happened", () => {
-    const expired = texts(mount("expired", false).tree).join(" ");
-    const lost = texts(mount("expired", true).tree).join(" ");
+  it("waits for the root stack on a cold start before opening", () => {
+    mockNavigationKey = undefined;
+    const { navigationBecomesReady } = mount("expired");
+    expect(push).not.toHaveBeenCalled();
 
-    expect(lost).toMatch(/connection/i);
-    expect(lost).not.toEqual(expired);
-    expect(expired).not.toMatch(/connection/i);
+    navigationBecomesReady();
+
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledWith(expiredSheet);
   });
 
-  it("opens the Asgardeo sign-in from its primary action", async () => {
-    const { tree } = mount("expired");
+  it("opens once per expiry, however often it re-renders", () => {
+    const { rerender, setAuth } = mount("expired");
 
-    await press(tree, "Sign in");
+    rerender();
+    rerender();
+    setAuth({ rotationLost: true });
+    setAuth({ isEndingSession: true });
+    setAuth({ isEndingSession: false });
 
-    expect(mockSignIn).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledTimes(1);
   });
 
-  it("stays up after a sign-in that did not complete, so the user can try again", async () => {
-    // useSignInWithAsgardeo swallows a cancel or a failure and leaves the session expired.
-    const { tree } = mount("expired");
+  it("opens again on a later, separate expiry", () => {
+    const { setStatus } = mount("expired");
 
-    await press(tree, "Sign in");
-
-    expect(isShown(tree)).toBe(true);
-  });
-
-  it("goes away on Not now and leaves the user signed out", async () => {
-    const { tree } = mount("expired");
-
-    await press(tree, "Not now");
-
-    expect(isShown(tree)).toBe(false);
-    expect(mockSignIn).not.toHaveBeenCalled();
-  });
-
-  it("goes away by itself once a new session starts", () => {
-    const { tree, setStatus } = mount("expired");
-
-    setStatus("authenticated");
-
-    expect(isShown(tree)).toBe(false);
-  });
-
-  it("asks again the next time a session expires, after Not now", async () => {
-    const { tree, setStatus } = mount("expired");
-
-    await press(tree, "Not now");
     setStatus("authenticated");
     setStatus("expired");
 
-    expect(isShown(tree)).toBe(true);
+    expect(push).toHaveBeenCalledTimes(2);
   });
 
-  it("asks again the next time, even though iOS reports the last one dismissed late", () => {
-    const { tree, setStatus } = mount("expired");
+  it("opens again after the user signed out and a later session expired", () => {
+    const { setStatus } = mount("expired");
 
+    setStatus("signedOut");
     setStatus("authenticated");
-    // iOS calls onDismiss once the hide animation is over, after the sign-in hid it.
-    act(() => {
-      tree.root.findByType(Modal).props.onDismiss();
-    });
     setStatus("expired");
 
-    expect(isShown(tree)).toBe(true);
+    expect(push).toHaveBeenCalledTimes(2);
   });
 });
