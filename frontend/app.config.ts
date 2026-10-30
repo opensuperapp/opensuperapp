@@ -94,7 +94,9 @@ let config: ExpoConfig = {
     bundleIdentifier: BUNDLE_ID,
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
-      UIBackgroundModes: ["remote-notification"],
+      // "location" keeps position updates flowing to a micro app that requested a
+      // background stream while the driver is in another app (e.g. Google Maps).
+      UIBackgroundModes: ["remote-notification", "location"],
       UIDesignRequiresCompatibility: true,
     },
     entitlements: {
@@ -131,6 +133,13 @@ let config: ExpoConfig = {
       "android.permission.CAMERA",
       "android.permission.RECORD_AUDIO",
       "android.permission.POST_NOTIFICATIONS",
+      // Location is only ever surfaced to a micro app whose microapp.json declares
+      // requiredPermissions: ["location"] - see startLocationUpdates in app/micro-app.tsx.
+      "android.permission.ACCESS_FINE_LOCATION",
+      "android.permission.ACCESS_COARSE_LOCATION",
+      "android.permission.ACCESS_BACKGROUND_LOCATION",
+      "android.permission.FOREGROUND_SERVICE",
+      "android.permission.FOREGROUND_SERVICE_LOCATION",
     ],
     // Firebase (messaging/remote-config) pulls these in transitively via
     // play-services-measurement. The app does not use the advertising ID,
@@ -198,6 +207,15 @@ let config: ExpoConfig = {
         configureAndroidBackup: true,
         faceIDPermission:
           "Allow $(PRODUCT_NAME) to access your Face ID biometric data.",
+      },
+    ],
+    [
+      "expo-location",
+      {
+        locationAlwaysAndWhenInUsePermission:
+          "Allow $(PRODUCT_NAME) to use your location so apps like Motor Rally can track your route.",
+        isAndroidBackgroundLocationEnabled: true,
+        isAndroidForegroundServiceEnabled: true,
       },
     ],
     ["expo-screen-orientation", { initialOrientation: "DEFAULT" }],

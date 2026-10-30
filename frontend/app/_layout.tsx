@@ -30,6 +30,10 @@ import {
   onRemoteConfigChange,
   initializeRemoteConfig,
 } from "@/services/remoteConfig";
+// Imported for its side effect: defines the background location task. The OS can
+// relaunch the app headlessly to deliver a fix, so the task must be defined on every
+// JS start, not when the micro app screen happens to be mounted.
+import "@/tasks/locationTask";
 import { initializeApp } from "@/utils/initializeApp";
 import {
   initializeNotifications,
