@@ -13,6 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import { ScreenPaths } from "@/constants/ScreenPaths";
 import { SignInReason, useSignInSheet } from "@/hooks/useSignInSheet";
 import { SessionStatus } from "@/types/auth.types";
 import { router } from "expo-router";
@@ -37,7 +38,7 @@ jest.mock("@/hooks/useSignInWithAsgardeo", () => ({
 // The route's ?reason= param; undefined when the route was opened without one.
 let mockReason: SignInReason | undefined;
 jest.mock("expo-router", () => ({
-  router: { back: jest.fn(), canGoBack: jest.fn() },
+  router: { back: jest.fn(), canGoBack: jest.fn(), replace: jest.fn() },
   useLocalSearchParams: () =>
     mockReason === undefined ? {} : { reason: mockReason },
 }));
@@ -89,10 +90,12 @@ const mount = (sessionStatus: SessionStatus, rotationLost = false) => {
 
 const back = router.back as jest.Mock;
 const canGoBack = router.canGoBack as jest.Mock;
+const replace = router.replace as jest.Mock;
 
 beforeEach(() => {
   mockSignIn.mockReset().mockResolvedValue(undefined);
   back.mockReset();
+  replace.mockReset();
   canGoBack.mockReset().mockReturnValue(true);
   mockReason = "expired";
 });
@@ -230,13 +233,26 @@ describe("useSignInSheet", () => {
     }
   );
 
-  it("does not go back when there is nothing to go back to", () => {
+  it("goes to the feed on sign-in when there is nothing to go back to", () => {
     canGoBack.mockReturnValue(false);
     const { setStatus } = mount("expired");
 
     setStatus("authenticated");
 
     expect(back).not.toHaveBeenCalled();
+    expect(replace).toHaveBeenCalledWith(ScreenPaths.FEED);
+  });
+
+  it("goes to the feed on dismiss when there is nothing to go back to", () => {
+    canGoBack.mockReturnValue(false);
+    const { sheet } = mount("expired");
+
+    act(() => {
+      sheet.current.dismiss();
+    });
+
+    expect(back).not.toHaveBeenCalled();
+    expect(replace).toHaveBeenCalledWith(ScreenPaths.FEED);
   });
 
   it("closes on dismiss without signing in", () => {

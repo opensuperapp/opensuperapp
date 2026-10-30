@@ -13,6 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import { ScreenPaths } from "@/constants/ScreenPaths";
 import { selectIsSignedIn } from "@/context/slices/authSlice";
 import { RootState } from "@/context/store";
 import { useSignInWithAsgardeo } from "@/hooks/useSignInWithAsgardeo";
@@ -36,6 +37,15 @@ const ROTATION_LOST_COPY = {
     "We lost your sign-in while the connection was down. Sign in again to keep using your apps.",
 };
 
+/**
+ * Leaves the sheet. A link can open it as the only route in the stack, with
+ * nothing to go back to; the feed takes its place then.
+ */
+const close = () => {
+  if (router.canGoBack()) router.back();
+  else router.replace(ScreenPaths.FEED);
+};
+
 /** Why the sign-in sheet was opened; it only changes the copy. */
 export type SignInReason = "expired" | "required";
 
@@ -55,7 +65,7 @@ export const useSignInSheet = () => {
   const [isSigningIn, setIsSigningIn] = useState(false);
 
   useEffect(() => {
-    if (isSignedIn && router.canGoBack()) router.back();
+    if (isSignedIn) close();
   }, [isSignedIn]);
 
   // A cancelled or failed sign-in leaves the sheet up to try again.
@@ -68,7 +78,7 @@ export const useSignInSheet = () => {
     }
   };
 
-  const dismiss = () => router.back();
+  const dismiss = close;
 
   const copy =
     reason !== "expired"
