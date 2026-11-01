@@ -16,9 +16,9 @@
 import ListItem from "@/components/ListItem";
 import SearchBar from "@/components/SearchBar";
 import SignInMessage from "@/components/SignInMessage";
-import SignInModal from "@/components/SignInModal";
 import { Colors } from "@/constants/Colors";
 import { NOT_DOWNLOADED } from "@/constants/Constants";
+import { ScreenPaths } from "@/constants/ScreenPaths";
 import { selectIsSignedIn } from "@/context/slices/authSlice";
 import {
   removeDownloading,
@@ -32,6 +32,7 @@ import {
   removeMicroApp,
 } from "@/services/appStoreService";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -58,7 +59,6 @@ const Store = () => {
     (state: RootState) => state.appConfig
   );
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [showModal, setShowModal] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [filteredApps, setFilteredApps] = useState(apps);
   const [installationQueue, setInstallationQueue] = useState<
@@ -188,7 +188,7 @@ const Store = () => {
   const handleDownload = (appId: string, downloadUrl: string) => {
     //if not logged in, show signin
     if (!isSignedIn) {
-      setShowModal(true);
+      router.push(ScreenPaths.SIGN_IN);
       return;
     }
 
@@ -234,7 +234,6 @@ const Store = () => {
         placeholder="Search apps..."
       />
 
-      <SignInModal visible={showModal} onClose={() => setShowModal(false)} />
       {isLoading && apps.length === 0 ? (
         <View
           style={{ flex: 1, alignItems: "center", justifyContent: "center" }}

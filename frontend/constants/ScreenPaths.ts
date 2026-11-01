@@ -24,4 +24,5 @@ export enum ScreenPaths {
   UPDATE = "/update",
   QR_SCANNER = "/qr-scanner",
   CHAT = "/(tabs)/chat",
+  SIGN_IN = "/sign-in",
 }

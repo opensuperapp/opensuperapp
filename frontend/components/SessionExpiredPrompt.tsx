@@ -13,60 +13,48 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import SignInModal from "@/components/SignInModal";
+import { ScreenPaths } from "@/constants/ScreenPaths";
 import { selectSessionStatus } from "@/context/slices/authSlice";
 import { RootState } from "@/context/store";
-import { useEffect, useState } from "react";
+import { SignInReason } from "@/hooks/useSignInSheet";
+import { router, useRootNavigationState } from "expo-router";
+import { useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 
-const EXPIRED_COPY = {
-  title: "Session expired",
-  message: "Your session has expired. Sign in again to keep using your apps.",
-};
-
-const ROTATION_LOST_COPY = {
-  title: "You've been signed out",
-  message:
-    "We lost your sign-in while the connection was down. Sign in again to keep using your apps.",
-};
-
 /**
- * Asks the user to sign in again the moment their session expires, wherever they are.
+ * Opens the sign-in sheet the moment the session expires, wherever the user is.
  * Before this the only way back was a Sign In button on Profile or the Store, and
  * nothing said to go there.
  *
- * Mounted once at the root. A user-initiated sign-out never shows it, and "Not now"
- * leaves the user signed out with the usual Sign In buttons where they always were.
+ * Mounted once at the root. A user-initiated sign-out never opens it. It opens once per
+ * expiry: closing it leaves the user signed out with the usual Sign In buttons where
+ * they always were.
  */
 const SessionExpiredPrompt = () => {
   const isExpired = useSelector(selectSessionStatus) === "expired";
-  const rotationLost = useSelector(
-    (state: RootState) => state.auth.rotationLost
-  );
   // A sign-in started while the expired session is still being cleared would be cleared
   // with it.
   const isEndingSession = useSelector(
     (state: RootState) => state.auth.isEndingSession
   );
-  const [dismissed, setDismissed] = useState(false);
+  // On a cold start the session can expire before the root stack exists to push onto.
+  const isNavigationReady = !!useRootNavigationState()?.key;
+  const hasOpened = useRef(false);
 
-  // Cleared on the way into an expiry rather than on the way out: iOS reports the modal
-  // dismissed only after its animation, by which time a sign-in has already hidden it.
   useEffect(() => {
-    if (isExpired) setDismissed(false);
-  }, [isExpired]);
+    if (!isExpired) {
+      hasOpened.current = false;
+      return;
+    }
+    if (isEndingSession || !isNavigationReady || hasOpened.current) return;
+    hasOpened.current = true;
+    router.push({
+      pathname: ScreenPaths.SIGN_IN,
+      params: { reason: "expired" satisfies SignInReason },
+    });
+  }, [isExpired, isEndingSession, isNavigationReady]);
 
-  const { title, message } = rotationLost ? ROTATION_LOST_COPY : EXPIRED_COPY;
-
-  return (
-    <SignInModal
-      visible={isExpired && !isEndingSession && !dismissed}
-      onClose={() => setDismissed(true)}
-      title={title}
-      message={message}
-      dismissLabel="Not now"
-    />
-  );
+  return null;
 };
 
 export default SessionExpiredPrompt;

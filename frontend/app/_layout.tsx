@@ -19,6 +19,7 @@ import SessionExpiredPrompt from "@/components/SessionExpiredPrompt";
 import CloseButton from "@/components/headers/CloseButton";
 import SplashModal from "@/components/SplashModal";
 import { isAndroid, NOTIFICATIONS_QUERY_KEY } from "@/constants/Constants";
+import { signInSheetOptions } from "@/constants/signInSheetOptions";
 import { AppDispatch, persistor, store } from "@/context/store";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { useNotificationNavigation } from "@/hooks/useNotificationNavigation";
@@ -41,7 +42,11 @@ import {
   DefaultTheme,
   ThemeProvider,
 } from "@react-navigation/native";
-import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import { Stack, useSegments } from "expo-router";
 import { lockAsync, OrientationLock } from "expo-screen-orientation";
@@ -58,12 +63,19 @@ import { PersistGate } from "redux-persist/integration/react";
 // rather than staying on top of everything above the stack.
 const ROUTES_WITH_OWN_OFFLINE_TOAST = ["(tabs)", "micro-app"];
 
+// On Android the sign-in sheet is a screen in this stack, so a toast rendered
+// after the stack would cover the sheet's buttons.
+const ROUTES_WITHOUT_OFFLINE_TOAST = ["sign-in"];
+
 // Every other route has no bar, so the toast sits on the screen's bottom edge.
 function StackOfflineToast() {
   const segments = useSegments();
   const insets = useSafeAreaInsets();
 
-  if (ROUTES_WITH_OWN_OFFLINE_TOAST.includes(segments[0])) {
+  if (
+    ROUTES_WITH_OWN_OFFLINE_TOAST.includes(segments[0]) ||
+    ROUTES_WITHOUT_OFFLINE_TOAST.includes(segments[0])
+  ) {
     return null;
   }
 
@@ -214,6 +226,7 @@ export default function RootLayout() {
                   name="micro-app"
                   options={{ headerBackTitle: "Back" }}
                 />
+                <Stack.Screen name="sign-in" options={signInSheetOptions} />
                 <Stack.Screen name="+not-found" />
               </Stack>
               <StackOfflineToast />
