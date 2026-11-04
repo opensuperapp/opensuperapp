@@ -108,6 +108,19 @@ jest.mock("@/services/scheduledNotifications", () => ({
   clearNotifications: jest.fn(),
   scheduleSessionNotifications: jest.fn(),
 }));
+// The location flow's native edges. The orchestration under test lives in the screen.
+const mockEnsureLocationPermissions = jest.fn();
+const mockStartForegroundLocationStream = jest.fn();
+const mockStopBackgroundLocationUpdates = jest.fn();
+jest.mock("@/services/locationService", () => ({
+  ...jest.requireActual("@/services/locationService"),
+  ensureLocationPermissions: (...args: unknown[]) =>
+    mockEnsureLocationPermissions(...args),
+  startForegroundLocationStream: (...args: unknown[]) =>
+    mockStartForegroundLocationStream(...args),
+  stopBackgroundLocationUpdates: (...args: unknown[]) =>
+    mockStopBackgroundLocationUpdates(...args),
+}));
 jest.mock("expo-document-picker", () => ({ getDocumentAsync: jest.fn() }));
 jest.mock("expo-mail-composer", () => ({ composeAsync: jest.fn() }));
 jest.mock("expo-secure-store", () => ({
@@ -125,17 +138,18 @@ jest.mock("@/components/OfflineToast", () => ({
 }));
 
 type SetStatus = { type: "set"; sessionStatus: SessionStatus };
+type StoredApp = { appId: string; requiredPermissions?: string[] };
 type State = {
-  apps: { apps: never[] };
+  apps: { apps: StoredApp[] };
   appConfig: { appScopes: never[] };
   auth: { sessionStatus: SessionStatus };
 };
 
-const buildStore = (sessionStatus: SessionStatus) =>
+const buildStore = (sessionStatus: SessionStatus, apps: StoredApp[] = []) =>
   createStore(
     (
       state: State = {
-        apps: { apps: [] },
+        apps: { apps },
         appConfig: { appScopes: [] },
         auth: { sessionStatus },
       },
@@ -149,8 +163,11 @@ const buildStore = (sessionStatus: SessionStatus) =>
         : state
   );
 
-const mount = async (sessionStatus: SessionStatus = "authenticated") => {
-  const store = buildStore(sessionStatus);
+const mount = async (
+  sessionStatus: SessionStatus = "authenticated",
+  apps: StoredApp[] = []
+) => {
+  const store = buildStore(sessionStatus, apps);
   let tree!: ReactTestRenderer;
   await act(async () => {
     tree = create(
@@ -173,6 +190,9 @@ beforeEach(() => {
     accessToken: "exchanged-access",
     idToken: "exchanged-id",
   });
+  mockEnsureLocationPermissions.mockResolvedValue(null);
+  mockStartForegroundLocationStream.mockResolvedValue({ remove: jest.fn() });
+  mockStopBackgroundLocationUpdates.mockResolvedValue(undefined);
   jest.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -343,5 +363,44 @@ describe("MicroApp token requests", () => {
     const { tree } = await mount();
 
     expect(texts(tree).join(" ")).not.toMatch(/try again/i);
+  });
+});
+
+describe("MicroApp when a background location task will not stop", () => {
+  const LOCATION_APP: StoredApp = {
+    appId: "app-a",
+    requiredPermissions: ["location"],
+  };
+  const UNAVAILABLE = 'window.nativebridge.rejectLocationUpdates("unavailable");';
+
+  it("tells the micro app that asked to stop that tracking may still be running", async () => {
+    mockStopBackgroundLocationUpdates.mockRejectedValue(new Error("stop failed"));
+    const { tree } = await mount("authenticated", [LOCATION_APP]);
+    mockInjectJavaScript.mockClear();
+
+    await postFromMicroApp(tree, "location_stop");
+
+    expect(injected()).toEqual([UNAVAILABLE]);
+  });
+
+  it("says nothing when the stop works", async () => {
+    const { tree } = await mount("authenticated", [LOCATION_APP]);
+    mockInjectJavaScript.mockClear();
+
+    await postFromMicroApp(tree, "location_stop");
+
+    expect(mockStopBackgroundLocationUpdates).toHaveBeenCalled();
+    expect(injected()).toEqual([]);
+  });
+
+  it("does not open a new stream over a task that is still recording", async () => {
+    mockStopBackgroundLocationUpdates.mockRejectedValue(new Error("stop failed"));
+    const { tree } = await mount("authenticated", [LOCATION_APP]);
+    mockInjectJavaScript.mockClear();
+
+    await postFromMicroApp(tree, "location_start");
+
+    expect(mockStartForegroundLocationStream).not.toHaveBeenCalled();
+    expect(injected()).toEqual([UNAVAILABLE]);
   });
 });

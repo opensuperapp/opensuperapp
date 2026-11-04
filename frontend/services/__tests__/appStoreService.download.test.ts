@@ -95,7 +95,11 @@ jest.mock("expo-file-system", () => {
     size = 1024;
     write = mockWrite;
     base64 = async () => "zip-bytes";
-    text = async () => JSON.stringify({ clientId: "micro-app-client" });
+    text = async () =>
+      JSON.stringify({
+        clientId: "micro-app-client",
+        requiredPermissions: ["location"],
+      });
     get parentDirectory() {
       return new MockDirectory();
     }
@@ -170,6 +174,23 @@ describe("downloadMicroApp", () => {
       "dispatch:updateAppStatus",
       "dispatch:removeDownloading",
     ]);
+  });
+
+  // The host enforces what the installed microapp.json declares, so the status
+  // update that records the install has to carry it into the store.
+  it("records the permissions the installed manifest declares", async () => {
+    const dispatch = jest.fn((action: unknown) => action);
+
+    await downloadMicroApp(dispatch as never, "app-1", downloadUrl);
+
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "updateAppStatus",
+      payload: expect.objectContaining({
+        appId: "app-1",
+        status: DOWNLOADED,
+        requiredPermissions: ["location"],
+      }),
+    });
   });
 
   // A refused write has already rolled the list back, so the app is not

@@ -35,6 +35,7 @@ import { selectIsSignedIn } from "@/context/slices/authSlice";
 import { AppDispatch, store } from "@/context/store";
 import { buildAppsWithTokens } from "@/utils/exchangedTokenRehydrator";
 import { persistAppsWithoutTokens } from "@/utils/exchangedTokenStore";
+import { parseRequiredPermissions } from "@/utils/microAppManifest";
 import { apiRequest } from "@/utils/requestHandler";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Directory, File, Paths } from "expo-file-system";
@@ -102,6 +103,7 @@ export const downloadMicroApp = async (
         webViewUri: installed.webViewUri,
         clientId: installed.clientId,
         displayMode: installed.displayMode,
+        requiredPermissions: installed.requiredPermissions,
       })
     );
     dispatch(updateDownloadProgress({ appId, progress: 100 }));
@@ -183,6 +185,7 @@ const unzipFile = async (appId: string) => {
       webViewUri: encodeURI(relativeUri),
       clientId: microAppConfig.clientId as string,
       displayMode: microAppConfig.displayMode,
+      requiredPermissions: microAppConfig.requiredPermissions,
     };
   } catch (error: unknown) {
     const message =
@@ -230,21 +233,30 @@ const getMicroAppConfig = async (extractedDir: Directory) => {
           return {
             clientId: appConfig.clientId || null,
             displayMode: appConfig.displayMode || DEFAULT_VIEWING_MODE,
+            requiredPermissions: parseRequiredPermissions(
+              appConfig.requiredPermissions
+            ),
           };
         } catch (jsonError) {
           console.error("Error parsing microapp.json:", jsonError);
           Alert.alert("Error", "Failed to parse microapp.json.");
-          return { clientId: null, displayMode: DEFAULT_VIEWING_MODE };
+          return EMPTY_MICRO_APP_CONFIG;
         }
       }
     }
 
     Alert.alert("Error", "microapp configs not found after unzipping.");
-    return { clientId: null, displayMode: DEFAULT_VIEWING_MODE };
+    return EMPTY_MICRO_APP_CONFIG;
   } catch (error) {
     console.error("Error reading microapp config:", error);
-    return { clientId: null, displayMode: DEFAULT_VIEWING_MODE };
+    return EMPTY_MICRO_APP_CONFIG;
   }
+};
+
+const EMPTY_MICRO_APP_CONFIG = {
+  clientId: null,
+  displayMode: DEFAULT_VIEWING_MODE,
+  requiredPermissions: [] as string[],
 };
 
 export const removeMicroApp = async (dispatch: AppDispatch, appId: string) => {
@@ -332,6 +344,15 @@ const mergeAppData = (latestApp: MicroApp, storedApp?: MicroApp): MicroApp => {
     exchangedIdToken: storedApp.exchangedIdToken || "",
     displayMode:
       storedApp.displayMode || latestApp.displayMode || DEFAULT_VIEWING_MODE,
+    // The installed microapp.json is what the host enforces against, so it wins over
+    // the store listing. An app that is not installed has no manifest, only the
+    // listing's pre-install preview: removing an app stores an empty list.
+    requiredPermissions:
+      (storedApp.status === DOWNLOADED
+        ? storedApp.requiredPermissions
+        : undefined) ??
+      latestApp.requiredPermissions ??
+      [],
   };
 };
 
