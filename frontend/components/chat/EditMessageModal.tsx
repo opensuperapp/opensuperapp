@@ -13,10 +13,11 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import BrandIcon from "@/components/brand/BrandIcon";
+import { radius, textStyle, type } from "@/constants/brand";
 import { ChatThemePalette } from "@/constants/ChatTheme";
 import { isIos } from "@/constants/Constants";
 import { MAX_MESSAGE_LENGTH } from "@/types/chat.types";
-import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -76,7 +77,7 @@ const EditMessageModal = ({
       presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
-      <View style={[styles.screen, { backgroundColor: theme.background }]}>
+      <View style={[styles.screen, { backgroundColor: theme.sheet }]}>
         <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
           <TouchableOpacity
             onPress={onClose}
@@ -92,12 +93,8 @@ const EditMessageModal = ({
             accessibilityLabel="Dismiss edit"
             accessibilityRole="button"
           >
-            <Ionicons
-              name="close"
-              size={20}
-              color={theme.assistantText}
-            />
-            <Text style={[styles.dismissText, { color: theme.assistantText }]}>
+            <BrandIcon name="close" size={20} color={theme.accent} />
+            <Text style={[styles.dismissText, { color: theme.accent }]}>
               Dismiss edit
             </Text>
           </TouchableOpacity>
@@ -116,7 +113,8 @@ const EditMessageModal = ({
             maxLength={MAX_MESSAGE_LENGTH}
             autoFocus
             textAlignVertical="top"
-            placeholderTextColor={theme.muted}
+            placeholderTextColor={theme.subtle}
+            selectionColor={theme.highlight}
           />
         </KeyboardAvoidingView>
 
@@ -131,15 +129,16 @@ const EditMessageModal = ({
             disabled={!canSend}
             style={[
               styles.sendBtn,
-              { backgroundColor: canSend ? theme.accent : theme.surface },
+              { backgroundColor: canSend ? theme.signal : theme.surface },
             ]}
             accessibilityLabel="Send message"
             accessibilityRole="button"
           >
-            <Ionicons
+            <BrandIcon
               name="send"
-              size={20}
-              color={canSend ? "#fff" : theme.muted}
+              size={22}
+              strokeWidth={1.8}
+              color={canSend ? theme.onSignal : theme.subtle}
             />
           </TouchableOpacity>
         </View>
@@ -170,16 +169,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderRadius: 22,
+    borderRadius: radius.pill,
   },
   dismissText: {
-    fontSize: 15,
-    fontWeight: "600",
+    ...textStyle({ size: 15, weight: 600 }),
   },
   input: {
     flex: 1,
-    fontSize: 16,
-    lineHeight: 24,
+    ...textStyle({ ...type.body, lineHeight: 1.6 }),
     paddingHorizontal: 20,
     paddingTop: 8,
     ...Platform.select({

@@ -13,17 +13,20 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import WheelLoader from "@/components/brand/WheelLoader";
 import ChatSessionDrawer from "@/components/chat/ChatSessionDrawer";
 import EditMessageModal from "@/components/chat/EditMessageModal";
 import ChatComposer from "@/components/chat/ChatComposer";
 import ChatEmptyState from "@/components/chat/ChatEmptyState";
 import ChatHeader from "@/components/chat/ChatHeader";
 import ChatMessageRow from "@/components/chat/ChatMessageRow";
+import { textStyle } from "@/constants/brand";
 import { getChatTheme } from "@/constants/ChatTheme";
 import { ChatRole, MessageStatus } from "@/constants/enums/Chat";
 import { isIos } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { RootState } from "@/context/store";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { useChat } from "@/hooks/useChat";
 import { useChatSessions } from "@/hooks/useChatSessions";
 import { useLeaveWhenSessionEnds } from "@/hooks/useLeaveWhenSessionEnds";
@@ -34,17 +37,14 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { router } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Animated,
   FlatList,
   Keyboard,
   KeyboardAvoidingView,
   StyleSheet,
   Text,
-  useColorScheme,
   View,
 } from "react-native";
 import { useSelector } from "react-redux";
@@ -55,8 +55,7 @@ import { useSelector } from "react-redux";
  * @returns {JSX.Element} Chat screen.
  */
 export default function ChatScreen(): JSX.Element {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
+  const { isDark } = useBrandTheme();
   const theme = getChatTheme(isDark);
   const tabBarHeight = useBottomTabBarHeight();
   const navigation = useNavigation();
@@ -247,7 +246,7 @@ export default function ChatScreen(): JSX.Element {
   if (sessionsLoading) {
     return (
       <View style={[styles.loading, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color={theme.accentMuted} />
+        <WheelLoader size={40} color={theme.muted} />
       </View>
     );
   }
@@ -255,17 +254,10 @@ export default function ChatScreen(): JSX.Element {
   return (
     <>
       <View style={[styles.screen, { backgroundColor: theme.background }]}>
-        {!isDark && (
-          <LinearGradient
-            colors={["rgba(255,255,255,0)", theme.gradientBottom]}
-            style={styles.bottomGradient}
-            pointerEvents="none"
-          />
-        )}
-
         <ChatHeader
           theme={theme}
           onOpenHistory={() => setDrawerVisible(true)}
+          onNewChat={hasMessages ? createNewSession : undefined}
         />
 
         <KeyboardAvoidingView
@@ -313,14 +305,14 @@ export default function ChatScreen(): JSX.Element {
               styles.snackbar,
               {
                 opacity: snackbarOpacity,
-                backgroundColor: isDark ? "#e3e3e3" : "#303030",
+                backgroundColor: theme.assistantText,
               },
             ]}
           >
             <Text
               style={[
                 styles.snackbarText,
-                { color: isDark ? "#131314" : "#fff" },
+                { color: theme.background },
               ]}
             >
               {snackbarText}
@@ -369,15 +361,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  bottomGradient: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: "45%",
-  },
   list: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 16,
   },
@@ -393,6 +378,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   snackbarText: {
-    fontSize: 14,
+    ...textStyle({ size: 14, weight: 500 }),
   },
 });

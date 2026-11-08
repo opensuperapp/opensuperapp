@@ -13,11 +13,14 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import BrandIcon from "@/components/brand/BrandIcon";
 import AssistantMessageContent from "@/components/chat/AssistantMessageContent";
 import ChatTypingIndicator from "@/components/chat/ChatTypingIndicator";
 import UserMessageContextMenu, {
   MessageContextMenuAnchor,
 } from "@/components/chat/UserMessageContextMenu";
+import SuperAppAgentIcon from "@/components/chat/SuperAppAgentIcon";
+import { radius, size, textStyle, type } from "@/constants/brand";
 import {
   CHAT_ERROR_GENERIC,
   CHAT_ERROR_STOPPED,
@@ -125,49 +128,52 @@ const ChatMessageRow = ({
 
   return (
     <View style={styles.assistantRow}>
-      {isStreaming ? (
-        <ChatTypingIndicator theme={theme} />
-      ) : (
-        <AssistantMessageContent
-          content={message.content}
-          theme={theme}
-          onCopy={onCopy}
-        />
-      )}
+      <SuperAppAgentIcon size={size.avatar.chatBot} />
+      <View style={styles.assistantBody}>
+        {isStreaming ? (
+          <ChatTypingIndicator theme={theme} />
+        ) : (
+          <AssistantMessageContent
+            content={message.content}
+            theme={theme}
+            onCopy={onCopy}
+          />
+        )}
 
-      {(message.status === MessageStatus.Error ||
-        message.status === MessageStatus.Stopped) && (
-        <Text style={[styles.errorHint, { color: theme.muted }]}>
-          {message.status === MessageStatus.Stopped
-            ? CHAT_ERROR_STOPPED
-            : CHAT_ERROR_GENERIC}
-        </Text>
-      )}
+        {(message.status === MessageStatus.Error ||
+          message.status === MessageStatus.Stopped) && (
+          <Text style={[styles.errorHint, { color: theme.muted }]}>
+            {message.status === MessageStatus.Stopped
+              ? CHAT_ERROR_STOPPED
+              : CHAT_ERROR_GENERIC}
+          </Text>
+        )}
 
-      {canShowActions && (
-        <View style={styles.actionRow}>
-          {showRegenerate && onRegenerate && (
-            <TouchableOpacity
-              onPress={onRegenerate}
-              hitSlop={8}
-              accessibilityLabel="Regenerate response"
-              accessibilityRole="button"
-            >
-              <Ionicons name="refresh" size={20} color={theme.muted} />
-            </TouchableOpacity>
-          )}
-          {onCopyMessage && (
-            <TouchableOpacity
-              onPress={() => onCopyMessage(message.content)}
-              hitSlop={8}
-              accessibilityLabel="Copy message"
-              accessibilityRole="button"
-            >
-              <Ionicons name="copy-outline" size={20} color={theme.muted} />
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
+        {canShowActions && (
+          <View style={styles.actionRow}>
+            {showRegenerate && onRegenerate && (
+              <TouchableOpacity
+                onPress={onRegenerate}
+                hitSlop={8}
+                accessibilityLabel="Regenerate response"
+                accessibilityRole="button"
+              >
+                <Ionicons name="refresh" size={20} color={theme.muted} />
+              </TouchableOpacity>
+            )}
+            {onCopyMessage && (
+              <TouchableOpacity
+                onPress={() => onCopyMessage(message.content)}
+                hitSlop={8}
+                accessibilityLabel="Copy message"
+                accessibilityRole="button"
+              >
+                <BrandIcon name="copy" size={20} color={theme.muted} />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+      </View>
     </View>
   );
 };
@@ -177,21 +183,30 @@ export default ChatMessageRow;
 const styles = StyleSheet.create({
   userRow: {
     alignItems: "flex-end",
-    marginBottom: 28,
-    paddingLeft: 56,
+    marginBottom: 16,
+    paddingLeft: "20%",
   },
   userBubble: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 24,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderTopLeftRadius: radius.chatBubbleUser.topLeft,
+    borderTopRightRadius: radius.chatBubbleUser.topRight,
+    borderBottomRightRadius: radius.chatBubbleUser.bottomRight,
+    borderBottomLeftRadius: radius.chatBubbleUser.bottomLeft,
   },
   userText: {
-    fontSize: 16,
-    lineHeight: 24,
+    ...textStyle({ ...type.body, lineHeight: 1.5 }),
   },
   assistantRow: {
-    marginBottom: 28,
-    paddingRight: 8,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    marginBottom: 16,
+  },
+  assistantBody: {
+    flex: 1,
+    minWidth: 0,
+    paddingTop: 4,
   },
   actionRow: {
     flexDirection: "row",
@@ -200,7 +215,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   errorHint: {
-    fontSize: 13,
+    ...textStyle({ size: 13, weight: 400 }),
     marginTop: 8,
   },
 });

@@ -13,6 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import { radius, textStyle } from "@/constants/brand";
 import { ChatThemePalette } from "@/constants/ChatTheme";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity } from "react-native";
@@ -42,7 +43,7 @@ const ChatSuggestionChip = ({
         styles.chip,
         {
           backgroundColor: theme.chipBg,
-          borderColor: theme.border,
+          borderColor: theme.inputBorder,
           opacity: disabled ? 0.5 : 1,
         },
       ]}
@@ -60,14 +61,13 @@ export default ChatSuggestionChip;
 
 const styles = StyleSheet.create({
   chip: {
+    height: 42,
+    justifyContent: "center",
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
+    borderRadius: radius.pill,
     borderWidth: 1,
   },
   label: {
-    fontSize: 14,
-    fontWeight: "500",
-    lineHeight: 20,
+    ...textStyle({ size: 14, weight: 500 }),
   },
 });

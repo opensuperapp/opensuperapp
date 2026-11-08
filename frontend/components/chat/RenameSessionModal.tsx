@@ -18,6 +18,7 @@ import {
   CHAT_RENAME_PLACEHOLDER,
   CHAT_SESSION_TITLE_MAX_LENGTH,
 } from "@/constants/Constants";
+import { radius, textStyle } from "@/constants/brand";
 import { ChatThemePalette } from "@/constants/ChatTheme";
 import React, { useEffect, useState } from "react";
 import {
@@ -73,13 +74,13 @@ const RenameSessionModal = ({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View style={[styles.overlay, { backgroundColor: "rgba(0,0,0,0.45)" }]}>
+      <View style={[styles.overlay, { backgroundColor: theme.backdrop }]}>
         <View
           style={[
             styles.dialog,
             {
-              backgroundColor: theme.background,
-              borderColor: theme.border,
+              backgroundColor: theme.sheet,
+              borderColor: theme.inputBorder,
             },
           ]}
         >
@@ -91,14 +92,15 @@ const RenameSessionModal = ({
               styles.input,
               {
                 color: theme.assistantText,
-                backgroundColor: theme.surface,
-                borderColor: theme.border,
+                backgroundColor: theme.inputSurface,
+                borderColor: theme.inputBorder,
               },
             ]}
             value={title}
             onChangeText={setTitle}
             placeholder={CHAT_RENAME_PLACEHOLDER}
-            placeholderTextColor={theme.muted}
+            placeholderTextColor={theme.subtle}
+            selectionColor={theme.highlight}
             maxLength={CHAT_SESSION_TITLE_MAX_LENGTH}
             autoFocus
             returnKeyType="done"
@@ -106,16 +108,22 @@ const RenameSessionModal = ({
           />
           <View style={styles.actions}>
             <TouchableOpacity onPress={onClose} style={styles.textBtn}>
-              <Text style={[styles.cancelText, { color: theme.muted }]}>
+              <Text style={[styles.cancelText, { color: theme.accent }]}>
                 Cancel
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleSave}
-              style={[styles.saveBtn, { backgroundColor: theme.accent }]}
+              style={[
+                styles.saveBtn,
+                { backgroundColor: theme.signal },
+                !title.trim() && styles.disabled,
+              ]}
               disabled={!title.trim()}
             >
-              <Text style={styles.saveText}>Save</Text>
+              <Text style={[styles.saveText, { color: theme.onSignal }]}>
+                Save
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -133,22 +141,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   dialog: {
-    borderRadius: 20,
+    borderRadius: radius.sheetTop,
     padding: 20,
     borderWidth: 1,
   },
   heading: {
-    fontSize: 18,
-    fontWeight: "500",
+    ...textStyle({ size: 18, weight: 600, tracking: -0.025 }),
     marginBottom: 14,
   },
   input: {
     minHeight: 48,
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: radius.input,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontSize: 16,
+    ...textStyle({ size: 16, weight: 400 }),
   },
   actions: {
     flexDirection: "row",
@@ -158,21 +165,23 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   textBtn: {
-    paddingVertical: 10,
+    minHeight: 44,
+    justifyContent: "center",
     paddingHorizontal: 12,
   },
   cancelText: {
-    fontSize: 15,
+    ...textStyle({ size: 15, weight: 500 }),
   },
   saveBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 20,
-    opacity: 1,
+    minHeight: 44,
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    borderRadius: radius.buttonSmall,
+  },
+  disabled: {
+    opacity: 0.5,
   },
   saveText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#fff",
+    ...textStyle({ size: 15, weight: 600 }),
   },
 });

@@ -17,8 +17,8 @@ import {
   CHAT_MENU_BUTTON_SIZE,
   CHAT_MENU_ICON_SIZE,
 } from "@/constants/Constants";
+import BrandIcon from "@/components/brand/BrandIcon";
 import { ChatThemePalette } from "@/constants/ChatTheme";
-import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, TouchableOpacity } from "react-native";
 
@@ -43,11 +43,13 @@ const ChatMenuButton = ({
     onPress={onPress}
     style={styles.button}
     accessibilityLabel={accessibilityLabel}
+    accessibilityRole="button"
   >
-    <Ionicons
-      name="reorder-two"
+    <BrandIcon
+      name="menu"
       size={CHAT_MENU_ICON_SIZE}
-      color={theme.assistantText}
+      color={theme.accent}
+      strokeWidth={2}
     />
   </TouchableOpacity>
 );

@@ -13,31 +13,38 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import BrandIcon from "@/components/brand/BrandIcon";
+import PrimaryButton from "@/components/brand/PrimaryButton";
 import ChatMenuButton from "@/components/chat/ChatMenuButton";
 import RenameSessionModal from "@/components/chat/RenameSessionModal";
+import {
+  duration,
+  easing,
+  radius,
+  size,
+  textStyle,
+  type,
+} from "@/constants/brand";
 import { ChatThemePalette } from "@/constants/ChatTheme";
 import {
-  CHAT_DRAWER_ANIMATION_MS,
-  CHAT_DRAWER_WIDTH_RATIO,
   CHAT_EMPTY_SEARCH_LABEL,
   CHAT_EMPTY_SESSIONS_LABEL,
   CHAT_HEADER_BOTTOM_PADDING,
   CHAT_HEADER_TOP_OFFSET,
   CHAT_NEW_SESSION_LABEL,
   CHAT_RECENT_SECTION_LABEL,
-  CHAT_SCREEN_HORIZONTAL_PADDING,
   CHAT_SEARCH_PLACEHOLDER,
   isAndroid,
 } from "@/constants/Constants";
 import { ChatSessionAction } from "@/constants/enums/Chat";
 import { ChatSession } from "@/types/chat.types";
-import { Ionicons } from "@expo/vector-icons";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import React, { JSX, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Animated,
   Dimensions,
+  Easing,
   FlatList,
   Platform,
   Pressable,
@@ -50,7 +57,11 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
-const DRAWER_WIDTH = SCREEN_WIDTH * CHAT_DRAWER_WIDTH_RATIO;
+const DRAWER_WIDTH = Math.min(
+  SCREEN_WIDTH * size.drawer.widthRatio,
+  size.drawer.maxWidth
+);
+const DRAWER_EASING = Easing.bezier(...easing.standard);
 
 export interface ChatSessionDrawerProps {
   visible: boolean;
@@ -105,12 +116,14 @@ const ChatSessionDrawer = ({
       Animated.parallel([
         Animated.timing(slideX, {
           toValue: 0,
-          duration: CHAT_DRAWER_ANIMATION_MS,
+          duration: duration.drawer,
+          easing: DRAWER_EASING,
           useNativeDriver: true,
         }),
         Animated.timing(overlayOpacity, {
           toValue: 1,
-          duration: CHAT_DRAWER_ANIMATION_MS,
+          duration: duration.drawer,
+          easing: DRAWER_EASING,
           useNativeDriver: true,
         }),
       ]).start();
@@ -120,12 +133,12 @@ const ChatSessionDrawer = ({
     Animated.parallel([
       Animated.timing(slideX, {
         toValue: -DRAWER_WIDTH,
-        duration: CHAT_DRAWER_ANIMATION_MS,
+        duration: duration.pop,
         useNativeDriver: true,
       }),
       Animated.timing(overlayOpacity, {
         toValue: 0,
-        duration: CHAT_DRAWER_ANIMATION_MS,
+        duration: duration.pop,
         useNativeDriver: true,
       }),
     ]).start(({ finished }) => {
@@ -175,7 +188,12 @@ const ChatSessionDrawer = ({
   return (
     <>
       <View style={styles.root} pointerEvents={visible ? "auto" : "none"}>
-        <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
+        <Animated.View
+          style={[
+            styles.overlay,
+            { opacity: overlayOpacity, backgroundColor: theme.backdrop },
+          ]}
+        >
           <Pressable style={styles.overlayPressable} onPress={onClose} />
         </Animated.View>
 
@@ -186,7 +204,8 @@ const ChatSessionDrawer = ({
               width: DRAWER_WIDTH,
               paddingTop: insets.top + CHAT_HEADER_TOP_OFFSET,
               paddingBottom: CHAT_HEADER_BOTTOM_PADDING,
-              backgroundColor: theme.background,
+              backgroundColor: theme.sheet,
+              borderRightColor: theme.inputBorder,
               transform: [{ translateX: slideX }],
             },
           ]}
@@ -204,26 +223,18 @@ const ChatSessionDrawer = ({
                 {
                   backgroundColor: theme.inputSurface,
                   borderColor: theme.inputBorder,
-                  ...Platform.select({
-                    ios: {
-                      shadowColor: theme.shadow,
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: 0.12,
-                      shadowRadius: 4,
-                    },
-                    android: { elevation: 3 },
-                  }),
                 },
               ]}
             >
-              <Ionicons name="search-outline" size={20} color={theme.muted} />
+              <BrandIcon name="search" size={20} color={theme.subtle} />
 
               <TextInput
                 style={[styles.searchInput, { color: theme.assistantText }]}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 placeholder={CHAT_SEARCH_PLACEHOLDER}
-                placeholderTextColor={theme.muted}
+                placeholderTextColor={theme.subtle}
+                selectionColor={theme.highlight}
                 autoCorrect={false}
                 returnKeyType="search"
                 clearButtonMode={isAndroid ? "never" : "while-editing"}
@@ -236,30 +247,22 @@ const ChatSessionDrawer = ({
                   hitSlop={8}
                   accessibilityLabel="Clear search"
                 >
-                  <Ionicons name="close-circle" size={20} color={theme.muted} />
+                  <BrandIcon name="close" size={18} color={theme.subtle} />
                 </TouchableOpacity>
               ) : null}
             </View>
           </View>
 
-          <TouchableOpacity
-            style={[styles.newChat, { backgroundColor: theme.newChatButton }]}
+          <PrimaryButton
+            title={CHAT_NEW_SESSION_LABEL}
+            style={styles.newChat}
             onPress={() => {
               onCreate();
               onClose();
             }}
-          >
-            <Ionicons
-              name="create-outline"
-              size={20}
-              color={theme.assistantText}
-            />
-            <Text style={[styles.newChatText, { color: theme.assistantText }]}>
-              {CHAT_NEW_SESSION_LABEL}
-            </Text>
-          </TouchableOpacity>
+          />
 
-          <Text style={[styles.sectionLabel, { color: theme.muted }]}>
+          <Text style={[styles.sectionLabel, { color: theme.subtle }]}>
             {CHAT_RECENT_SECTION_LABEL}
           </Text>
 
@@ -270,7 +273,7 @@ const ChatSessionDrawer = ({
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             ListEmptyComponent={
-              <Text style={[styles.emptyList, { color: theme.muted }]}>
+              <Text style={[styles.emptyList, { color: theme.subtle }]}>
                 {searchQuery.trim()
                   ? CHAT_EMPTY_SEARCH_LABEL
                   : CHAT_EMPTY_SESSIONS_LABEL}
@@ -338,7 +341,6 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.35)",
   },
   overlayPressable: {
     flex: 1,
@@ -348,72 +350,57 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     bottom: 0,
-    paddingHorizontal: CHAT_SCREEN_HORIZONTAL_PADDING,
-    shadowColor: "#000",
-    shadowOffset: { width: 2, height: 0 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 10,
+    paddingHorizontal: 16,
+    borderRightWidth: 1,
   },
   header: {
-    marginBottom: 20,
-    gap: 14,
+    marginBottom: 16,
+    gap: 12,
   },
   searchPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    paddingHorizontal: 16,
-    minHeight: 50,
-    borderRadius: 26,
+    paddingHorizontal: 14,
+    height: size.searchHeight,
+    borderRadius: radius.input,
     borderWidth: 1,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
-    lineHeight: 22,
-    paddingVertical: Platform.OS === "ios" ? 12 : 10,
+    ...textStyle({ size: 15, weight: 400 }),
+    paddingVertical: Platform.OS === "ios" ? 12 : 8,
   },
   newChat: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    paddingVertical: 14,
-    borderRadius: 28,
-    marginBottom: 20,
-  },
-  newChatText: {
-    fontSize: 16,
-    fontWeight: "500",
+    height: 48,
+    marginBottom: 16,
   },
   sectionLabel: {
-    fontSize: 13,
-    fontWeight: "500",
-    marginBottom: 8,
+    ...textStyle(type.metaLabel),
+    paddingTop: 4,
+    paddingBottom: 8,
     paddingHorizontal: 4,
   },
   list: {
     paddingBottom: 12,
     flexGrow: 1,
+    gap: 4,
   },
   emptyList: {
-    fontSize: 14,
-    textAlign: "center",
-    paddingVertical: 24,
-    paddingHorizontal: 12,
+    ...textStyle({ size: 13, weight: 400 }),
+    paddingVertical: 4,
+    paddingHorizontal: 4,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 12,
+    minHeight: size.minHitTarget,
+    padding: 12,
     borderRadius: 12,
     gap: 8,
   },
   rowTitle: {
     flex: 1,
-    fontSize: 15,
-    lineHeight: 21,
+    ...textStyle({ size: 14, weight: 500, lineHeight: 1.45 }),
   },
 });

@@ -17,6 +17,7 @@ import ChatSuggestionChip from "@/components/chat/ChatSuggestionChip";
 import SuperAppAgentIcon from "@/components/chat/SuperAppAgentIcon";
 import { CHAT_EMPTY_HINT, CHAT_SUGGESTIONS } from "@/constants/Constants";
 import { getChatEmptyTitleContent } from "@/utils/chatEmptyTitle";
+import { size, textStyle, type } from "@/constants/brand";
 import { ChatThemePalette } from "@/constants/ChatTheme";
 import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
@@ -48,11 +49,13 @@ const ChatEmptyState = ({
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-      <SuperAppAgentIcon size={72} />
+      <View style={styles.halo}>
+        <SuperAppAgentIcon size={size.avatar.chatEmpty} animated />
+      </View>
 
       <View style={styles.copyBlock}>
         {greeting ? (
-          <Text style={[styles.greeting, { color: theme.accent }]}>
+          <Text style={[styles.greeting, { color: theme.highlight }]}>
             {greeting}
           </Text>
         ) : null}
@@ -83,15 +86,23 @@ const ChatEmptyState = ({
 
 export default ChatEmptyState;
 
+// Prototype `.bot` box-shadow: 0 0 0 10px rgba(255,70,0,.08).
+const HALO_WIDTH = 10;
+
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 20,
-    paddingBottom: 24,
-    paddingTop: 16,
-    gap: 24,
+    paddingVertical: 24,
+    gap: 10,
+  },
+  halo: {
+    padding: HALO_WIDTH,
+    borderRadius: size.avatar.chatEmpty / 2 + HALO_WIDTH,
+    backgroundColor: "rgba(255,70,0,0.08)",
+    marginBottom: 14 - HALO_WIDTH,
   },
   copyBlock: {
     alignItems: "center",
@@ -99,31 +110,23 @@ const styles = StyleSheet.create({
     maxWidth: 320,
   },
   greeting: {
-    fontSize: 32,
-    fontWeight: "700",
-    letterSpacing: -0.8,
+    ...textStyle({ size: 21, weight: 600, tracking: -0.035, lineHeight: 1.25 }),
     textAlign: "center",
-    lineHeight: 40,
   },
   message: {
-    fontSize: 20,
-    fontWeight: "500",
-    letterSpacing: -0.2,
+    ...textStyle({ size: 21, weight: 600, tracking: -0.035, lineHeight: 1.25 }),
     textAlign: "center",
-    lineHeight: 28,
   },
   hint: {
-    fontSize: 14,
-    fontWeight: "400",
+    ...textStyle({ ...type.excerpt, lineHeight: 1.45 }),
     textAlign: "center",
-    lineHeight: 20,
-    marginTop: 4,
   },
   chips: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "center",
-    gap: 10,
+    gap: 8,
+    marginTop: 14,
     maxWidth: 360,
   },
 });
