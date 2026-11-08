@@ -13,17 +13,11 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
-import { Styles } from "@/constants/Styles";
-import { Ionicons } from "@expo/vector-icons";
+import BrandIcon from "@/components/brand/BrandIcon";
+import { radius, size, textStyle, type } from "@/constants/brand";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import React from "react";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 type Props = {
   label: string;
@@ -48,24 +42,23 @@ type Props = {
  * @returns The outlined open-in-wallet button.
  */
 const OpenInWalletButton = ({ label, onPress }: Props) => {
-  const colorScheme = useColorScheme() ?? "light";
-  const styles = createStyles(colorScheme);
+  const { colors } = useBrandTheme();
 
   return (
     <Pressable
       onPress={onPress}
-      style={styles.button}
+      style={({ pressed }) => [
+        styles.button,
+        { borderColor: colors.line2 },
+        pressed && { backgroundColor: colors.card2 },
+      ]}
       accessibilityRole="button"
       accessibilityLabel="open_wallet_app"
       accessibilityHint={label}
     >
       <View style={styles.content}>
-        <Ionicons
-          name="wallet-outline"
-          size={18}
-          color={Colors[colorScheme].primaryTextColor}
-        />
-        <Text style={styles.label}>{label}</Text>
+        <BrandIcon name="wallet" size={22} color={colors.text} />
+        <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
       </View>
     </Pressable>
   );
@@ -73,28 +66,23 @@ const OpenInWalletButton = ({ label, onPress }: Props) => {
 
 export default OpenInWalletButton;
 
-const createStyles = (colorScheme: "light" | "dark") =>
-  StyleSheet.create({
-    button: {
-      alignSelf: "stretch",
-      minHeight: 44,
-      alignItems: "center",
-      justifyContent: "center",
-      borderRadius: Styles.BorderRadius.medium,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: Colors[colorScheme].modalBorderColor,
-      backgroundColor: Colors[colorScheme].secondaryBackgroundColor,
-      paddingVertical: 12,
-      paddingHorizontal: Styles.Padding.default,
-    },
-    content: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: Styles.Padding.small,
-    },
-    label: {
-      fontSize: 16,
-      fontWeight: "600",
-      color: Colors[colorScheme].primaryTextColor,
-    },
-  });
+// The prototype's ghost .btn: line2 outline, text-coloured label.
+const styles = StyleSheet.create({
+  button: {
+    alignSelf: "stretch",
+    height: size.buttonPrimaryHeight,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radius.buttonPrimary,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+  },
+  content: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  label: {
+    ...textStyle({ ...type.storeRowName, tracking: -0.01 }),
+  },
+});

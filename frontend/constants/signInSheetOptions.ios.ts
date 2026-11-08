@@ -13,8 +13,8 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import { brand, radius } from "@/constants/brand";
 import type { NativeStackNavigationOptions } from "@react-navigation/native-stack";
-import { PlatformColor } from "react-native";
 
 /**
  * A native iOS form sheet sized to its content, so the expiry reads as an interruption
@@ -26,9 +26,9 @@ export const signInSheetOptions: NativeStackNavigationOptions = {
   sheetAllowedDetents: "fitToContents",
   sheetGrabberVisible: true,
   // Pinned so the corners don't change with the system default across iOS versions.
-  sheetCornerRadius: 24,
+  sheetCornerRadius: radius.sheetTop,
   // The sheet keeps the home indicator inset below the content, and that strip shows
-  // this colour. The system colour follows light and dark mode without the options
-  // needing the theme, and uses the raised dark-mode sheet colour like system sheets.
-  contentStyle: { backgroundColor: PlatformColor("systemBackground") },
+  // this colour. The sheet is the always-dark sign-in artwork in both themes, so the
+  // strip is Midnight to match it.
+  contentStyle: { backgroundColor: brand.midnight },
 };

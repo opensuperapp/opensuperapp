@@ -13,24 +13,22 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
-import { Ionicons } from "@expo/vector-icons";
+import BrandIcon from "@/components/brand/BrandIcon";
+import { textStyle, type } from "@/constants/brand";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import React from "react";
-import { StyleSheet, Text, useColorScheme, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 const BusinessCardEmptyState = () => {
-  const colorScheme = useColorScheme() ?? "light";
-  const styles = createStyles(colorScheme);
+  const { colors } = useBrandTheme();
 
   return (
     <View style={styles.container}>
-      <Ionicons
-        name="card-outline"
-        size={48}
-        color={Colors[colorScheme].icon}
-      />
-      <Text style={styles.title}>Your card isn&apos;t ready yet</Text>
-      <Text style={styles.description}>
+      <BrandIcon name="card" size={48} color={colors.text3} strokeWidth={1.4} />
+      <Text style={[styles.title, { color: colors.text }]}>
+        Your card isn&apos;t ready yet
+      </Text>
+      <Text style={[styles.description, { color: colors.text2 }]}>
         We need your name and work email to build your digital business card.
         Please sign in or try again once your profile has synced.
       </Text>
@@ -40,25 +38,21 @@ const BusinessCardEmptyState = () => {
 
 export default BusinessCardEmptyState;
 
-const createStyles = (colorScheme: "light" | "dark") =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-      paddingHorizontal: 32,
-    },
-    title: {
-      marginTop: 16,
-      fontSize: 18,
-      fontWeight: "600",
-      color: Colors[colorScheme].text,
-      textAlign: "center",
-    },
-    description: {
-      marginTop: 8,
-      fontSize: 14,
-      color: Colors[colorScheme].secondaryTextColor,
-      textAlign: "center",
-    },
-  });
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+  },
+  title: {
+    ...textStyle(type.cardTitle),
+    marginTop: 16,
+    textAlign: "center",
+  },
+  description: {
+    ...textStyle(type.excerpt),
+    marginTop: 8,
+    textAlign: "center",
+  },
+});

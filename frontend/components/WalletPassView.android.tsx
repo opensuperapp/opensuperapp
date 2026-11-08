@@ -13,23 +13,22 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import ChoreoMark from "@/components/brand/ChoreoMark";
+import CardFrontArtwork from "@/components/businessCard/CardFrontArtwork";
 import GooglePassField from "@/components/businessCard/GooglePassField";
 import { googlePassStyles as styles } from "@/components/businessCard/googlePassStyles";
+import { PASS_FOREGROUND_COLOR } from "@/constants/BusinessCard";
 import { GOOGLE_PASS } from "@/constants/GooglePass";
 import { BusinessCardData } from "@/types/businessCard.types";
 import { buildVCard } from "@/utils/vcard";
 import React, { forwardRef } from "react";
-import {
-  Image,
-  ImageSourcePropType,
-  Pressable,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, Text, View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 
-// The same artwork the pass class ships as its logo.
-const PASS_LOGO: ImageSourcePropType = require("@/assets/images/wso2-pulse-white.png");
+// The Choreo mark inside Wallet's circular logo mask, keeping Google's 15%
+// margin. The pass class's logo has to carry the same artwork.
+const LOGO_MARK_WIDTH =
+  GOOGLE_PASS.logoSize * (1 - GOOGLE_PASS.logoInsetFraction * 2);
 
 type Props = {
   data: BusinessCardData;
@@ -47,13 +46,11 @@ const WalletPassView = forwardRef<View, Props>(
 
     return (
       <View ref={ref} style={styles.pass} collapsable={false}>
+        <CardFrontArtwork />
         <View style={styles.titleRow}>
-          <Image
-            source={PASS_LOGO}
-            style={styles.logo}
-            resizeMode="contain"
-            accessibilityIgnoresInvertColors
-          />
+          <View style={styles.logo}>
+            <ChoreoMark width={LOGO_MARK_WIDTH} color={PASS_FOREGROUND_COLOR} />
+          </View>
           <Text style={styles.cardTitle} numberOfLines={1}>
             {data.organization}
           </Text>

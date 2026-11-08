@@ -13,17 +13,12 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
+import BrandIcon from "@/components/brand/BrandIcon";
+import { size, textStyle } from "@/constants/brand";
 import { isIos } from "@/constants/Constants";
-import { Ionicons } from "@expo/vector-icons";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import React from "react";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Props = {
@@ -31,8 +26,7 @@ type Props = {
 };
 
 const BusinessCardHeader = ({ onClose }: Props) => {
-  const colorScheme = useColorScheme() ?? "light";
-  const styles = createStyles(colorScheme);
+  const { colors } = useBrandTheme();
   const insets = useSafeAreaInsets();
 
   return (
@@ -40,21 +34,22 @@ const BusinessCardHeader = ({ onClose }: Props) => {
       style={[
         styles.header,
         // Only the Android full-screen presentation runs under the status bar.
-        !isIos && { paddingTop: insets.top + 12 },
+        !isIos && { paddingTop: insets.top + 8 },
       ]}
     >
-      <Text style={styles.title}>My Business Card</Text>
+      <Text style={[styles.title, { color: colors.text }]}>
+        My Business Card
+      </Text>
       <Pressable
         onPress={onClose}
-        hitSlop={12}
         accessibilityRole="button"
         accessibilityLabel="close_business_card"
+        style={({ pressed }) => [
+          styles.close,
+          pressed && { backgroundColor: colors.card2 },
+        ]}
       >
-        <Ionicons
-          name="close"
-          size={24}
-          color={Colors[colorScheme].secondaryTextColor}
-        />
+        <BrandIcon name="close" size={24} color={colors.text} />
       </Pressable>
     </View>
   );
@@ -62,19 +57,25 @@ const BusinessCardHeader = ({ onClose }: Props) => {
 
 export default BusinessCardHeader;
 
-const createStyles = (colorScheme: "light" | "dark") =>
-  StyleSheet.create({
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 16,
-      paddingTop: 14,
-      paddingBottom: 10,
-    },
-    title: {
-      fontSize: 17,
-      fontWeight: "600",
-      color: Colors[colorScheme].text,
-    },
-  });
+// The prototype's sheet header: 18/600 title, 44pt close control.
+const styles = StyleSheet.create({
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingLeft: 20,
+    paddingRight: 10,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  title: {
+    ...textStyle({ size: 18, weight: 600, tracking: -0.025 }),
+  },
+  close: {
+    width: size.minHitTarget,
+    height: size.minHitTarget,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});

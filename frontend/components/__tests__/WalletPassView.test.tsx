@@ -13,6 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import ChoreoLabsLogo from "@/components/brand/ChoreoLabsLogo";
 import WalletPassView from "@/components/WalletPassView";
 import { PASS_BACKGROUND_COLOR } from "@/constants/BusinessCard";
 import { BusinessCardData } from "@/types/businessCard.types";
@@ -38,12 +39,12 @@ const baseData: BusinessCardData = {
   firstName: "Jane",
   lastName: "Doe",
   jobTitle: "Software Engineer",
-  workEmail: "jane.doe@wso2.com",
+  workEmail: "jane.doe@example.com",
   mobile: "+94771234567",
   organization: "WSO2 LLC",
-  website: "https://wso2.com",
+  website: "https://example.com",
   address: "20 Palm Grove, Colombo 03, Sri Lanka",
-  photoUri: "https://lh3.googleusercontent.com/a-/abc",
+  photoUri: "https://photos.example.com/a-/abc",
 };
 
 const render = (data: BusinessCardData, onBarcodePress?: () => void) => {
@@ -190,18 +191,11 @@ describe("WalletPassView — card geometry", () => {
     expect(flatten(pass.props.style).aspectRatio).toBeCloseTo(2 / 3);
   });
 
-  it("draws the brand mark at exactly 40x40, pinned to the top-left", () => {
+  it("draws the brand logo pinned to the top-left", () => {
     const { root } = render(baseData);
-    // The only local asset on the card is the pulse mark; the employee photo
-    // is a remote { uri } source.
-    const mark = root.root
-      .findAllByType(Image)
-      .find((node) => node.props.source?.uri === undefined);
+    const mark = root.root.findByType(ChoreoLabsLogo).parent!;
 
-    expect(mark).toBeDefined();
-    const style = flatten(mark!.props.style);
-    expect(style.width).toBe(40);
-    expect(style.height).toBe(40);
+    const style = flatten(mark.props.style);
     expect(style.alignSelf).toBe("flex-start");
     // Nothing above it: the mark sits against the content inset, which is what
     // "top-left" means once the pass's own padding is applied.
@@ -215,16 +209,16 @@ describe("WalletPassView — a real access token, end to end", () => {
   // was "the title and phone are missing from the card" — and every claim they
   // come from is right here in the token.
   const payload = {
-    sub: "jane.doe@wso2.com",
+    sub: "jane.doe@example.com",
     jobtitle: "Software Engineer",
     profile:
-      "https://lh3.googleusercontent.com/a-/AAcHTtexampleavatartoken=s100",
+      "https://photos.example.com/a-/AAcHTtexampleavatartoken=s100",
     given_name: "Jane",
     family_name: "Doe",
     userid: "00000000-0000-4000-8000-000000000000",
     phone_number: "+94771234567",
-    email: "jane.doe@wso2.com",
-    org_handle: "wso2",
+    email: "jane.doe@example.com",
+    org_handle: "example-org",
   };
 
   const base64Url = (value: object): string =>
@@ -250,7 +244,7 @@ describe("WalletPassView — a real access token, end to end", () => {
     expect(text).toContain("TITLE");
     expect(text).toContain("Software Engineer");
     expect(text).toContain("EMAIL");
-    expect(text).toContain("jane.doe@wso2.com");
+    expect(text).toContain("jane.doe@example.com");
     expect(text).toContain("PHONE");
     expect(text).toContain("+94771234567");
 
@@ -259,7 +253,7 @@ describe("WalletPassView — a real access token, end to end", () => {
       .findAllByType(Image)
       .find((node) => node.props.source?.uri !== undefined);
     expect(photo!.props.source.uri).toBe(
-      "https://lh3.googleusercontent.com/a-/AAcHTtexampleavatartoken"
+      "https://photos.example.com/a-/AAcHTtexampleavatartoken"
     );
   });
 });

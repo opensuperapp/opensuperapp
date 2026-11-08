@@ -17,6 +17,7 @@
 // Imported by its explicit platform path: jest-expo resolves a bare
 // "@/components/WalletPassView" to the iOS file, which the sibling
 // WalletPassView.test.tsx covers.
+import ChoreoMark from "@/components/brand/ChoreoMark";
 import WalletPassView from "@/components/WalletPassView.android";
 import { PASS_BACKGROUND_COLOR } from "@/constants/BusinessCard";
 import { GOOGLE_PASS } from "@/constants/GooglePass";
@@ -40,12 +41,12 @@ const baseData: BusinessCardData = {
   firstName: "Jane",
   lastName: "Doe",
   jobTitle: "Software Engineer",
-  workEmail: "jane.doe@wso2.com",
+  workEmail: "jane.doe@example.com",
   mobile: "+94771234567",
   organization: "WSO2 LLC",
-  website: "https://wso2.com",
+  website: "https://example.com",
   address: "20 Palm Grove, Colombo 03, Sri Lanka",
-  photoUri: "https://lh3.googleusercontent.com/a-/abc",
+  photoUri: "https://photos.example.com/a-/abc",
 };
 
 const render = (data: BusinessCardData, onBarcodePress?: () => void) => {
@@ -132,11 +133,10 @@ describe("WalletPassView (Android) — card geometry", () => {
 
   it("masks the logo into a circle, as Wallet does", () => {
     const { root } = render(baseData);
-    const logo = root.root
-      .findAllByType(Image)
-      .find((node) => node.props.source?.uri === undefined);
+    // The mark sits inside the circular mask the logo slot draws.
+    const logo = root.root.findByType(ChoreoMark).parent!;
 
-    const style = flatten(logo!.props.style);
+    const style = flatten(logo.props.style);
     expect(style.width).toBe(GOOGLE_PASS.logoSize);
     expect(style.borderRadius).toBe(GOOGLE_PASS.logoSize / 2);
   });

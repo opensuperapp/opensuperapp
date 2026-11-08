@@ -13,17 +13,11 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
-import { Styles } from "@/constants/Styles";
-import { Ionicons } from "@expo/vector-icons";
+import BrandIcon from "@/components/brand/BrandIcon";
+import { brand, radius, size, textStyle, type } from "@/constants/brand";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import React, { ReactNode } from "react";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Props = {
@@ -48,10 +42,10 @@ const BusinessCardActionsFooter = ({
   onShowDisclaimer,
   children,
 }: Props) => {
-  const colorScheme = useColorScheme() ?? "light";
-  const styles = createStyles(colorScheme);
+  const { colors } = useBrandTheme();
   const insets = useSafeAreaInsets();
   const hasWallet = children !== undefined;
+  const linkText = [styles.linkText, { color: colors.cobalt }];
 
   return (
     <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
@@ -61,62 +55,65 @@ const BusinessCardActionsFooter = ({
         ) : (
           <Pressable
             onPress={onSaveAsImage}
-            style={styles.primaryButton}
+            style={({ pressed }) => [
+              styles.primaryButton,
+              {
+                backgroundColor: pressed ? brand.flare : colors.primaryFill,
+              },
+            ]}
             accessibilityRole="button"
             accessibilityLabel="save_card_image"
             accessibilityHint="Saves your business card as an image"
           >
-            <Text style={styles.primaryButtonText}>Save image</Text>
+            <Text
+              style={[styles.primaryButtonText, { color: colors.primaryText }]}
+            >
+              Save image
+            </Text>
           </Pressable>
         )}
       </View>
 
-      <View style={styles.secondaryActions}>
+      {/* Links inside the card sheet take the cobalt token, per the handoff. */}
+      <View style={styles.links}>
         <Pressable
           onPress={onShareVCard}
           hitSlop={8}
+          style={styles.link}
           accessibilityRole="button"
           accessibilityLabel="share_contact_file"
         >
-          <Text style={styles.secondaryActionText}>Share contact file</Text>
+          <BrandIcon name="share" size={18} color={colors.cobalt} />
+          <Text style={linkText}>Share contact file</Text>
         </Pressable>
         {hasWallet && (
-          <>
-            <Text style={styles.secondaryActionSeparator}>·</Text>
-            <Pressable
-              onPress={onSaveAsImage}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="save_card_image"
-            >
-              <Text style={styles.secondaryActionText}>Save as image</Text>
-            </Pressable>
-          </>
+          <Pressable
+            onPress={onSaveAsImage}
+            hitSlop={8}
+            style={styles.link}
+            accessibilityRole="button"
+            accessibilityLabel="save_card_image"
+          >
+            <BrandIcon name="download" size={18} color={colors.cobalt} />
+            <Text style={linkText}>Save as image</Text>
+          </Pressable>
         )}
       </View>
 
-      {/* Its own row under the links rather than a fourth item in theirs. The
-          links are actions on the card; this one opens a document about it, and
-          squeezing it onto the end pushed the row off centre and left it
-          fighting "Share contact file · Save as image" for width. */}
+      {/* Its own row under the links rather than a third item in theirs. The
+          links are actions on the card; this one opens a document about it. */}
       {onShowDisclaimer && (
-        <View style={styles.disclaimerRow}>
-          <Pressable
-            onPress={onShowDisclaimer}
-            hitSlop={8}
-            style={styles.disclaimerButton}
-            accessibilityRole="button"
-            accessibilityLabel="view_wallet_disclaimer"
-            accessibilityHint="Shows what goes on your wallet card and how the details are handled"
-          >
-            <Ionicons
-              name="information-circle-outline"
-              size={16}
-              color={Colors.actionButtonTextColor}
-            />
-            <Text style={styles.secondaryActionText}>Privacy</Text>
-          </Pressable>
-        </View>
+        <Pressable
+          onPress={onShowDisclaimer}
+          hitSlop={8}
+          style={[styles.link, styles.disclaimer]}
+          accessibilityRole="button"
+          accessibilityLabel="view_wallet_disclaimer"
+          accessibilityHint="Shows what goes on your wallet card and how the details are handled"
+        >
+          <BrandIcon name="info" size={18} color={colors.cobalt} />
+          <Text style={linkText}>Privacy</Text>
+        </Pressable>
       )}
     </View>
   );
@@ -124,55 +121,44 @@ const BusinessCardActionsFooter = ({
 
 export default BusinessCardActionsFooter;
 
-const createStyles = (colorScheme: "light" | "dark") =>
-  StyleSheet.create({
-    footer: {
-      paddingHorizontal: 16,
-      paddingTop: 12,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: Colors[colorScheme].borderColor,
-    },
-    walletSlot: {
-      alignItems: "center",
-    },
-    primaryButton: {
-      backgroundColor: Colors.companyOrange,
-      width: "100%",
-      minHeight: 44,
-      alignItems: "center",
-      justifyContent: "center",
-      borderRadius: Styles.BorderRadius.medium,
-      paddingVertical: 12,
-    },
-    primaryButtonText: {
-      fontSize: 16,
-      fontWeight: "600",
-      color: Colors[colorScheme].primaryBackgroundColor,
-    },
-    secondaryActions: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      marginTop: 12,
-    },
-    disclaimerRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      marginTop: Styles.Padding.small,
-    },
-    disclaimerButton: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 4,
-    },
-    secondaryActionText: {
-      fontSize: 14,
-      color: Colors.actionButtonTextColor,
-    },
-    secondaryActionSeparator: {
-      marginHorizontal: 10,
-      fontSize: 14,
-      color: Colors[colorScheme].secondaryTextColor,
-    },
-  });
+const styles = StyleSheet.create({
+  footer: {
+    paddingHorizontal: 16,
+    paddingTop: 4,
+  },
+  walletSlot: {
+    alignItems: "center",
+  },
+  // The prototype's primary .btn: Signal fill, Ink label, 54 high.
+  primaryButton: {
+    width: "100%",
+    height: size.buttonPrimaryHeight,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radius.buttonPrimary,
+  },
+  primaryButtonText: {
+    ...textStyle({ ...type.storeRowName, tracking: -0.01 }),
+  },
+  links: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "center",
+    columnGap: 20,
+    marginTop: 16,
+  },
+  link: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 6,
+  },
+  disclaimer: {
+    alignSelf: "center",
+    marginTop: 4,
+  },
+  linkText: {
+    ...textStyle({ size: 14, weight: 500 }),
+  },
+});

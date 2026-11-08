@@ -13,42 +13,44 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
-import { Ionicons } from "@expo/vector-icons";
+import BrandIcon, { type BrandIconName } from "@/components/brand/BrandIcon";
+import { soraFamily, textStyle, type } from "@/constants/brand";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import React from "react";
-import { StyleSheet, Text, useColorScheme, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { Skeleton } from "./Skeleton";
 
 /**
  * Props for ProfileListItem component.
  */
 type ProfileListItemProps = {
-  icon: string;
+  icon: BrandIconName;
   title: string;
   value?: string | null;
 };
 
+/** One row of the profile list card: icon, small label, value. */
 const ProfileListItem = React.memo(
   ({ icon, title, value }: ProfileListItemProps) => {
-    const colorScheme = useColorScheme();
-    const styles = createStyles(colorScheme ?? "light");
+    const { colors } = useBrandTheme();
 
     return (
-      <View style={{ paddingVertical: 8 }}>
-        <View style={styles.row}>
-          <Ionicons
-            name={icon as keyof typeof Ionicons.glyphMap}
-            size={24}
-            style={styles.iconText}
-          />
-          <View style={{ flexDirection: "column", gap: 3 }}>
-            <Text style={styles.titleText}>{title}</Text>
-            {value && value.trim() ? (
-              <Text style={styles.valueText}>{value}</Text>
-            ) : (
-              <Skeleton width={220} height={10} style={{ marginTop: 4 }} />
-            )}
-          </View>
+      <View style={styles.row}>
+        <BrandIcon name={icon} size={24} color={colors.text2} />
+        <View style={styles.text}>
+          <Text style={[styles.titleText, { color: colors.text3 }]}>
+            {title}
+          </Text>
+          {value && value.trim() ? (
+            <Text
+              style={[styles.valueText, { color: colors.text }]}
+              numberOfLines={1}
+            >
+              {value}
+            </Text>
+          ) : (
+            <Skeleton width={220} height={10} style={{ marginTop: 6 }} />
+          )}
         </View>
       </View>
     );
@@ -57,25 +59,23 @@ const ProfileListItem = React.memo(
 
 export default ProfileListItem;
 
-const createStyles = (colorScheme: "light" | "dark") =>
-  StyleSheet.create({
-    row: {
-      marginHorizontal: 10,
-      flexDirection: "row",
-      padding: 10,
-      alignItems: "center",
-      gap: 15,
-    },
-    iconText: {
-      color: Colors[colorScheme].primaryTextColor,
-    },
-    titleText: {
-      color: Colors[colorScheme].ternaryTextColor,
-      fontSize: 16,
-      fontWeight: "500",
-    },
-    valueText: {
-      color: Colors[colorScheme].primaryTextColor,
-      fontSize: 14,
-    },
-  });
+const styles = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    paddingVertical: 16,
+  },
+  text: {
+    flex: 1,
+    minWidth: 0,
+  },
+  titleText: {
+    ...textStyle({ ...type.profileFieldLabel, tracking: 0.02 }),
+  },
+  valueText: {
+    ...textStyle(type.profileFieldValue),
+    fontFamily: soraFamily[500],
+    marginTop: 2,
+  },
+});

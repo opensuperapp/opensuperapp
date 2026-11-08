@@ -27,11 +27,11 @@ const baseData: BusinessCardData = {
   firstName: "Jane",
   lastName: "Doe",
   jobTitle: "Software Engineer",
-  workEmail: "jane.doe@wso2.com",
+  workEmail: "jane.doe@example.com",
   workPhone: "+94112345678",
   mobile: "+94771234567",
   organization: "WSO2 LLC",
-  website: "https://wso2.com",
+  website: "https://example.com",
   address: "20 Palm Grove, Colombo 03, Sri Lanka",
 };
 

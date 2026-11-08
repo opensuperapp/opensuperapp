@@ -15,16 +15,11 @@
 // under the License.
 import WalletPassDetails from "@/components/WalletPassDetails";
 import WalletPassView from "@/components/WalletPassView";
-import { Colors } from "@/constants/Colors";
+import { textStyle, type } from "@/constants/brand";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { BusinessCardData } from "@/types/businessCard.types";
 import React, { RefObject } from "react";
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 const CONTENT_PADDING_H = 16;
 
@@ -35,8 +30,7 @@ type Props = {
 };
 
 const BusinessCardPreview = ({ data, passRef, onBarcodePress }: Props) => {
-  const colorScheme = useColorScheme() ?? "light";
-  const styles = createStyles(colorScheme);
+  const { colors, scheme } = useBrandTheme();
 
   return (
     <ScrollView
@@ -53,9 +47,9 @@ const BusinessCardPreview = ({ data, passRef, onBarcodePress }: Props) => {
 
       {/* Google Wallet has no card back: tapping the pass opens an expanded
           view below it, which is what these rows stand in for. */}
-      <Text style={styles.sectionHeading}>In the expanded pass view</Text>
+      <Text style={[styles.sectionHeading, { color: colors.text3 }]}>In the expanded pass view</Text>
       <View style={styles.passSlot}>
-        <WalletPassDetails data={data} colorScheme={colorScheme} />
+        <WalletPassDetails data={data} colorScheme={scheme} />
       </View>
     </ScrollView>
   );
@@ -63,23 +57,19 @@ const BusinessCardPreview = ({ data, passRef, onBarcodePress }: Props) => {
 
 export default BusinessCardPreview;
 
-const createStyles = (colorScheme: "light" | "dark") =>
-  StyleSheet.create({
-    content: {
-      paddingHorizontal: CONTENT_PADDING_H,
-      paddingTop: 4,
-      paddingBottom: 20,
-    },
-    passSlot: {
-      width: "100%",
-    },
-    sectionHeading: {
-      marginTop: 20,
-      marginBottom: 8,
-      fontSize: 12,
-      fontWeight: "600",
-      letterSpacing: 0.6,
-      textTransform: "uppercase",
-      color: Colors[colorScheme].secondaryTextColor,
-    },
-  });
+const styles = StyleSheet.create({
+  content: {
+    paddingHorizontal: CONTENT_PADDING_H,
+    paddingTop: 8,
+    paddingBottom: 20,
+  },
+  passSlot: {
+    width: "100%",
+  },
+  sectionHeading: {
+    ...textStyle(type.metaLabel),
+    textAlign: "center",
+    marginTop: 18,
+    marginBottom: 12,
+  },
+});

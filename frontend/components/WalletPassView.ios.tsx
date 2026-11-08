@@ -13,23 +13,20 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import ChoreoLabsLogo from "@/components/brand/ChoreoLabsLogo";
 import ApplePassField from "@/components/businessCard/ApplePassField";
 import { applePassStyles as styles } from "@/components/businessCard/applePassStyles";
-import { PASS } from "@/constants/BusinessCard";
+import CardFrontArtwork from "@/components/businessCard/CardFrontArtwork";
+import { PASS, PASS_FOREGROUND_COLOR } from "@/constants/BusinessCard";
 import { BusinessCardData } from "@/types/businessCard.types";
 import { buildVCard } from "@/utils/vcard";
 import React, { forwardRef } from "react";
-import {
-  Image,
-  ImageSourcePropType,
-  Pressable,
-  Text,
-  View,
-} from "react-native";
+import { Image, Pressable, Text, View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 
-// The same artwork the pass bundle ships as icon.png and logo.png.
-const PASS_LOGO: ImageSourcePropType = require("@/assets/images/wso2-pulse-white.png");
+// The compact Choreo Labs lockup, 26pt tall as on the brand card. The pass
+// bundle's logo.png has to carry the same artwork.
+const LOGO_WIDTH = 79;
 
 type Props = {
   data: BusinessCardData;
@@ -44,12 +41,10 @@ const WalletPassView = forwardRef<View, Props>(
 
     return (
       <View ref={ref} style={styles.pass} collapsable={false}>
-        <Image
-          source={PASS_LOGO}
-          style={styles.logo}
-          resizeMode="contain"
-          accessibilityIgnoresInvertColors
-        />
+        <CardFrontArtwork />
+        <View style={styles.logo}>
+          <ChoreoLabsLogo width={LOGO_WIDTH} color={PASS_FOREGROUND_COLOR} />
+        </View>
 
         <View style={styles.primaryRow}>
           <View style={styles.primaryColumn}>

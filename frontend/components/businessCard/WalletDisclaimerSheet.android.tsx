@@ -14,13 +14,13 @@
 // specific language governing permissions and limitations
 // under the License.
 import { createMarkdownStyles } from "@/components/businessCard/walletDisclaimerStyles";
-import { Colors } from "@/constants/Colors";
+import BrandIcon from "@/components/brand/BrandIcon";
+import { radius, textStyle, themes } from "@/constants/brand";
 import { Styles } from "@/constants/Styles";
 import {
   GOOGLE_WALLET_DISCLAIMER_MD,
   GOOGLE_WALLET_DISCLAIMER_TITLE,
 } from "@/constants/WalletDisclaimer";
-import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
   Linking,
@@ -96,11 +96,7 @@ const WalletDisclaimerSheet = ({ visible, onClose }: Props) => {
               accessibilityLabel="close_wallet_disclaimer"
               accessibilityHint="Closes the wallet disclaimer"
             >
-              <Ionicons
-                name="close"
-                size={24}
-                color={Colors[colorScheme].secondaryTextColor}
-              />
+              <BrandIcon name="close" size={24} color={themes[colorScheme].text} />
             </Pressable>
           </View>
 
@@ -127,7 +123,7 @@ const createStyles = (colorScheme: "light" | "dark") =>
   StyleSheet.create({
     backdrop: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: Colors[colorScheme].overLayColor,
+      backgroundColor: themes[colorScheme].backdrop,
     },
     sheetWrapper: {
       flex: 1,
@@ -138,9 +134,9 @@ const createStyles = (colorScheme: "light" | "dark") =>
       // fill a phone screen, and a sheet that covers everything stops reading
       // as a sheet you can back out of.
       maxHeight: "85%",
-      backgroundColor: Colors[colorScheme].primaryBackgroundColor,
-      borderTopLeftRadius: Styles.BorderRadius.large,
-      borderTopRightRadius: Styles.BorderRadius.large,
+      backgroundColor: themes[colorScheme].sheet,
+      borderTopLeftRadius: radius.sheetTop,
+      borderTopRightRadius: radius.sheetTop,
     },
     header: {
       flexDirection: "row",
@@ -150,12 +146,11 @@ const createStyles = (colorScheme: "light" | "dark") =>
       paddingTop: Styles.Padding.default,
       paddingBottom: 10,
       borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: Colors[colorScheme].borderColor,
+      borderBottomColor: themes[colorScheme].line,
     },
     title: {
-      fontSize: 17,
-      fontWeight: "600",
-      color: Colors[colorScheme].text,
+      ...textStyle({ size: 18, weight: 600, tracking: -0.025 }),
+      color: themes[colorScheme].text,
       // The close control has to keep its corner however long the title runs.
       flexShrink: 1,
       marginRight: Styles.Padding.medium,

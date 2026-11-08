@@ -13,6 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import { soraFamily } from "@/constants/brand";
 import {
   CARD_ASPECT_RATIO,
   PASS,
@@ -32,8 +33,6 @@ export const applePassStyles = StyleSheet.create({
     overflow: "hidden",
   },
   logo: {
-    width: PASS.logoSize,
-    height: PASS.logoSize,
     alignSelf: "flex-start",
   },
   primaryRow: {
@@ -46,9 +45,10 @@ export const applePassStyles = StyleSheet.create({
     marginRight: 12,
   },
   primaryValue: {
+    fontFamily: soraFamily[700],
     fontSize: 28,
-    lineHeight: 33,
-    fontWeight: "700",
+    lineHeight: 30,
+    letterSpacing: -0.05 * 28,
     color: PASS_FOREGROUND_COLOR,
   },
   thumbnail: {

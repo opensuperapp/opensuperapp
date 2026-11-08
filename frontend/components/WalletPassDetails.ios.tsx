@@ -13,13 +13,18 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
+import ChoreoLabsLogo from "@/components/brand/ChoreoLabsLogo";
+import { brand, soraFamily, textStyle, themes, type } from "@/constants/brand";
+import { PASS } from "@/constants/BusinessCard";
 import { BusinessCardData } from "@/types/businessCard.types";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
+
+const DOTS = require("@/assets/brand/blackout-dots.png");
 
 type Props = {
   data: BusinessCardData;
+  // Kept for parity with the Android file; the back is Ink in both themes.
   colorScheme: "light" | "dark";
 };
 
@@ -48,18 +53,23 @@ export const backFields = (data: BusinessCardData): BackField[] => {
   return fields;
 };
 
-// App surface colours, not the pass orange: iOS renders the back as a system
-// list.
-const WalletPassDetails = ({ data, colorScheme }: Props) => {
-  const styles = createStyles(colorScheme);
-
-  return (
-    <View style={styles.sheet}>
-      {backFields(data).map((field, index) => (
-        <View
-          key={field.key}
-          style={[styles.row, index > 0 && styles.rowDivider]}
-        >
+// The back face of the card: Ink with the dot artwork, the white logo, and the
+// fields pass.go puts on the back, separated by hairlines. Fills the card face
+// it is given, so it is the same size as the front it flips from.
+const WalletPassDetails = ({ data }: Props) => (
+  <View style={styles.face}>
+    <Image
+      source={DOTS}
+      resizeMode="cover"
+      style={StyleSheet.absoluteFill}
+      accessibilityIgnoresInvertColors
+    />
+    <View style={styles.logo}>
+      <ChoreoLabsLogo width={79} color="#FFFFFF" />
+    </View>
+    <View style={styles.list}>
+      {backFields(data).map((field) => (
+        <View key={field.key} style={styles.row}>
           <Text style={styles.label}>{field.label}</Text>
           <Text style={styles.value} selectable>
             {field.value}
@@ -67,34 +77,43 @@ const WalletPassDetails = ({ data, colorScheme }: Props) => {
         </View>
       ))}
     </View>
-  );
-};
+  </View>
+);
 
 export default WalletPassDetails;
 
-const createStyles = (colorScheme: "light" | "dark") =>
-  StyleSheet.create({
-    sheet: {
-      backgroundColor: Colors[colorScheme].secondaryBackgroundColor,
-      borderRadius: 12,
-      paddingHorizontal: 16,
-    },
-    row: {
-      paddingVertical: 12,
-    },
-    rowDivider: {
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: Colors[colorScheme].borderColor,
-    },
-    label: {
-      fontSize: 11,
-      fontWeight: "600",
-      letterSpacing: 0.6,
-      color: Colors[colorScheme].secondaryTextColor,
-    },
-    value: {
-      marginTop: 3,
-      fontSize: 15,
-      color: Colors[colorScheme].text,
-    },
-  });
+const styles = StyleSheet.create({
+  face: {
+    flex: 1,
+    backgroundColor: brand.ink,
+    borderRadius: PASS.cornerRadius,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.1)",
+    paddingHorizontal: PASS.contentPaddingH,
+    paddingTop: PASS.contentPaddingTop,
+    paddingBottom: PASS.contentPaddingBottom,
+    overflow: "hidden",
+  },
+  logo: {
+    alignSelf: "flex-start",
+  },
+  list: {
+    marginTop: "auto",
+  },
+  row: {
+    paddingVertical: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.14)",
+  },
+  label: {
+    ...textStyle({ ...type.cardFieldLabel, uppercase: false }),
+    color: themes.dark.text2,
+  },
+  value: {
+    marginTop: 2,
+    fontFamily: soraFamily[600],
+    fontSize: 15,
+    letterSpacing: -0.15,
+    color: "#FFFFFF",
+  },
+});

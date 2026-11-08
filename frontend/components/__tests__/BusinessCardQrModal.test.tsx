@@ -54,9 +54,9 @@ const data: BusinessCardData = {
   firstName: "Jane",
   lastName: "Doe",
   jobTitle: "Software Engineer",
-  workEmail: "jane.doe@wso2.com",
+  workEmail: "jane.doe@example.com",
   organization: "WSO2",
-  website: "https://wso2.com",
+  website: "https://example.com",
 };
 
 // The brightness work is a promise chain the component never exposes, so let
