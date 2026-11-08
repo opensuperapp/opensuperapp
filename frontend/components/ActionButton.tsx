@@ -13,15 +13,11 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
+import WheelLoader from "@/components/brand/WheelLoader";
+import { radius, soraFamily } from "@/constants/brand";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import React from "react";
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useColorScheme,
-} from "react-native";
+import { StyleSheet, Text, TouchableOpacity } from "react-native";
 
 interface ActionButtonProps {
   label: string;
@@ -32,6 +28,7 @@ interface ActionButtonProps {
   fixedSize?: boolean;
 }
 
+/** Store pill: card2 fill, radius 999; shows the Wheel while downloading. */
 const ActionButton: React.FC<ActionButtonProps> = ({
   label,
   onPress,
@@ -40,29 +37,23 @@ const ActionButton: React.FC<ActionButtonProps> = ({
   downloading = false,
   fixedSize = false,
 }) => {
-  const colorScheme = useColorScheme() ?? "light";
+  const { colors } = useBrandTheme();
 
   return (
     <TouchableOpacity
       style={[
         styles.button,
         fixedSize && styles.fixedSize,
-        {
-          backgroundColor:
-            backgroundColor ?? Colors[colorScheme].secondaryBackgroundColor,
-        },
+        { backgroundColor: backgroundColor ?? colors.card2 },
       ]}
       onPress={onPress}
       activeOpacity={0.6}
     >
       {downloading ? (
-        <ActivityIndicator color={Colors.companyOrange} />
+        <WheelLoader size={20} color={colors.text2} />
       ) : (
         <Text
-          style={[
-            styles.buttonText,
-            { color: textColor ?? Colors.actionButtonTextColor },
-          ]}
+          style={[styles.buttonText, { color: textColor ?? colors.cobalt }]}
           allowFontScaling={false}
         >
           {label}
@@ -76,17 +67,20 @@ export default ActionButton;
 
 const styles = StyleSheet.create({
   button: {
+    minWidth: 84,
+    height: 36,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    minWidth: 50,
     justifyContent: "center",
-    borderRadius: 16,
+    alignItems: "center",
+    borderRadius: radius.pill,
     flexDirection: "row",
   },
   buttonText: {
-    fontWeight: "600",
+    fontFamily: soraFamily[600],
+    fontSize: 14,
   },
+  // A Get pill keeps its width while the Wheel replaces the label.
   fixedSize: {
-    paddingHorizontal: 30,
+    minWidth: 84,
   },
 });

@@ -13,12 +13,12 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
-import { Styles } from "@/constants/Styles";
+import BrandIcon from "@/components/brand/BrandIcon";
+import { radius, soraFamily, type ThemeColors } from "@/constants/brand";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { Notification } from "@/hooks/useNotifications";
 import { formatNotificationDate } from "@/utils/date";
-import { Ionicons } from "@expo/vector-icons";
-import { StyleSheet, Text, useColorScheme, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 interface Props {
   item: Notification;
@@ -26,26 +26,20 @@ interface Props {
 }
 
 export function NotificationItem({ item, isNew }: Props) {
-  const colorScheme = useColorScheme() ?? "light";
-  const styles = createStyles(colorScheme);
+  const { colors } = useBrandTheme();
+  const styles = createStyles(colors);
 
   return (
-    <View
-      style={[
-        {
-          backgroundColor: isNew
-            ? Colors.companyOrange15
-            : Colors[colorScheme].primaryBackgroundColor,
-        },
-        styles.container,
-      ]}
-    >
+    <View style={[styles.container, isNew && styles.containerNew]}>
       <View style={styles.iconContainer}>
-        <Ionicons name="notifications" size={20} color={Colors.companyOrange} />
+        <BrandIcon name="bell" size={20} color={colors.text} />
       </View>
 
       <View style={{ flex: 1, gap: 4 }}>
-        <Text style={styles.title}>{item.title}</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>{item.title}</Text>
+          {isNew && <View style={styles.newDot} />}
+        </View>
         <Text style={styles.message}>{item.message}</Text>
         <Text style={[styles.date, isNew && styles.newDate]}>
           {formatNotificationDate(item.createdAt)}
@@ -55,41 +49,60 @@ export function NotificationItem({ item, isNew }: Props) {
   );
 }
 
-const createStyles = (colorScheme: "light" | "dark") =>
+const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {
       flexDirection: "row",
-      padding: Styles.Padding.default,
+      padding: 16,
       gap: 12,
       alignItems: "flex-start",
-      borderBottomWidth: 1,
-      borderBottomColor: Colors[colorScheme].borderColor,
+      backgroundColor: colors.card,
+      borderRadius: radius.card,
+      borderWidth: 1,
+      borderColor: colors.line,
+    },
+    containerNew: {
+      borderColor: colors.line2,
     },
     iconContainer: {
-      backgroundColor: Colors.companyOrange20,
+      backgroundColor: colors.card2,
       width: 36,
       height: 36,
-      borderRadius: Styles.BorderRadius.medium,
+      borderRadius: 18,
       alignItems: "center",
       justifyContent: "center",
     },
+    titleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
     title: {
+      fontFamily: soraFamily[600],
       fontSize: 16,
-      fontWeight: "600",
-      color: Colors[colorScheme].text,
+      letterSpacing: -0.32,
+      color: colors.text,
       flex: 1,
     },
+    newDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: colors.cobalt,
+    },
     message: {
+      fontFamily: soraFamily[400],
       fontSize: 14,
-      color: Colors[colorScheme].primaryTextColor,
       lineHeight: 20,
+      color: colors.text2,
     },
     date: {
-      fontSize: 10,
-      color: Colors[colorScheme].text,
+      fontFamily: soraFamily[400],
+      fontSize: 12,
+      color: colors.text3,
     },
     newDate: {
-      fontSize: 12,
-      fontWeight: "600",
+      fontFamily: soraFamily[500],
+      color: colors.cobalt,
     },
   });

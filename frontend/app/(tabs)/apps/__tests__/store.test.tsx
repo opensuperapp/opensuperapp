@@ -62,10 +62,11 @@ jest.mock("react-redux", () =>
   require("react-redux/alternate-renderers")
 );
 
+import WheelLoader from "@/components/brand/WheelLoader";
 import { loadMicroAppDetails } from "@/services/appStoreService";
 import { SessionStatus } from "@/types/auth.types";
 import React from "react";
-import { ActivityIndicator, FlatList } from "react-native";
+import { FlatList } from "react-native";
 import { Provider } from "react-redux";
 import { createStore } from "redux";
 import { act, create, ReactTestRenderer } from "react-test-renderer";
@@ -131,7 +132,7 @@ const renderStore = async (store: ReturnType<typeof buildStore>) => {
 };
 
 const isSpinning = (renderer: ReactTestRenderer) =>
-  renderer.root.findAllByType(ActivityIndicator).length > 0;
+  renderer.root.findAllByType(WheelLoader).length > 0;
 
 describe("Store loading", () => {
   beforeEach(() => {
