@@ -21,3 +21,11 @@
 import mockRNCNetInfo from "@react-native-community/netinfo/jest/netinfo-mock.js";
 
 jest.mock("@react-native-community/netinfo", () => mockRNCNetInfo);
+
+// lottie-react-native renders through a native view that doesn't exist under Jest. The brand
+// loaders (components/brand) use it everywhere a wait is shown, so stand it in with a View.
+jest.mock("lottie-react-native", () => {
+  const { View } = require("react-native");
+  const LottieView = (props) => <View testID={props.testID} />;
+  return { __esModule: true, default: LottieView };
+});
