@@ -13,40 +13,32 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
-import React, { useMemo } from "react";
-import {
-  Dimensions,
-  ScrollView,
-  StyleSheet,
-  useColorScheme,
-  View,
-} from "react-native";
+import { radius, size } from "@/constants/brand";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
+import React from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { Skeleton } from "./Skeleton";
-
-const screenWidth = Dimensions.get("window").width;
 
 const FeedSkeleton = () => {
   const skeletonData: number[] = [1, 2, 3];
-  const colorScheme = useColorScheme() ?? "light";
-  const styles = useMemo(() => createStyles(colorScheme), [colorScheme]);
+  const { colors } = useBrandTheme();
+  const card = [styles.card, { backgroundColor: colors.card, borderColor: colors.line }];
 
   return (
-    <View style={{ padding: 16, marginTop: 5 }}>
+    <View style={{ padding: 16 }}>
       <Skeleton
-        style={{ width: "100%" }}
-        borderRadius={12}
-        height={(screenWidth - 32) * (22 / 35)}
+        style={{ width: "100%", aspectRatio: size.heroAspect }}
+        borderRadius={radius.hero}
       />
-      <View style={{ marginTop: 20 }}>
-        <Skeleton width={100} height={30} />
+      <View style={{ marginTop: 24 }}>
+        <Skeleton width={100} height={24} style={{ marginHorizontal: 4 }} />
         <ScrollView
-          style={{ marginTop: 10 }}
+          style={{ marginTop: 12 }}
           horizontal={true}
           scrollEnabled={false}
         >
           {skeletonData.map((index) => (
-            <View style={styles.card} key={index}>
+            <View style={[card, styles.eventCard]} key={index}>
               <View style={styles.header}>
                 <View style={styles.headerLeft}>
                   <Skeleton width={20} height={20} />
@@ -56,8 +48,8 @@ const FeedSkeleton = () => {
               </View>
               <Skeleton
                 style={{ width: "100%" }}
-                height={180}
-                borderRadius={12}
+                height={148}
+                borderRadius={14}
               />
               <Skeleton
                 height={18}
@@ -84,10 +76,10 @@ const FeedSkeleton = () => {
           ))}
         </ScrollView>
       </View>
-      <View style={{ marginTop: 20 }}>
-        <Skeleton width={100} height={30} />
+      <View style={{ marginTop: 24 }}>
+        <Skeleton width={100} height={24} style={{ marginHorizontal: 4 }} />
         {skeletonData.map((index) => (
-          <View style={styles.card} key={`feed-skelton-${index}`}>
+          <View style={card} key={`feed-skelton-${index}`}>
             <View style={styles.header}>
               <View style={styles.headerLeft}>
                 <Skeleton width={20} height={20} />
@@ -129,30 +121,33 @@ const FeedSkeleton = () => {
 
 export default FeedSkeleton;
 
-const createStyles = (colorScheme: "light" | "dark") =>
-  StyleSheet.create({
-    card: {
-      backgroundColor: Colors[colorScheme].libraryCardBackgroundColor,
-      borderRadius: 14,
-      padding: 16,
-      marginTop: 10,
-      marginInlineEnd: 10,
-    },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: 10,
-    },
-    headerLeft: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 2,
-    },
-    descriptionContainer: {
-      flexDirection: "column",
-      gap: 10,
-      marginBottom: 10,
-      maxWidth: 275,
-    },
-  });
+const styles = StyleSheet.create({
+  card: {
+    borderRadius: radius.card,
+    borderWidth: 1,
+    padding: 18,
+    marginTop: 12,
+  },
+  eventCard: {
+    width: 300,
+    marginTop: 0,
+    marginInlineEnd: 12,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+  },
+  descriptionContainer: {
+    flexDirection: "column",
+    gap: 10,
+    marginBottom: 10,
+    maxWidth: 275,
+  },
+});

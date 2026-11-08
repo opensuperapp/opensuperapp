@@ -13,12 +13,12 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
+import BrandIcon from "@/components/brand/BrandIcon";
 import { ScreenPaths } from "@/constants/ScreenPaths";
-import { Ionicons } from "@expo/vector-icons";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { router } from "expo-router";
 import React, { useEffect, useMemo, useRef } from "react";
-import { Animated, StyleSheet, View } from "react-native";
+import { Animated, Pressable, StyleSheet, View } from "react-native";
 
 const SPARKLE_COUNT = 1;
 
@@ -33,6 +33,7 @@ const generateSparkle = () => ({
 });
 
 const SparkleIcon = () => {
+  const { colors } = useBrandTheme();
   const sparkles = useMemo(
     () => Array.from({ length: SPARKLE_COUNT }, generateSparkle),
     []
@@ -41,13 +42,14 @@ const SparkleIcon = () => {
   return (
     <View style={styles.container}>
       <View style={styles.iconWrapper}>
-        <Ionicons
-          name="storefront-outline"
-          size={24}
-          color={Colors.companyOrange}
-          style={{ marginRight: 16 }}
+        <Pressable
           onPress={() => router.push(ScreenPaths.STORE)}
-        />
+          accessibilityRole="button"
+          accessibilityLabel="Store"
+          style={{ marginRight: 16 }}
+        >
+          <BrandIcon name="store" size={24} color={colors.accent} />
+        </Pressable>
         {sparkles.map((sparkle) => (
           <FloatingSparkle key={sparkle.id} sparkle={sparkle} />
         ))}

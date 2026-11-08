@@ -13,9 +13,9 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
+import { CardMeta, CardMore, cardText, PressableCard } from "@/components/feed/Card";
 import { EventItem } from "@/hooks/useEventsFeed";
-import { Ionicons } from "@expo/vector-icons";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import {
   differenceInCalendarDays,
   format,
@@ -25,15 +25,12 @@ import {
   parseISO,
 } from "date-fns";
 import React from "react";
-import {
-  Linking,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useColorScheme,
-  View,
-} from "react-native";
+import { Linking, StyleSheet, Text } from "react-native";
 import RemoteFallbackImage from "./RemoteFallbackImage";
+
+const CARD_WIDTH = 300;
+const CARD_PADDING = 18;
+const IMAGE_WIDTH = CARD_WIDTH - CARD_PADDING * 2 - 2; // minus the 1px border
 
 const getRelativeDateLabel = (
   startDateStr: string,
@@ -92,134 +89,47 @@ const stripHtml = (htmlString: string) => {
 };
 
 const Event = ({ item }: { item: EventItem }) => {
-  const colorScheme = useColorScheme();
-  const styles = createStyles(colorScheme ?? "light");
+  const { colors } = useBrandTheme();
 
   return (
-    <TouchableOpacity
-      onPress={() => Linking.openURL(item.url)}
-      style={styles.card}
-      activeOpacity={0.6}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Ionicons name="calendar-outline" size={16} color="#919191" />
-          <Text style={styles.type}>
-            {getEventStatus(item.date, item.end_date)}
-          </Text>
-        </View>
-        <Text style={styles.date}>
-          {getRelativeDateLabel(item.date, item.end_date)}
-        </Text>
-      </View>
+    <PressableCard onPress={() => Linking.openURL(item.url)} style={styles.card}>
+      <CardMeta
+        icon="calendar"
+        label={getEventStatus(item.date, item.end_date)}
+        date={getRelativeDateLabel(item.date, item.end_date)}
+      />
 
-      {/* Featured Image */}
       {item.image ? (
-        <View style={{ alignItems: "center" }}>
-          <RemoteFallbackImage
-            source={item.image}
-            style={styles.featuredImage}
-            resizeMode="cover"
-          />
-        </View>
+        <RemoteFallbackImage
+          source={item.image}
+          style={[styles.featuredImage, { backgroundColor: colors.card2 }]}
+          resizeMode="cover"
+        />
       ) : null}
 
-      {/* Title */}
-      <Text style={styles.title} numberOfLines={1}>
+      <Text style={[cardText.title, { color: colors.text }]} numberOfLines={1}>
         {item.title}
       </Text>
 
-      <View style={styles.descriptionContainer}>
-        <Text numberOfLines={4} style={styles.description}>
-          {stripHtml(item.teaser)}
-        </Text>
-      </View>
+      <Text numberOfLines={2} style={[cardText.excerpt, { color: colors.text2 }]}>
+        {stripHtml(item.teaser)}
+      </Text>
 
-      {/* More info button */}
-      <TouchableOpacity
-        onPress={() => Linking.openURL(item.url)}
-        style={{
-          flexDirection: "row",
-          gap: 4,
-          alignItems: "center",
-          justifyContent: "flex-end",
-          marginTop: 4,
-        }}
-      >
-        <Text style={{ fontSize: 14, color: Colors.companyOrange }}>
-          More Info
-        </Text>
-        <Ionicons name="arrow-forward" size={15} color={Colors.companyOrange} />
-      </TouchableOpacity>
-    </TouchableOpacity>
+      <CardMore label="More Info" />
+    </PressableCard>
   );
 };
 
 export default Event;
 
-const createStyles = (colorScheme: "light" | "dark") =>
-  StyleSheet.create({
-    card: {
-      backgroundColor: Colors[colorScheme].libraryCardBackgroundColor,
-      borderRadius: 14,
-      padding: 16,
-      marginBottom: 16,
-      borderWidth: 1,
-      borderColor:
-        colorScheme === "light"
-          ? Colors.light.secondaryBackgroundColor
-          : "transparent",
-      marginInlineEnd: 12,
-    },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: 10,
-    },
-    headerLeft: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 2,
-    },
-    type: {
-      color: "#919191",
-      fontSize: 12,
-      fontWeight: "500",
-      marginLeft: 4,
-    },
-    date: {
-      color: Colors[colorScheme ?? "light"].mutedTextColor,
-      fontSize: 12,
-    },
-    featuredImage: {
-      width: 272,
-      height: 153,
-      borderRadius: 12,
-      marginBottom: 14,
-    },
-    title: {
-      color: Colors[colorScheme].text,
-      fontSize: 16,
-      fontWeight: "600",
-      marginBottom: 10,
-      maxWidth: 275,
-    },
-
-    descriptionContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 10,
-      marginBottom: 10,
-      maxWidth: 275,
-    },
-    description: {
-      color: Colors[colorScheme ?? "light"].mutedTextColor,
-      fontSize: 14,
-    },
-    venue: {
-      color: Colors[colorScheme ?? "light"].mutedTextColor,
-      fontSize: 14,
-    },
-  });
+const styles = StyleSheet.create({
+  card: {
+    width: CARD_WIDTH,
+  },
+  featuredImage: {
+    width: IMAGE_WIDTH,
+    height: IMAGE_WIDTH * (9 / 16),
+    borderRadius: 14,
+    marginTop: 14,
+  },
+});

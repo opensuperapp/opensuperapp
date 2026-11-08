@@ -13,32 +13,33 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import BrandIcon from "@/components/brand/BrandIcon";
+import WheelLoader from "@/components/brand/WheelLoader";
+import ContentEmptyView from "@/components/ContentEmptyView";
+import AuthorAvatar from "@/components/feed/AuthorAvatar";
+import { CardMeta, cardText, PressableCard } from "@/components/feed/Card";
 import RemoteFallbackImage from "@/components/RemoteFallbackImage";
 import SearchBar from "@/components/SearchBar";
-import { Colors } from "@/constants/Colors";
+import { radius, size, textStyle, type } from "@/constants/brand";
 import {
   ARTICLE_BASE_URL,
   LIBRARY_ARTICLE_FETCH_LIMIT,
 } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import useDebounce from "@/hooks/useDebounce";
 import { useTrackActiveScreen } from "@/hooks/useTrackActiveScreen";
 import { fetchLibraryArticles } from "@/services/libraryService";
 import { LibraryArticle } from "@/types/library.types";
 import { capitalizeName } from "@/utils/capitalizeName";
-import { Ionicons } from "@expo/vector-icons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Dimensions,
   FlatList,
-  Image,
   Linking,
   StyleSheet,
   Text,
-  TouchableOpacity,
-  useColorScheme,
   View,
 } from "react-native";
 import LibrarySkelton from "../../components/LibrarySkeleton";
@@ -56,8 +57,8 @@ const Library = () => {
 
   const debouncedQuery = useDebounce(searchQuery, 500);
   const tabBarHeight: number = useBottomTabBarHeight();
-  const colorScheme = useColorScheme();
-  const styles = createStyles(colorScheme ?? "light", tabBarHeight);
+  const { colors } = useBrandTheme();
+  const styles = createStyles(tabBarHeight);
 
   useTrackActiveScreen(ScreenPaths.LIBRARY);
 
@@ -124,53 +125,50 @@ const Library = () => {
     index: number;
   }) => {
     const isWebinar = article.content_name === WEBINAR;
-    const iconName = isWebinar ? "videocam-outline" : "reader-outline";
     const label = isWebinar
-      ? `ON-DEMAND ${article.content_name?.toUpperCase()}`
-      : article.content_name?.toUpperCase();
+      ? `ON-DEMAND ${article.content_name}`
+      : article.content_name;
+    const tags = [article.productAreaNames, article.industriesNames]
+      .flatMap((names) => names?.split(",") ?? [])
+      .map((tag) => tag.trim())
+      .filter((tag) => tag.length > 0);
 
     return (
-      <TouchableOpacity
+      <PressableCard
         onPress={() => Linking.openURL(ARTICLE_BASE_URL + article.url)}
         style={styles.card}
-        activeOpacity={0.8}
         accessibilityLabel={`library_article_${index}`}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Ionicons name={iconName} size={16} color="#919191" />
-            <Text style={styles.type}>{label}</Text>
-          </View>
-          <Text style={styles.date}>{article.date?.toUpperCase()}</Text>
-        </View>
+        <CardMeta icon="doc" label={label} date={article.date} />
 
         {/* Featured Image */}
         {article.featured_image ? (
           <RemoteFallbackImage
             source={article.featured_image}
-            style={styles.featuredImage}
+            style={[styles.featuredImage, { backgroundColor: colors.card2 }]}
             resizeMode="cover"
           />
         ) : null}
 
-        {/* Title */}
-        <Text style={styles.title}>{article.title}</Text>
+        <Text style={[cardText.title, { color: colors.text }]}>
+          {article.title}
+        </Text>
 
         {/* Author */}
         <View style={styles.authorContainer}>
-          {article.author_img && (
-            <Image
-              source={{
-                uri: `${ARTICLE_BASE_URL}files/pictures/${article.author_img}`,
-              }}
-              style={styles.authorImage}
-              resizeMode="cover"
-            />
-          )}
+          <AuthorAvatar
+            name={article.author}
+            photoUri={
+              article.author_img
+                ? `${ARTICLE_BASE_URL}files/pictures/${article.author_img}`
+                : undefined
+            }
+          />
           <View style={styles.authorTextContainer}>
-            <Text style={styles.author}>{capitalizeName(article.author)}</Text>
-            <Text style={styles.designation}>
+            <Text style={[styles.author, { color: colors.text }]}>
+              {capitalizeName(article.author)}
+            </Text>
+            <Text style={[styles.designation, { color: colors.text2 }]}>
               {`${article.author_designation} - ${article.author_company}` ||
                 ""}
             </Text>
@@ -178,33 +176,26 @@ const Library = () => {
         </View>
 
         {/* Tags */}
-        <View style={styles.tagContainer}>
-          {article.productAreaNames
-            ?.split(",")
-            .map((tag: string) => tag.trim())
-            .filter((tag: string) => tag.length > 0)
-            .map((tag: string, idx: number) => (
-              <View key={`product-${idx}`} style={styles.tagProductAreaNames}>
-                <Text style={styles.tagTextProductAreaNames}>{tag}</Text>
+        {tags.length > 0 && (
+          <View style={[styles.tagContainer, { borderTopColor: colors.line }]}>
+            {tags.map((tag, idx) => (
+              <View
+                key={`tag-${idx}`}
+                style={[styles.tag, { backgroundColor: colors.card2 }]}
+              >
+                <Text style={[styles.tagText, { color: colors.text }]}>
+                  {tag}
+                </Text>
               </View>
             ))}
-
-          {article.industriesNames
-            ?.split(",")
-            .map((tag: string) => tag.trim())
-            .filter((tag: string) => tag.length > 0)
-            .map((tag: string, idx: number) => (
-              <View key={`industry-${idx}`} style={styles.tagIndustriesNames}>
-                <Text style={styles.tagTextIndustriesNames}>{tag}</Text>
-              </View>
-            ))}
-        </View>
-      </TouchableOpacity>
+          </View>
+        )}
+      </PressableCard>
     );
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <SearchBar
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
@@ -224,22 +215,20 @@ const Library = () => {
           onEndReachedThreshold={0.5}
           ListFooterComponent={
             fetchingMore ? (
-              <ActivityIndicator
-                size="small"
-                color={Colors[colorScheme ?? "light"].text}
-                style={styles.footerLoader}
-              />
+              <View style={styles.footerLoader}>
+                <WheelLoader size={28} color={colors.text2} />
+              </View>
             ) : null
           }
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text
-                style={styles.emptyText}
-                accessibilityLabel="library_empty_text"
-              >
-                No search results found
-              </Text>
-            </View>
+            <ContentEmptyView
+              header={
+                <BrandIcon name="search" size={28} color={colors.text} />
+              }
+              title="No search results found"
+              titleAccessibilityLabel="library_empty_text"
+              description="Try different keywords, or clear the search to see everything."
+            />
           }
         />
       )}
@@ -249,142 +238,61 @@ const Library = () => {
 
 export default Library;
 
-const createStyles = (colorScheme: "light" | "dark", tabBarHeight: number) =>
+const createStyles = (tabBarHeight: number) =>
   StyleSheet.create({
     card: {
-      backgroundColor: Colors[colorScheme].libraryCardBackgroundColor,
-      borderRadius: 14,
-      padding: 16,
-      marginBottom: 16,
-      borderWidth: 1,
-      borderColor:
-        colorScheme === "light"
-          ? Colors.light.secondaryBackgroundColor
-          : "transparent",
-    },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: 10,
-    },
-    headerLeft: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 2,
-    },
-    type: {
-      color: "#919191",
-      fontSize: 12,
-      fontWeight: "500",
-      marginLeft: 4,
-    },
-    date: {
-      color: Colors[colorScheme ?? "light"].mutedTextColor,
-      fontSize: 12,
+      marginBottom: 12,
     },
     featuredImage: {
       width: "100%",
-      height: (screenWidth - 96) * (20 / 35),
-      borderRadius: 12,
-      marginBottom: 14,
-    },
-    title: {
-      color: Colors[colorScheme].text,
-      fontSize: 18,
-      fontWeight: "600",
-      marginBottom: 18,
+      height: (screenWidth - 70) * (20 / 35),
+      borderRadius: 14,
+      marginTop: 14,
     },
     authorContainer: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 10,
-      marginBottom: 18,
-    },
-    authorImage: {
-      width: 40,
-      height: 40,
-      borderRadius: 30,
-      borderWidth: 0.5,
-      borderColor:
-        colorScheme === "light"
-          ? Colors.light.secondaryBackgroundColor
-          : "transparent",
+      gap: 12,
+      paddingTop: 6,
+      marginTop: 14,
     },
     authorTextContainer: {
-      width: "80%",
+      flex: 1,
     },
     author: {
-      color: Colors[colorScheme ?? "light"].mutedTextColor,
-      fontSize: 14,
-      fontWeight: "600",
+      ...textStyle({ ...type.authorName, tracking: -0.01 }),
       marginBottom: 2,
     },
     designation: {
-      color: Colors[colorScheme ?? "light"].mutedTextColor,
-      fontSize: 12,
+      ...textStyle({ ...type.authorRole, lineHeight: 1.4 }),
     },
     tagContainer: {
       flexDirection: "row",
       flexWrap: "wrap",
-      borderTopColor: Colors[colorScheme].primaryTextColor,
-      borderTopWidth: 0.25,
-      paddingTop: 12,
+      gap: 8,
+      borderTopWidth: 1,
+      marginTop: 16,
+      paddingTop: 14,
     },
-    tagProductAreaNames: {
-      backgroundColor: "#DDD",
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 999,
-      marginRight: 2,
-      marginBottom: 4,
-    },
-    tagIndustriesNames: {
-      backgroundColor: "#333",
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 999,
-      marginRight: 2,
-      marginBottom: 4,
-    },
-    tagTextProductAreaNames: {
-      color: "#333",
-      fontSize: 12,
-    },
-    tagTextIndustriesNames: {
-      color: "#DDD",
-      fontSize: 12,
-    },
-    loadingContainer: {
-      flex: 1,
+    tag: {
+      height: size.tagHeight,
+      paddingHorizontal: 14,
+      borderRadius: radius.pill,
       justifyContent: "center",
-      alignItems: "center",
-      backgroundColor: Colors[colorScheme].primaryBackgroundColor,
     },
-    loader: {
-      width: "20%",
-      height: 100,
+    tagText: {
+      ...textStyle({ size: 13, weight: 500 }),
     },
     container: {
-      backgroundColor: Colors[colorScheme].primaryBackgroundColor,
       paddingBottom: tabBarHeight,
     },
     flatListContent: {
-      padding: 16,
+      paddingHorizontal: 16,
+      paddingTop: 4,
       paddingBottom: tabBarHeight,
     },
     footerLoader: {
-      marginVertical: 16,
-    },
-    emptyContainer: {
-      flex: 1,
       alignItems: "center",
-      paddingHorizontal: 40,
-      marginTop: 24,
-    },
-    emptyText: {
-      color: Colors[colorScheme].secondaryTextColor,
-      fontSize: 16,
-      textAlign: "center",
+      marginVertical: 16,
     },
   });

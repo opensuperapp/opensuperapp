@@ -13,17 +13,12 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
+import BrandIcon from "@/components/brand/BrandIcon";
+import { radius, size, textStyle } from "@/constants/brand";
 import { isAndroid } from "@/constants/Constants";
-import { Ionicons } from "@expo/vector-icons";
-import React from "react";
-import {
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  useColorScheme,
-  View,
-} from "react-native";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
+import React, { useState } from "react";
+import { StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 
 type SearchProps = {
   searchQuery: string;
@@ -33,25 +28,30 @@ type SearchProps = {
 
 const SearchBar = React.memo(
   ({ searchQuery, setSearchQuery, placeholder }: SearchProps) => {
-    const colorScheme = useColorScheme();
-    const styles = createStyles(colorScheme ?? "light");
+    const { colors, isDark } = useBrandTheme();
+    const [focused, setFocused] = useState(false);
 
     return (
-      <View style={styles.searchContainer}>
-        <Ionicons
-          name="search"
-          size={20}
-          color={Colors[colorScheme ?? "light"].secondaryTextColor}
-          style={styles.searchIcon}
-        />
+      <View
+        style={[
+          styles.searchContainer,
+          {
+            backgroundColor: colors.field,
+            borderColor: focused ? colors.cobalt : colors.line,
+          },
+        ]}
+      >
+        <BrandIcon name="search" size={20} color={colors.text3} />
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: colors.text }]}
           placeholder={placeholder}
-          placeholderTextColor={
-            Colors[colorScheme ?? "light"].secondaryTextColor
-          }
+          placeholderTextColor={colors.text3}
+          selectionColor={colors.cobalt}
+          keyboardAppearance={isDark ? "dark" : "light"}
           value={searchQuery}
           onChangeText={setSearchQuery}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           clearButtonMode="while-editing"
         />
 
@@ -60,13 +60,10 @@ const SearchBar = React.memo(
             onPress={() => setSearchQuery("")}
             accessibilityLabel="Clear search"
             accessibilityRole="button"
+            hitSlop={10}
+            style={[styles.clear, { backgroundColor: colors.card2 }]}
           >
-            <Ionicons
-              name="close-circle-sharp"
-              size={20}
-              color={Colors[colorScheme ?? "light"].secondaryTextColor}
-              style={styles.searchIcon}
-            />
+            <BrandIcon name="close" size={16} strokeWidth={2} color={colors.text2} />
           </TouchableOpacity>
         )}
       </View>
@@ -76,39 +73,29 @@ const SearchBar = React.memo(
 
 export default SearchBar;
 
-const createStyles = (colorScheme: "light" | "dark") =>
-  StyleSheet.create({
-    searchContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: Colors[colorScheme].secondaryBackgroundColor,
-      borderRadius: 10,
-      marginHorizontal: 16,
-      marginTop: 20,
-      marginBottom: 12,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-    },
-    searchIcon: {
-      marginRight: 8,
-    },
-    searchInput: {
-      flex: 1,
-      color: Colors[colorScheme].text,
-      fontSize: 16,
-    },
-    emptyContainer: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-      paddingHorizontal: 40,
-    },
-    emptyText: {
-      color: Colors[colorScheme].primaryTextColor,
-      textAlign: "center",
-    },
-    columnWrapper: {
-      justifyContent: "space-between",
-      marginBottom: 16,
-    },
-  });
+const styles = StyleSheet.create({
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    height: size.searchHeight,
+    borderRadius: radius.input,
+    borderWidth: 1,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 12,
+    paddingHorizontal: 14,
+  },
+  searchInput: {
+    ...textStyle({ size: 16, weight: 400 }),
+    flex: 1,
+    height: "100%",
+  },
+  clear: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});
