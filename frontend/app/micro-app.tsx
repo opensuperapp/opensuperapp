@@ -13,11 +13,13 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import WheelLoader from "@/components/brand/WheelLoader";
 import NotFound from "@/components/NotFound";
 import OfflineToast, {
   OFFLINE_TOAST_ANIMATION_MS,
 } from "@/components/OfflineToast";
 import TextPromptDialog from "@/components/TextPromptDialog";
+import { soraFamily, themes } from "@/constants/brand";
 import { Colors } from "@/constants/Colors";
 import {
   DEVELOPER_APP_ANDROID_DEFAULT_URL,
@@ -78,7 +80,6 @@ import { StatusBar } from "expo-status-bar";
 import * as WebBrowser from "expo-web-browser";
 import { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Animated,
   Keyboard,
@@ -1101,9 +1102,9 @@ const MicroApp = () => {
               accessibilityState={{ busy: isRetryingToken }}
             >
               {isRetryingToken ? (
-                <ActivityIndicator
-                  size="small"
-                  color={Colors[colorScheme ?? "light"].primaryBackgroundColor}
+                <WheelLoader
+                  size={20}
+                  color={themes[colorScheme ?? "light"].primaryText}
                 />
               ) : (
                 <Text style={styles.retryText}>Try again</Text>
@@ -1145,8 +1146,9 @@ const createStyles = (colorScheme: "light" | "dark", bottomSafeArea: number) =>
       paddingBottom: isAndroid ? bottomSafeArea : 0,
     },
     headerText: {
-      fontWeight: "600",
-      color: Colors[colorScheme].primaryTextColor,
+      fontFamily: soraFamily[500],
+      fontSize: 16,
+      color: themes[colorScheme].accent,
     },
     errorContainer: {
       flex: 1,
@@ -1156,12 +1158,13 @@ const createStyles = (colorScheme: "light" | "dark", bottomSafeArea: number) =>
       backgroundColor: Colors[colorScheme].primaryBackgroundColor,
     },
     errorTitle: {
+      fontFamily: soraFamily[600],
       fontSize: 18,
-      fontWeight: "bold",
       marginBottom: 15,
-      color: Colors.companyOrange,
+      color: themes[colorScheme].text,
     },
     errorMessage: {
+      fontFamily: soraFamily[400],
       fontSize: 14,
       color: Colors[colorScheme].primaryTextColor,
       textAlign: "center",
@@ -1169,7 +1172,7 @@ const createStyles = (colorScheme: "light" | "dark", bottomSafeArea: number) =>
       paddingHorizontal: 20,
     },
     bold: {
-      fontWeight: "bold",
+      fontFamily: soraFamily[600],
     },
     tokenError: {
       position: "absolute",
@@ -1179,26 +1182,27 @@ const createStyles = (colorScheme: "light" | "dark", bottomSafeArea: number) =>
       alignItems: "center",
       gap: 12,
       padding: 12,
-      borderRadius: 12,
+      borderRadius: 14,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: Colors[colorScheme].borderColor,
       backgroundColor: Colors[colorScheme].secondaryBackgroundColor,
     },
     tokenErrorText: {
       flex: 1,
+      fontFamily: soraFamily[400],
       fontSize: 14,
       color: Colors[colorScheme].text,
     },
     retryButton: {
       paddingVertical: 10,
       paddingHorizontal: 25,
-      backgroundColor: Colors.companyOrange,
-      borderRadius: 8,
+      backgroundColor: themes[colorScheme].primaryFill,
+      borderRadius: 12,
     },
     retryText: {
+      fontFamily: soraFamily[600],
       fontSize: 16,
       lineHeight: 20,
-      color: Colors[colorScheme].primaryBackgroundColor,
-      fontWeight: "600",
+      color: themes[colorScheme].primaryText,
     },
   });

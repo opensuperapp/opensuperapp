@@ -13,19 +13,25 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import { blur } from "@/constants/brand";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { BlurView } from "expo-blur";
 import { StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+// expo-blur's intensity runs 0-100; this lands near an 18px CSS backdrop blur.
+const BLUR_INTENSITY = blur.bar * 2;
+
+/** The brand bar colour over an 18px backdrop blur. */
 export default function BlurTabBarBackground() {
+  const { colors, isDark } = useBrandTheme();
+
   return (
     <BlurView
-      // System chrome material automatically adapts to the system's theme
-      // and matches the native tab bar appearance on iOS.
-      tint="systemChromeMaterial"
-      intensity={100}
-      style={StyleSheet.absoluteFill}
+      tint={isDark ? "dark" : "light"}
+      intensity={BLUR_INTENSITY}
+      style={[StyleSheet.absoluteFill, { backgroundColor: colors.bar }]}
     />
   );
 }

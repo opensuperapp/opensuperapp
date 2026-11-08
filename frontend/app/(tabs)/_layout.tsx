@@ -16,8 +16,10 @@
 import { HapticTab } from "@/components/HapticTab";
 import OfflineAwareTabBar from "@/components/OfflineAwareTabBar";
 import SimulateOfflineButton from "@/components/SimulateOfflineButton";
+import { tabRootHeaderOptions } from "@/components/headers/navigationTheme";
+import TabBarIcon, { type TabIconName } from "@/components/tabbar/TabBarIcon";
 import TabBarBackground from "@/components/ui/TabBarBackground";
-import { Colors } from "@/constants/Colors";
+import { textStyle, type } from "@/constants/brand";
 import {
   CHAT_TAB_NAME,
   FEED_TAB_NAME,
@@ -28,13 +30,18 @@ import {
 import { selectIsSignedIn } from "@/context/slices/authSlice";
 import { RootState } from "@/context/store";
 import { DEFAULT_TAB_CONFIG } from "@/types/remoteConfig.types";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { useTabVisibilityRules } from "@/hooks/useRemoteConfig";
 import { useRestoreLastTab } from "@/hooks/useRestoreLastTab";
 import { shouldShowTab } from "@/utils/tabVisibility";
-import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { Platform } from "react-native";
+import { Platform, StyleSheet, Text } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
+
+// Bar: 6 top padding, a 52+ item (5 padding, 26 icon, 3 gap, label), then the safe area.
+const TAB_BAR_PADDING_TOP = 6;
+const TAB_BAR_CONTENT_HEIGHT = 62;
 
 type TabType = {
   name: string;
@@ -42,8 +49,7 @@ type TabType = {
   options: {
     headerShown: boolean;
     title: string;
-    icon: keyof typeof Ionicons.glyphMap;
-    iconFocused: keyof typeof Ionicons.glyphMap;
+    icon: TabIconName;
   };
 };
 
@@ -53,8 +59,7 @@ const tabs: TabType[] = [
     options: {
       headerShown: true,
       title: FEED_TAB_NAME,
-      icon: "layers-outline",
-      iconFocused: "layers-sharp",
+      icon: "feed",
     },
   },
   {
@@ -62,8 +67,7 @@ const tabs: TabType[] = [
     options: {
       headerShown: true,
       title: LIBRARY_TAB_NAME,
-      icon: "book-outline",
-      iconFocused: "book",
+      icon: "library",
     },
   },
   {
@@ -71,8 +75,7 @@ const tabs: TabType[] = [
     options: {
       headerShown: false,
       title: MY_APPS_TAB_NAME,
-      icon: "apps-outline",
-      iconFocused: "apps",
+      icon: "apps",
     },
   },
   {
@@ -81,8 +84,7 @@ const tabs: TabType[] = [
     options: {
       headerShown: false,
       title: CHAT_TAB_NAME,
-      icon: "chatbubble-ellipses-outline",
-      iconFocused: "chatbubble-ellipses",
+      icon: "chat",
     },
   },
   {
@@ -90,8 +92,7 @@ const tabs: TabType[] = [
     options: {
       headerShown: true,
       title: PROFILE_TAB_NAME,
-      icon: "person-circle-outline",
-      iconFocused: "person-circle",
+      icon: "profile",
     },
   },
 ];
@@ -103,6 +104,8 @@ export default function TabLayout() {
   );
   const email = authEmail ?? workEmail ?? null;
   const isAuthenticated = useSelector(selectIsSignedIn);
+  const { colors } = useBrandTheme();
+  const insets = useSafeAreaInsets();
 
   const { loading, rules } = useTabVisibilityRules();
   const effectiveRules = loading ? DEFAULT_TAB_CONFIG : rules;
@@ -116,17 +119,29 @@ export default function TabLayout() {
     <Tabs
       tabBar={(props) => <OfflineAwareTabBar {...props} />}
       screenOptions={{
-        tabBarActiveTintColor: Colors.companyOrange,
+        ...tabRootHeaderOptions(colors),
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.text3,
         headerShown: true,
         tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
+        tabBarBackground: TabBarBackground
+          ? () => <TabBarBackground />
+          : undefined,
         // headerRight is taken by some tabs; the left is free on all of them.
         headerLeft: __DEV__ ? () => <SimulateOfflineButton /> : undefined,
-        tabBarStyle: Platform.select({
-          ios: {
-            position: "absolute",
+        tabBarLabelPosition: "below-icon",
+        tabBarIconStyle: styles.icon,
+        tabBarStyle: [
+          {
+            height: TAB_BAR_CONTENT_HEIGHT + insets.bottom,
+            paddingTop: TAB_BAR_PADDING_TOP,
+            borderTopColor: colors.line,
           },
-        }),
+          Platform.select({
+            ios: { position: "absolute" as const },
+            default: { backgroundColor: colors.bar },
+          }),
+        ],
       }}
     >
       {tabs.map((tab, index) => {
@@ -143,11 +158,24 @@ export default function TabLayout() {
               headerTitleAllowFontScaling: false,
               href: showTab ? undefined : null,
               tabBarIcon: ({ focused, color }) => (
-                <Ionicons
-                  name={focused ? tab.options.iconFocused : tab.options.icon}
-                  size={28}
+                <TabBarIcon
+                  name={tab.options.icon}
+                  focused={focused}
                   color={color}
                 />
+              ),
+              tabBarLabel: ({ focused, color, children }) => (
+                <Text
+                  style={[
+                    styles.label,
+                    focused && styles.labelSelected,
+                    { color },
+                  ]}
+                  allowFontScaling={false}
+                  numberOfLines={1}
+                >
+                  {children}
+                </Text>
               ),
             }}
           />
@@ -156,3 +184,18 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  icon: {
+    width: 26,
+    height: 26,
+  },
+  label: {
+    ...textStyle(type.tabLabel),
+    letterSpacing: 0.11,
+    marginTop: 3,
+  },
+  labelSelected: {
+    ...textStyle(type.tabLabelSelected),
+  },
+});

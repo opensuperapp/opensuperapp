@@ -17,11 +17,15 @@ import AppProviders from "@/components/contexts/AppProviders";
 import OfflineToast from "@/components/OfflineToast";
 import SessionExpiredPrompt from "@/components/SessionExpiredPrompt";
 import CloseButton from "@/components/headers/CloseButton";
+import {
+  navigationThemes,
+  pushedHeaderOptions,
+} from "@/components/headers/navigationTheme";
 import SplashModal from "@/components/SplashModal";
 import { isAndroid, NOTIFICATIONS_QUERY_KEY } from "@/constants/Constants";
 import { signInSheetOptions } from "@/constants/signInSheetOptions";
 import { AppDispatch, persistor, store } from "@/context/store";
-import { useColorScheme } from "@/hooks/useColorScheme";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { useNotificationNavigation } from "@/hooks/useNotificationNavigation";
 import { useOfflineQueueReplay } from "@/hooks/useOfflineQueueReplay";
 import { useProactiveTokenRefresh } from "@/hooks/useProactiveTokenRefresh";
@@ -37,11 +41,7 @@ import {
   setupBackgroundNotificationListeners,
   setupMessagingListener,
 } from "@/utils/push-notification";
-import {
-  DarkTheme,
-  DefaultTheme,
-  ThemeProvider,
-} from "@react-navigation/native";
+import { ThemeProvider } from "@react-navigation/native";
 import {
   QueryClient,
   QueryClientProvider,
@@ -139,7 +139,7 @@ const queryClient = new QueryClient();
 // Main Root Layout
 export default function RootLayout() {
   SplashScreen.hide();
-  const colorScheme = useColorScheme();
+  const { colors, scheme, isDark } = useBrandTheme();
   const [isAppReady, setIsAppReady] = useState(false);
   const [isMinTimeElapsed, setIsMinTimeElapsed] = useState(false);
   // A font that fails to load falls back to the system face; it must not hold the splash forever.
@@ -213,43 +213,51 @@ export default function RootLayout() {
     lockOrientation();
   }, []);
 
-  if (showSplash) {
-    return <SplashModal loading={showSplash} animationType="fade" />;
-  }
-
+  // The splash stays mounted after the app appears so it can play its exit over it.
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <QueryClientProvider client={queryClient}>
-        <Provider store={store}>
-          <PersistGate loading={null} persistor={persistor}>
-            <AppProviders>
-              <AppInitializer onReady={onAppLoadComplete} />
-              <Stack>
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="update" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="qr-scanner"
-                  options={{
-                    presentation: "modal",
-                    title: "QR Scanner",
-                    headerShown: isAndroid ? false : true,
-                    headerRight: () => <CloseButton />,
-                  }}
-                />
-                <Stack.Screen
-                  name="micro-app"
-                  options={{ headerBackTitle: "Back" }}
-                />
-                <Stack.Screen name="sign-in" options={signInSheetOptions} />
-                <Stack.Screen name="+not-found" />
-              </Stack>
-              <StackOfflineToast />
-              <SessionExpiredPrompt />
-            </AppProviders>
-          </PersistGate>
-        </Provider>
-      </QueryClientProvider>
-      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
-    </ThemeProvider>
+    <>
+      {showSplash ? null : (
+        <ThemeProvider value={navigationThemes[scheme]}>
+          <QueryClientProvider client={queryClient}>
+            <Provider store={store}>
+              <PersistGate loading={null} persistor={persistor}>
+                <AppProviders>
+                  <AppInitializer onReady={onAppLoadComplete} />
+                  <Stack screenOptions={pushedHeaderOptions(colors)}>
+                    <Stack.Screen
+                      name="(tabs)"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="update"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="qr-scanner"
+                      options={{
+                        presentation: "modal",
+                        title: "QR Scanner",
+                        headerShown: isAndroid ? false : true,
+                        headerRight: () => <CloseButton />,
+                      }}
+                    />
+                    <Stack.Screen
+                      name="micro-app"
+                      options={{ headerBackTitle: "Back" }}
+                    />
+                    <Stack.Screen name="sign-in" options={signInSheetOptions} />
+                    <Stack.Screen name="+not-found" />
+                  </Stack>
+                  <StackOfflineToast />
+                  <SessionExpiredPrompt />
+                </AppProviders>
+              </PersistGate>
+            </Provider>
+          </QueryClientProvider>
+          <StatusBar style={isDark ? "light" : "dark"} />
+        </ThemeProvider>
+      )}
+      <SplashModal loading={showSplash} />
+    </>
   );
 }

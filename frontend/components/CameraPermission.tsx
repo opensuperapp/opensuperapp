@@ -13,16 +13,25 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
-import { Ionicons } from "@expo/vector-icons";
+import PrimaryButton from "@/components/brand/PrimaryButton";
+import { soraFamily, textStyle, type } from "@/constants/brand";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import React from "react";
-import {
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useColorScheme,
-  View,
-} from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import Svg, { Circle, Path } from "react-native-svg";
+
+// No camera glyph in the brand set: drawn on the same 24 grid, outline, round joins.
+const CameraIcon = ({ color }: { color: string }) => (
+  <Svg width={64} height={64} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M4 7.5h3l1.6-2.5h6.8L17 7.5h3a1 1 0 0 1 1 1V18a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8.5a1 1 0 0 1 1-1Z"
+      stroke={color}
+      strokeWidth={1.4}
+      strokeLinejoin="round"
+    />
+    <Circle cx={12} cy={13} r={3.5} stroke={color} strokeWidth={1.4} />
+  </Svg>
+);
 
 const CameraPermission = ({
   handlePress,
@@ -31,31 +40,19 @@ const CameraPermission = ({
   handlePress: () => void;
   message?: string;
 }) => {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
+  const { colors } = useBrandTheme();
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor:
-            Colors[colorScheme ?? "light"].primaryBackgroundColor,
-        },
-      ]}
-    >
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <View style={styles.content}>
         {/* Camera Icon */}
-        <Ionicons
-          style={styles.icon}
-          name="camera"
-          size={80}
-          color={Colors.companyOrange}
-        />
+        <View style={styles.icon}>
+          <CameraIcon color={colors.accent} />
+        </View>
 
         {/* Title */}
         <Text
-          style={[styles.title, { color: isDark ? "#E5E7EB" : "#1F2937" }]}
+          style={[styles.title, { color: colors.text }]}
           allowFontScaling={false}
         >
           Camera Access Needed
@@ -63,27 +60,18 @@ const CameraPermission = ({
 
         {/* Description */}
         <Text
-          style={[
-            styles.description,
-            { color: isDark ? "#9CA3AF" : "#4B5563" },
-          ]}
+          style={[styles.description, { color: colors.text2 }]}
           allowFontScaling={false}
         >
           {message}
         </Text>
 
         {/* Button */}
-        <TouchableOpacity style={styles.button} onPress={handlePress}>
-          <Text
-            style={[
-              styles.buttonText,
-              { color: isDark ? "#D1D5DB" : "#F9FAFB" },
-            ]}
-            allowFontScaling={false}
-          >
-            Continue
-          </Text>
-        </TouchableOpacity>
+        <PrimaryButton
+          title="Continue"
+          onPress={handlePress}
+          style={styles.button}
+        />
       </View>
     </View>
   );
@@ -105,26 +93,18 @@ const styles = StyleSheet.create({
     margin: 20,
   },
   title: {
-    fontSize: 24,
-    lineHeight: 32,
-    fontWeight: "700",
+    ...textStyle(type.articleTitle),
     textAlign: "center",
   },
   description: {
+    fontFamily: soraFamily[400],
+    fontSize: 15,
+    lineHeight: 23,
     textAlign: "center",
     marginTop: 16,
   },
   button: {
-    backgroundColor: Colors.companyOrange,
     width: "100%",
-    paddingVertical: 13,
-    paddingHorizontal: 20,
-    borderRadius: 16,
     marginTop: 30,
-  },
-  buttonText: {
-    textAlign: "center",
-    fontWeight: "600",
-    fontSize: 15,
   },
 });

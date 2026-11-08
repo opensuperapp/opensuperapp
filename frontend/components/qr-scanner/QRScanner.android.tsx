@@ -13,12 +13,12 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
 import { Styles } from "@/constants/Styles";
 import { useQrScanner } from "@/context/QrScannerContext";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import Constants from "expo-constants";
 import { useGlobalSearchParams, useRouter } from "expo-router";
-import { useColorScheme, View } from "react-native";
+import { View } from "react-native";
 import Scanner from "../Scanner";
 import CloseButton from "../headers/CloseButton";
 import { QrScannerScreenProps } from "./QRScanner.ios";
@@ -29,7 +29,7 @@ const QrScanner = ({ message }: QrScannerScreenProps) => {
   const { message: routeMessage } = useGlobalSearchParams<{
     message?: string;
   }>();
-  const colorScheme = useColorScheme();
+  const { colors } = useBrandTheme();
 
   const handleMessageScan = (qrCode: string) => {
     emitQrCode(qrCode);
@@ -47,10 +47,9 @@ const QrScanner = ({ message }: QrScannerScreenProps) => {
           position: "absolute",
           top: paddingTop + Styles.Padding.default,
           right: Styles.Padding.default,
-          backgroundColor:
-            Colors[colorScheme ?? "light"].primaryBackgroundColor,
-          borderRadius: Styles.BorderRadius.default,
-          padding: 8,
+          backgroundColor: colors.bar,
+          borderRadius: Styles.BorderRadius.medium,
+          padding: 10,
         }}
       />
     </View>

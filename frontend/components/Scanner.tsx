@@ -13,6 +13,8 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import BrandIcon from "@/components/brand/BrandIcon";
+import { soraFamily } from "@/constants/brand";
 import { Colors } from "@/constants/Colors";
 import { isAndroid } from "@/constants/Constants";
 import { CameraType, CameraView, useCameraPermissions } from "expo-camera";
@@ -102,14 +104,23 @@ const Scanner = ({ onScan, message, style }: ScannerProps) => {
           }}
         >
           <TouchableOpacity
-            style={{ flex: 1, alignItems: "center", alignSelf: "flex-end" }}
+            style={{
+              flex: 1,
+              flexDirection: "row",
+              justifyContent: "center",
+              alignItems: "center",
+              alignSelf: "flex-end",
+              gap: 8,
+              minHeight: 44,
+            }}
             onPress={toggleCameraFacing}
           >
+            <BrandIcon name="flip" size={22} color="white" />
             <Text
               style={{
-                fontWeight: 600,
-                fontSize: 20,
-                lineHeight: 28,
+                fontFamily: soraFamily[600],
+                fontSize: 17,
+                lineHeight: 24,
                 color: "white",
               }}
             >

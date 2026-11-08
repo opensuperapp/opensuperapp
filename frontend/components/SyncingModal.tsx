@@ -13,15 +13,11 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import WheelLoader from "@/components/brand/WheelLoader";
+import { soraFamily, type ThemeColors } from "@/constants/brand";
 import { Colors } from "@/constants/Colors";
-import {
-  ActivityIndicator,
-  Modal,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from "react-native";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
+import { Modal, StyleSheet, Text, View } from "react-native";
 import { ProgressBar } from "react-native-paper";
 
 const SyncingModal = ({
@@ -33,8 +29,8 @@ const SyncingModal = ({
   currentAction: string | null;
   progress: { done: number; total: number };
 }) => {
-  const colorScheme = useColorScheme();
-  const styles = createStyles(colorScheme ?? "light");
+  const { colors } = useBrandTheme();
+  const styles = createStyles(colors);
 
   return (
     <Modal visible={syncing} transparent animationType="none">
@@ -51,15 +47,14 @@ const SyncingModal = ({
             color={Colors.companyOrange}
             style={{
               borderRadius: 12,
-              backgroundColor:
-                Colors[colorScheme ?? "light"].secondaryBackgroundColor,
+              backgroundColor: colors.card2,
             }}
           />
         </View>
 
         <Text style={styles.waitText}>Please wait while we sync your apps</Text>
 
-        <ActivityIndicator size="large" color={Colors.companyOrange} />
+        <WheelLoader size={40} color={colors.text2} />
       </View>
     </Modal>
   );
@@ -67,36 +62,38 @@ const SyncingModal = ({
 
 export default SyncingModal;
 
-const createStyles = (colorScheme: "light" | "dark") =>
+const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {
       flex: 1,
       justifyContent: "center",
       alignItems: "center",
-      backgroundColor: Colors[colorScheme].primaryBackgroundColor,
+      backgroundColor: colors.bg,
     },
     title: {
+      fontFamily: soraFamily[600],
       fontSize: 18,
       lineHeight: 28,
-      fontWeight: "600",
       marginBottom: 16,
-      color: Colors[colorScheme].text,
+      color: colors.text,
     },
     actionText: {
+      fontFamily: soraFamily[400],
       fontSize: 14,
       lineHeight: 20,
       textAlign: "center",
-      color: Colors[colorScheme].primaryTextColor,
+      color: colors.text2,
     },
     progress: {
       width: "70%",
       marginVertical: 12,
     },
     waitText: {
+      fontFamily: soraFamily[400],
       fontSize: 14,
       lineHeight: 20,
       marginBottom: 24,
       textAlign: "center",
-      color: Colors[colorScheme].primaryTextColor,
+      color: colors.text2,
     },
   });

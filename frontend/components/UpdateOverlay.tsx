@@ -13,6 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import WheelLoader from "@/components/brand/WheelLoader";
 import React, { useEffect, useRef } from "react";
 import { Animated, View } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
@@ -21,7 +22,6 @@ interface UpdateOverlayProps {
   size?: number;
   strokeWidth?: number;
   color?: string;
-  duration?: number;
   progress?: number;
 }
 
@@ -29,7 +29,6 @@ const UpdateOverlay = ({
   size = 32,
   strokeWidth = 3,
   color = "#ffffff",
-  duration = 2000,
   progress,
 }: UpdateOverlayProps) => {
   const animatedValue = useRef(new Animated.Value(0)).current;
@@ -37,29 +36,15 @@ const UpdateOverlay = ({
   const radius = (size - strokeWidth) / 2;
 
   useEffect(() => {
-    if (typeof progress === "number") {
-      Animated.timing(animatedValue, {
-        toValue: progress / 100,
-        duration: 300,
-        useNativeDriver: false,
-      }).start();
-    } else {
-      const animate = () => {
-        animatedValue.setValue(0);
-        Animated.timing(animatedValue, {
-          toValue: 1,
-          duration,
-          useNativeDriver: false,
-        }).start(() => animate());
-      };
-
-      animate();
-
-      return () => {
-        animatedValue.stopAnimation();
-      };
+    if (typeof progress !== "number") {
+      return;
     }
-  }, [animatedValue, duration, progress]);
+    Animated.timing(animatedValue, {
+      toValue: progress / 100,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  }, [animatedValue, progress]);
 
   // Listen to animated value changes
   useEffect(() => {
@@ -93,6 +78,11 @@ const UpdateOverlay = ({
       centerY - radius
     } A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x} ${y} Z`;
   };
+
+  // No progress to show yet: the standard loader stands in for the pie.
+  if (typeof progress !== "number") {
+    return <WheelLoader size={size} color={color} />;
+  }
 
   return (
     <View style={{ width: size, height: size }}>

@@ -13,13 +13,14 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import BrandIcon from "@/components/brand/BrandIcon";
+import { ICON_PATHS, radius, soraFamily, spacing } from "@/constants/brand";
 import { Colors } from "@/constants/Colors";
 import {
   OFFLINE_DETAIL,
   OFFLINE_TITLE,
   useIsOffline,
 } from "@/context/OfflineStatusContext";
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -29,17 +30,36 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import Svg, { Path } from "react-native-svg";
 
 const SLIDE_DISTANCE = 24;
 export const OFFLINE_TOAST_ANIMATION_MS = 200;
-const TOAST_PADDING_VERTICAL = 10;
+const TOAST_PADDING_VERTICAL = 12;
+// Clear of whatever it sits on: the tab bar, or the screen's bottom edge.
+const TOAST_GAP = 8;
+
+/** The brand wifi icon, struck through. */
+const WifiOffIcon = ({ color }: { color: string }) => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+    {[...ICON_PATHS.wifi, "M3.5 3.5l17 17"].map((d) => (
+      <Path
+        key={d}
+        d={d}
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    ))}
+  </Svg>
+);
 
 type OfflineToastProps = {
   /** Distance from the bottom of the parent, e.g. the tab bar's height. */
   bottom: number;
   /**
-   * Room to leave inside the strip for the home indicator, when it sits on the screen's
-   * bottom edge. The red runs down to the edge; only the text is kept clear of it.
+   * Room to leave under the toast for the home indicator, when it sits on the screen's
+   * bottom edge.
    */
   bottomInset?: number;
   /** Puts the toast away by itself this long after it appears. Unset, it stays up. */
@@ -145,21 +165,17 @@ const OfflineToast = ({
       pointerEvents={visible ? "box-none" : "none"}
     >
       <View
-        style={[
-          styles.toast,
-          { paddingBottom: TOAST_PADDING_VERTICAL + bottomInset },
-        ]}
+        style={[styles.toast, { marginBottom: TOAST_GAP + bottomInset }]}
         accessibilityRole="alert"
         accessibilityLiveRegion="polite"
       >
-        <MaterialIcons
-          name="wifi-off"
-          size={18}
-          color={Colors[colorScheme].offlineTextColor}
+        <View
           // Decoration: the message already says it.
           accessibilityElementsHidden
           importantForAccessibility="no"
-        />
+        >
+          <WifiOffIcon color={Colors[colorScheme].offlineTextColor} />
+        </View>
         <View style={styles.message}>
           <Text style={styles.title}>{OFFLINE_TITLE}</Text>
           <Text style={styles.detail}>{OFFLINE_DETAIL}</Text>
@@ -170,7 +186,7 @@ const OfflineToast = ({
           accessibilityRole="button"
           accessibilityLabel="Dismiss"
         >
-          <Ionicons
+          <BrandIcon
             name="close"
             size={18}
             color={Colors[colorScheme].offlineTextColor}
@@ -185,11 +201,12 @@ export default OfflineToast;
 
 const createStyles = (colorScheme: "light" | "dark") =>
   StyleSheet.create({
-    // A flat strip, edge to edge, sitting directly on the tab bar or the screen's bottom.
+    // A floating card just above the tab bar or the screen's bottom. The spec has no
+    // offline token, so it is built on the theme's error colour.
     container: {
       position: "absolute",
-      left: 0,
-      right: 0,
+      left: spacing.screen,
+      right: spacing.screen,
       zIndex: 20,
       elevation: 20,
     },
@@ -198,19 +215,26 @@ const createStyles = (colorScheme: "light" | "dark") =>
       alignItems: "center",
       gap: 12,
       paddingHorizontal: 16,
-      paddingTop: TOAST_PADDING_VERTICAL,
+      paddingVertical: TOAST_PADDING_VERTICAL,
+      borderRadius: radius.input,
       backgroundColor: Colors[colorScheme].offlineBackgroundColor,
+      shadowColor: "#000000",
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: 0.3,
+      shadowRadius: 20,
+      elevation: 6,
     },
     message: {
       flex: 1,
       gap: 2,
     },
     title: {
+      fontFamily: soraFamily[600],
       fontSize: 14,
-      fontWeight: "600",
       color: Colors[colorScheme].offlineTextColor,
     },
     detail: {
+      fontFamily: soraFamily[400],
       fontSize: 13,
       color: Colors[colorScheme].offlineTextColor,
     },
