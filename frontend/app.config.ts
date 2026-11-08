@@ -36,7 +36,7 @@ const profile =
   (process.env.NODE_ENV === PRODUCTION ? PRODUCTION : DEVELOPMENT);
 
 // Allow forks to build by providing defaults, while letting you override via env.
-const APP_NAME = process.env.APP_NAME ?? "";
+const APP_NAME = process.env.APP_NAME ?? "Choreo Labs";
 const APP_SCHEME = process.env.APP_SCHEME ?? "";
 const APP_SLUG = process.env.APP_SLUG ?? "";
 const APP_OWNER = process.env.APP_OWNER ?? "";
@@ -141,7 +141,7 @@ let config: ExpoConfig = {
     ],
     adaptiveIcon: {
       foregroundImage: "./assets/images/adaptive-icon.png",
-      backgroundColor: "#476481",
+      backgroundColor: "#0B1633",
     },
   },
   plugins: [
@@ -168,11 +168,11 @@ let config: ExpoConfig = {
     [
       "expo-splash-screen",
       {
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "#050A1C",
         image: "./assets/images/splash-icon.png",
         dark: {
           image: "./assets/images/splash-icon.png",
-          backgroundColor: "#000000",
+          backgroundColor: "#050A1C",
         },
         imageWidth: 200,
       },
