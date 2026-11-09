@@ -46,7 +46,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaInsetsContext,
+  SafeAreaProvider,
+} from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 
 /**
@@ -57,7 +60,6 @@ import { useSelector } from "react-redux";
 export default function ChatScreen(): JSX.Element {
   const { isDark } = useBrandTheme();
   const theme = getChatTheme(isDark);
-  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { userInfo } = useSelector((state: RootState) => state.userInfo);
   const {
@@ -184,13 +186,12 @@ export default function ChatScreen(): JSX.Element {
     [isGenerating, sendMessage]
   );
 
-  // Inside a native tab the bottom inset already clears the tab bar on iOS; on Android
-  // the content ends above the bar, so only a small gap is needed.
-  const bottomInset = isKeyboardVisible
-    ? isIos
-      ? 12
-      : 16
-    : (isIos ? insets.bottom : 0) + 8;
+  // `tabBottomInset` comes from the screen's own SafeAreaProvider (below), so on iOS it
+  // includes the native tab bar the screen extends under; the root provider's inset is
+  // only the home indicator. On Android the content ends above the bar, so only a small
+  // gap is needed.
+  const composerBottomInset = (tabBottomInset: number) =>
+    isKeyboardVisible ? (isIos ? 12 : 16) : (isIos ? tabBottomInset : 0) + 8;
   const hasMessages = messages.length > 0;
 
   // Native bar buttons: history on the left, "new chat" once there is something to leave.
@@ -267,71 +268,78 @@ export default function ChatScreen(): JSX.Element {
 
   return (
     <>
-      <View style={[styles.screen, { backgroundColor: theme.background }]}>
-        <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={isIos ? "padding" : undefined}
-          keyboardVerticalOffset={0}
-        >
-          <FlatList
-            ref={flatListRef}
-            // Scrolls under the translucent bar; iOS insets it for the header.
-            contentInsetAdjustmentBehavior="automatic"
-            keyboardDismissMode="interactive"
-            data={messages}
-            renderItem={renderMessage}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={[
-              styles.list,
-              !hasMessages && styles.listEmpty,
-            ]}
-            onContentSizeChange={() =>
-              flatListRef.current?.scrollToEnd({ animated: true })
-            }
-            ListEmptyComponent={
-              <ChatEmptyState
-                theme={theme}
-                firstName={userInfo?.firstName}
-                onSuggestionPress={handleSuggestionPress}
-                suggestionsDisabled={isGenerating}
-              />
-            }
-            showsVerticalScrollIndicator={false}
-          />
-
-          <ChatComposer
-            theme={theme}
-            value={inputText}
-            onChangeText={setInputText}
-            onSend={handleSend}
-            onStop={stopGeneration}
-            isGenerating={isGenerating}
-            bottomInset={bottomInset}
-          />
-        </KeyboardAvoidingView>
-
-        {snackbarVisible && (
-          <Animated.View
-            style={[
-              styles.snackbar,
-              {
-                opacity: snackbarOpacity,
-                backgroundColor: theme.assistantText,
-              },
-            ]}
+      {/* Not around EditMessageModal: its sheet has no tab bar under it. */}
+      <SafeAreaProvider>
+        <View style={[styles.screen, { backgroundColor: theme.background }]}>
+          <KeyboardAvoidingView
+            style={styles.flex}
+            behavior={isIos ? "padding" : undefined}
+            keyboardVerticalOffset={0}
           >
-            <Text
+            <FlatList
+              ref={flatListRef}
+              // Scrolls under the translucent bar; iOS insets it for the header.
+              contentInsetAdjustmentBehavior="automatic"
+              keyboardDismissMode="interactive"
+              data={messages}
+              renderItem={renderMessage}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={[
+                styles.list,
+                !hasMessages && styles.listEmpty,
+              ]}
+              onContentSizeChange={() =>
+                flatListRef.current?.scrollToEnd({ animated: true })
+              }
+              ListEmptyComponent={
+                <ChatEmptyState
+                  theme={theme}
+                  firstName={userInfo?.firstName}
+                  onSuggestionPress={handleSuggestionPress}
+                  suggestionsDisabled={isGenerating}
+                />
+              }
+              showsVerticalScrollIndicator={false}
+            />
+
+            <SafeAreaInsetsContext.Consumer>
+              {(tabInsets) => (
+                <ChatComposer
+                  theme={theme}
+                  value={inputText}
+                  onChangeText={setInputText}
+                  onSend={handleSend}
+                  onStop={stopGeneration}
+                  isGenerating={isGenerating}
+                  bottomInset={composerBottomInset(tabInsets?.bottom ?? 0)}
+                />
+              )}
+            </SafeAreaInsetsContext.Consumer>
+          </KeyboardAvoidingView>
+
+          {snackbarVisible && (
+            <Animated.View
               style={[
-                styles.snackbarText,
-                { color: theme.background },
+                styles.snackbar,
+                {
+                  opacity: snackbarOpacity,
+                  backgroundColor: theme.assistantText,
+                },
               ]}
             >
-              {snackbarText}
-            </Text>
-          </Animated.View>
-        )}
+              <Text
+                style={[
+                  styles.snackbarText,
+                  { color: theme.background },
+                ]}
+              >
+                {snackbarText}
+              </Text>
+            </Animated.View>
+          )}
 
-      </View>
+        </View>
+      </SafeAreaProvider>
 
       <EditMessageModal
         visible={editTarget !== null}
