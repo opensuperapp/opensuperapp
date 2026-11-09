@@ -65,7 +65,12 @@ describe("Android edge-to-edge (Expo built-in, no react-native-edge-to-edge)", (
 type MetaData = { $: { "android:name": string; "android:value"?: string; "android:resource"?: string } };
 
 describe("expo-notifications native config", () => {
-  const config = introspect({ EXPO_PUBLIC_ADD_ANDROID_NOTIFICATION_ICON: "true" });
+  const config = introspect({
+    EXPO_PUBLIC_ADD_ANDROID_NOTIFICATION_ICON: "true",
+    EXPO_PUBLIC_ENABLE_FIREBASE: "true",
+    EXPO_PUBLIC_NOTIFICATION_CHANNEL_ID: "test-channel",
+    EXPO_PUBLIC_ANDROID_NOTIFICATION_SMALL_ICON_ACCENT_COLOR: "#123456",
+  });
   const metaData: MetaData[] =
     config._internal.modResults.android.manifest.manifest.application[0]["meta-data"] ?? [];
   const meta = (name: string) => metaData.find((m) => m.$["android:name"] === name)?.$;
@@ -87,13 +92,25 @@ describe("expo-notifications native config", () => {
     expect(permissions).toContain("android.permission.SCHEDULE_EXACT_ALARM");
   });
 
-  // @react-native-firebase/messaging's library manifest declares these two
-  // keys, so setting them here fails Gradle's manifest merge.
-  it.each([
-    "com.google.firebase.messaging.default_notification_channel_id",
-    "com.google.firebase.messaging.default_notification_color",
-  ])("leaves %s to the library manifest", (name) => {
-    expect(meta(name)).toBeUndefined();
+  // Background pushes on Android are drawn by FCM from these keys, so they must
+  // match the channel the app creates and the accent local notifications use.
+  it("routes pushes to the app's channel in its accent colour", () => {
+    expect(
+      meta("com.google.firebase.messaging.default_notification_channel_id")?.["android:value"],
+    ).toBe("test-channel");
+    for (const prefix of ["com.google.firebase.messaging", "expo.modules.notifications"]) {
+      expect(meta(`${prefix}.default_notification_color`)?.["android:resource"]).toBe(
+        "@color/notification_icon_color",
+      );
+    }
+  });
+
+  it("no longer builds notifee or Firebase messaging", () => {
+    const pluginNames = (config.plugins ?? []).map((p: string | [string]) =>
+      Array.isArray(p) ? p[0] : p,
+    );
+    expect(pluginNames).not.toContain("@react-native-firebase/messaging");
+    expect(JSON.stringify(config.plugins)).not.toContain("@notifee");
   });
 });
 
@@ -104,5 +121,7 @@ describe("APNs environment", () => {
   ])("a %s build registers with the %s APNs host", (profile, apsEnvironment) => {
     const config = introspect({ EAS_BUILD_PROFILE: profile });
     expect(config._internal.modResults.ios.entitlements["aps-environment"]).toBe(apsEnvironment);
+    // The app reports this with its token so the sender picks the same host.
+    expect(config.extra.apsEnvironment).toBe(apsEnvironment);
   });
 });

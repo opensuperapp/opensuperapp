@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 import { pushFcmToken } from "@/context/slices/deviceSlice";
+import type { PushToken } from "@/utils/push-notification";
 
 // @reduxjs/toolkit pulls in immer as ESM, which this project's Jest transform does not
 // handle (see microAppCacheStore.test.ts). This stand-in runs a thunk's payload creator
@@ -59,8 +60,10 @@ type Thunk = (dispatch: (action: unknown) => unknown) => Promise<unknown>;
 const dispatch: jest.Mock = jest.fn((action: unknown): unknown =>
   typeof action === "function" ? (action as Thunk)(dispatch) : action
 );
-const push = (fcmToken: string) =>
-  (pushFcmToken({ fcmToken }) as unknown as Thunk)(dispatch);
+const push = (token: string, extra: Partial<PushToken> = {}) =>
+  (
+    pushFcmToken({ token, tokenType: "fcm", ...extra } as PushToken) as unknown as Thunk
+  )(dispatch);
 
 // What axios throws when the request never reached the server.
 const networkError = () =>
@@ -79,6 +82,27 @@ afterEach(() => {
 });
 
 describe("pushFcmToken", () => {
+  // The query parameter is what the current backend reads; the body is for the
+  // one that can route APNs tokens. Sending both keeps either working.
+  it("sends the token as the query parameter and the typed token as the body", async () => {
+    mockApiRequest.mockResolvedValueOnce({ status: 200, data: {} });
+
+    await push("apns-token-1", {
+      tokenType: "apns",
+      environment: "production",
+    });
+
+    expect(mockApiRequest).toHaveBeenCalledWith({
+      url: "https://api.example.com/users/fcm-tokens?fcmToken=apns-token-1",
+      method: "POST",
+      data: {
+        token: "apns-token-1",
+        tokenType: "apns",
+        environment: "production",
+      },
+    });
+  });
+
   it("queues the same push for the next reconnect when it never reached the server", async () => {
     mockApiRequest.mockRejectedValueOnce(networkError());
 

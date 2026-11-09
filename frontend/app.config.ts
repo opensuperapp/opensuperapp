@@ -47,7 +47,11 @@ const IOS_URL_SCHEME = process.env.IOS_URL_SCHEME ?? "example.scheme";
 const ENABLE_FIREBASE = process.env.EXPO_PUBLIC_ENABLE_FIREBASE ?? FALSE;
 const ADD_ANDROID_NOTIFICATION_ICON =
   process.env.EXPO_PUBLIC_ADD_ANDROID_NOTIFICATION_ICON ?? FALSE;
-const APPLE_PASS_TYPE_ID = process.env.EXPO_PUBLIC_APPLE_PASS_TYPE_ID ?? "";
+const NOTIFICATION_CHANNEL_ID = process.env.EXPO_PUBLIC_NOTIFICATION_CHANNEL_ID;
+const NOTIFICATION_ACCENT_COLOR =
+  process.env.EXPO_PUBLIC_ANDROID_NOTIFICATION_SMALL_ICON_ACCENT_COLOR;
+const APS_ENVIRONMENT = profile === PRODUCTION ? PRODUCTION : DEVELOPMENT;
+const APPLE_PASS_TYPE_ID =process.env.EXPO_PUBLIC_APPLE_PASS_TYPE_ID ?? "";
 const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID ?? ""; // Comment this if EAS is not used
 const UPDATES_CHANNEL = process.env.EXPO_PUBLIC_UPDATES_CHANNEL ?? ""; // Comment this if EAS is not used
 
@@ -98,7 +102,7 @@ let config: ExpoConfig = {
       UIDesignRequiresCompatibility: true,
     },
     entitlements: {
-      "aps-environment": profile === PRODUCTION ? PRODUCTION : DEVELOPMENT,
+      "aps-environment": APS_ENVIRONMENT,
       // PKPassLibrary reports only passes whose type identifier is listed
       // here. Without it the app can hand the business card to Wallet but can
       // never see that Wallet has it, so hasPass and viewInWallet both answer
@@ -160,10 +164,6 @@ let config: ExpoConfig = {
           compileSdkVersion: 35,
           targetSdkVersion: 35,
           minSdkVersion: 24,
-          extraMavenRepos: [
-            // https://github.com/invertase/notifee/issues/799#issuecomment-2569217836
-            "../../node_modules/@notifee/react-native/android/libs",
-          ],
         },
       },
     ],
@@ -206,11 +206,13 @@ let config: ExpoConfig = {
     ["expo-font", { fonts: ["./assets/fonts/SpaceMono-Regular.ttf"] }],
     [
       "expo-notifications",
-      // defaultChannel and color wait for @react-native-firebase/messaging to
-      // go: its manifest declares the same FCM meta-data and the merge fails.
-      ADD_ANDROID_NOTIFICATION_ICON === TRUE
-        ? { icon: "./assets/images/notification-icon.png" }
-        : {},
+      {
+        ...(ADD_ANDROID_NOTIFICATION_ICON === TRUE && {
+          icon: "./assets/images/notification-icon.png",
+        }),
+        defaultChannel: NOTIFICATION_CHANNEL_ID,
+        color: NOTIFICATION_ACCENT_COLOR,
+      },
     ],
     [
       "@react-native-google-signin/google-signin",
@@ -229,6 +231,7 @@ let config: ExpoConfig = {
   experiments: { typedRoutes: true },
   extra: {
     router: { origin: false },
+    apsEnvironment: APS_ENVIRONMENT,
     eas: { projectId: EAS_PROJECT_ID }, // Comment this if EAS is not used
   },
   assetBundlePatterns: ["**/*"],

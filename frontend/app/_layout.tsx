@@ -32,11 +32,7 @@ import {
   initializeRemoteConfig,
 } from "@/services/remoteConfig";
 import { initializeApp } from "@/utils/initializeApp";
-import {
-  initializeNotifications,
-  setupBackgroundNotificationListeners,
-  setupMessagingListener,
-} from "@/utils/push-notification";
+import { initializeNotifications } from "@/utils/push-notification";
 import {
   DarkTheme,
   DefaultTheme,
@@ -155,13 +151,9 @@ export default function RootLayout() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Setup FCM foreground messaging listener
+  // Create the channel and show notifications that arrive in the foreground
   useEffect(() => {
     initializeNotifications();
-    const unsubscribe = setupMessagingListener();
-
-    setupBackgroundNotificationListeners();
-    return () => unsubscribe();
   }, []);
 
   // Initialize Firebase Remote Config

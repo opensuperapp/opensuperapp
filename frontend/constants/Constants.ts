@@ -158,7 +158,6 @@ export const AUTH_BUNDLE_KEY = "secure_auth_bundle";
 // Keys for Async Storage
 export const LAST_NOTIFICATION_OPENED_AT = "last_notification_opened_at";
 export const ALARM_PERMISSION_PROMPTED_KEY = "alarm_permission_prompted";
-export const PENDING_NOTIFICATION_NAVIGATION = "pending_notification_navigation";
 export const REFRESH_INTERRUPTED_KEY = "auth-refresh-interrupted";
 
 // Android Notification Configuration
