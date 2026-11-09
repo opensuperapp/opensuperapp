@@ -15,11 +15,9 @@
 // under the License.
 import Avatar from "@/components/Avatar";
 import BrandIcon from "@/components/brand/BrandIcon";
-import ChoreoLabsLogo from "@/components/brand/ChoreoLabsLogo";
 import BusinessCardSheet from "@/components/BusinessCardSheet";
 import BusinessCardHeaderButton from "@/components/headers/BusinessCardHeaderButton";
 import ProfileListItem from "@/components/ProfileListItem";
-import SignInArtwork from "@/components/signIn/SignInArtwork";
 import SignInMessage from "@/components/SignInMessage";
 import {
   brand,
@@ -28,10 +26,9 @@ import {
   soraFamily,
   spacing,
   textStyle,
-  themes,
   type,
 } from "@/constants/brand";
-import { SUPER_APP_DEVELOPER_GROUP } from "@/constants/Constants";
+import { isIos, SUPER_APP_DEVELOPER_GROUP } from "@/constants/Constants";
 import { Event } from "@/constants/enums/Event";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { selectIsSignedIn } from "@/context/slices/authSlice";
@@ -58,17 +55,36 @@ import {
   Alert,
   Image,
   Pressable,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaProvider,
+  useSafeAreaInsets,
+  type EdgeInsets,
+} from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 
 const AVATAR_SIZE = size.avatar.profile;
 const RING = size.profileAvatarRing;
+
+type VerticalInsets = Pick<EdgeInsets, "top" | "bottom">;
+const NO_INSETS: VerticalInsets = { top: 0, bottom: 0 };
+
+/** Reports the top/bottom insets of the nearest SafeAreaProvider when they change. */
+function InsetsProbe({
+  onChange,
+}: {
+  onChange: (insets: VerticalInsets) => void;
+}) {
+  const { top, bottom } = useSafeAreaInsets();
+  useEffect(() => onChange({ top, bottom }), [top, bottom, onChange]);
+  return null;
+}
 
 /**
  * Settings screen displays user profile information when authenticated,
@@ -81,7 +97,6 @@ const SettingsScreen = () => {
   const isSignedIn = useSelector(selectIsSignedIn);
   const { userInfo } = useSelector((state: RootState) => state.userInfo);
   const { colors } = useBrandTheme();
-  const insets = useSafeAreaInsets();
   const version = Constants.expoConfig?.version;
   const [basicUserInfo, setBasicUserInfo] = useState<BasicUserInfo>({
     firstName: "",
@@ -90,15 +105,14 @@ const SettingsScreen = () => {
     avatarUri: "",
   });
   const [cardVisible, setCardVisible] = useState(false);
+  const [viewportHeight, setViewportHeight] = useState(0);
+  const [screenInsets, setScreenInsets] = useState<VerticalInsets>(NO_INSETS);
   const { cardEnabled } = useWalletPassConfig();
 
   useTrackActiveScreen(ScreenPaths.PROFILE);
 
-  // One setOptions call: the signed-out artwork is full bleed and drawn in the dark
-  // tokens, so the native bar (and its large title) only shows once signed in.
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerShown: isSignedIn,
       headerRight: () =>
         isSignedIn && cardEnabled ? (
           <BusinessCardHeaderButton onPress={() => setCardVisible(true)} />
@@ -180,19 +194,11 @@ const SettingsScreen = () => {
 
   if (!isSignedIn) {
     return (
-      <SignInArtwork
-        style={[styles.signIn, { paddingBottom: insets.bottom + 24 }]}
-      >
-        <View style={styles.signInLogo}>
-          <ChoreoLabsLogo width={200} color="#FFFFFF" />
+      <SafeAreaView style={[styles.signIn, { backgroundColor: colors.bg }]}>
+        <View style={styles.signInCard}>
+          <SignInMessage message="To view your profile, please sign in" />
         </View>
-        <View style={styles.signInFoot}>
-          <SignInMessage onArtwork />
-          <Text style={[styles.versionText, { color: themes.dark.text3 }]}>
-            version {version}
-          </Text>
-        </View>
-      </SignInArtwork>
+      </SafeAreaView>
     );
   }
 
@@ -201,7 +207,19 @@ const SettingsScreen = () => {
       <ScrollView
         style={{ backgroundColor: colors.bg }}
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={styles.content}
+        onLayout={(e) => setViewportHeight(e.nativeEvent.layout.height)}
+        contentContainerStyle={[
+          styles.content,
+          // iOS insets the content for the bars it runs under (the tab bar,
+          // and the nav bar when it overlaps), so the visible area is the
+          // viewport minus those insets. flexGrow alone would fill the whole
+          // viewport and leave Sign Out behind the tab bar.
+          {
+            minHeight: isIos
+              ? viewportHeight - screenInsets.top - screenInsets.bottom
+              : viewportHeight,
+          },
+        ]}
       >
         {/* User info */}
         <View
@@ -281,6 +299,13 @@ const SettingsScreen = () => {
         </View>
       </ScrollView>
 
+      {/* After the ScrollView, which must stay the first child for the large title
+          to collapse. This provider measures the screen's own safe area, which on
+          iOS includes the tab bar; the root provider only has the home indicator. */}
+      <SafeAreaProvider style={StyleSheet.absoluteFill} pointerEvents="none">
+        <InsetsProbe onChange={setScreenInsets} />
+      </SafeAreaProvider>
+
       <BusinessCardSheet
         visible={cardVisible}
         onClose={() => setCardVisible(false)}
@@ -292,26 +317,23 @@ const SettingsScreen = () => {
 export default SettingsScreen;
 
 const styles = StyleSheet.create({
-  // flexGrow so the foot's marginTop: "auto" still pins Sign Out to the bottom
-  // when the content is shorter than the screen.
+  // minHeight (set inline) lets the foot's marginTop: "auto" pin Sign Out to the
+  // bottom of the visible area when the content is shorter than the screen.
   content: {
-    flexGrow: 1,
     paddingHorizontal: spacing.screen,
     paddingTop: 16,
     paddingBottom: 24,
   },
+  // Same layout as the signed-out My Apps and Store screens.
   signIn: {
     flex: 1,
-    paddingHorizontal: 24,
-  },
-  signInLogo: {
-    flex: 1,
-    alignItems: "center",
     justifyContent: "center",
-  },
-  signInFoot: {
     alignItems: "center",
-    gap: 14,
+  },
+  signInCard: {
+    padding: 30,
+    width: "90%",
+    alignItems: "center",
   },
   avatarRing: {
     alignSelf: "center",
