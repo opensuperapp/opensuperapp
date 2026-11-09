@@ -22,12 +22,7 @@ import {
   ScheduledNotificationData,
   ScheduledNotificationIdentifiable,
 } from "@/types/microApp.types";
-import notifee, {
-  AndroidCategory,
-  AndroidImportance,
-  TimestampTrigger,
-  TriggerType,
-} from "@notifee/react-native";
+import * as Notifications from "expo-notifications";
 
 const SCHEDULED_LOCAL_NOTIFICATIONS_KEY = "scheduled_local_notifications";
 const SCHEDULED_IDS_KEY = "scheduled_notification_ids";
@@ -51,31 +46,21 @@ export const scheduleSessionNotifications = async (
     const now = new Date();
     const triggerTime = new Date(data.time);
     if (triggerTime.getTime() > now.getTime()) {
-      const trigger: TimestampTrigger = {
-        type: TriggerType.TIMESTAMP,
-        timestamp: triggerTime.getTime(),
-      };
-
-      await notifee.createTriggerNotification(
-        {
+      await Notifications.scheduleNotificationAsync({
+        identifier: data.id,
+        content: {
           title: data.title,
           body: data.body,
-          id: data.id,
           data: { screen: "/(tabs)/apps/notifications" },
-          android: {
-            channelId: NOTIFICATION_CHANNEL_ID,
-            smallIcon: "ic_notification",
-            color: ANDROID_NOTIFICATION_SMALL_ICON_ACCENT_COLOR,
-            importance: AndroidImportance.HIGH,
-            sound: "default",
-            category: AndroidCategory.ALARM,
-            pressAction: {
-              id: "default",
-            },
-          },
+          sound: "default",
+          color: ANDROID_NOTIFICATION_SMALL_ICON_ACCENT_COLOR,
         },
-        trigger
-      );
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: triggerTime.getTime(),
+          channelId: NOTIFICATION_CHANNEL_ID,
+        },
+      });
 
       const existingIdsJson = await AsyncStorage.getItem(SCHEDULED_IDS_KEY);
       const existingIds: string[] = existingIdsJson
@@ -100,7 +85,8 @@ export const scheduleSessionNotifications = async (
 // Clear notifications and local storage on logout
 export const clearNotifications = async () => {
   try {
-    await notifee.cancelAllNotifications();
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    await Notifications.dismissAllNotificationsAsync();
 
     const scheduledIdsJson = await AsyncStorage.getItem(SCHEDULED_IDS_KEY);
     const scheduledIds: string[] = scheduledIdsJson
@@ -125,7 +111,7 @@ export const cancelLocalNotification = async (
   data: ScheduledNotificationIdentifiable
 ) => {
   try {
-    await notifee.cancelTriggerNotification(data.id);
+    await Notifications.cancelScheduledNotificationAsync(data.id);
 
     const existingIdsJson = await AsyncStorage.getItem(CANCELLED_IDS_KEY);
     const existingIds: string[] = existingIdsJson
@@ -202,10 +188,8 @@ export const clearLocalNotifications = async () => {
 
 export const reconcileTriggeredNotifications = async () => {
   try {
-    const triggerNotifications = await notifee.getTriggerNotifications();
-    const pendingIds = new Set(
-      triggerNotifications.map((n) => n.notification.id)
-    );
+    const pending = await Notifications.getAllScheduledNotificationsAsync();
+    const pendingIds = new Set(pending.map((request) => request.identifier));
 
     const scheduledIdsJson = await AsyncStorage.getItem(SCHEDULED_IDS_KEY);
     const scheduledIds: string[] = scheduledIdsJson

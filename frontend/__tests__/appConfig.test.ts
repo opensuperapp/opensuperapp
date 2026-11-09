@@ -24,11 +24,16 @@ type Style = { $: { name: string; parent?: string }; item: StyleItem[] };
 
 // Runs the real config plugins and returns what prebuild would write, so these
 // assertions check the generated native files rather than app.config.ts itself.
-function introspect() {
+// Variables set here win over .env, because dotenv never overrides them.
+function introspect(env: Record<string, string> = {}) {
   const out = execFileSync(
     "npx",
     ["expo", "config", "--type", "introspect", "--json"],
-    { cwd: path.resolve(__dirname, ".."), encoding: "utf8" },
+    {
+      cwd: path.resolve(__dirname, ".."),
+      encoding: "utf8",
+      env: { ...process.env, ...env },
+    },
   );
   return JSON.parse(out);
 }
@@ -54,5 +59,69 @@ describe("Android edge-to-edge (Expo built-in, no react-native-edge-to-edge)", (
       (i) => i.$.name === "android:enforceNavigationBarContrast",
     );
     expect(item?._).toBe("false");
+  });
+});
+
+type MetaData = { $: { "android:name": string; "android:value"?: string; "android:resource"?: string } };
+
+describe("expo-notifications native config", () => {
+  const config = introspect({
+    EXPO_PUBLIC_ADD_ANDROID_NOTIFICATION_ICON: "true",
+    EXPO_PUBLIC_ENABLE_FIREBASE: "true",
+    EXPO_PUBLIC_NOTIFICATION_CHANNEL_ID: "test-channel",
+    EXPO_PUBLIC_ANDROID_NOTIFICATION_SMALL_ICON_ACCENT_COLOR: "#123456",
+  });
+  const metaData: MetaData[] =
+    config._internal.modResults.android.manifest.manifest.application[0]["meta-data"] ?? [];
+  const meta = (name: string) => metaData.find((m) => m.$["android:name"] === name)?.$;
+
+  it("uses the app's small icon for pushes and local notifications", () => {
+    for (const prefix of ["com.google.firebase.messaging", "expo.modules.notifications"]) {
+      expect(meta(`${prefix}.default_notification_icon`)?.["android:resource"]).toBe(
+        "@drawable/notification_icon",
+      );
+    }
+  });
+
+  // notifee's library manifest declares this today; the app must own it so
+  // scheduled sessions still fire on time once notifee is removed.
+  it("declares the exact-alarm permission for scheduled sessions", () => {
+    const permissions = (
+      config._internal.modResults.android.manifest.manifest["uses-permission"] ?? []
+    ).map((p: { $: { "android:name": string } }) => p.$["android:name"]);
+    expect(permissions).toContain("android.permission.SCHEDULE_EXACT_ALARM");
+  });
+
+  // Background pushes on Android are drawn by FCM from these keys, so they must
+  // match the channel the app creates and the accent local notifications use.
+  it("routes pushes to the app's channel in its accent colour", () => {
+    expect(
+      meta("com.google.firebase.messaging.default_notification_channel_id")?.["android:value"],
+    ).toBe("test-channel");
+    for (const prefix of ["com.google.firebase.messaging", "expo.modules.notifications"]) {
+      expect(meta(`${prefix}.default_notification_color`)?.["android:resource"]).toBe(
+        "@color/notification_icon_color",
+      );
+    }
+  });
+
+  it("no longer builds notifee or Firebase messaging", () => {
+    const pluginNames = (config.plugins ?? []).map((p: string | [string]) =>
+      Array.isArray(p) ? p[0] : p,
+    );
+    expect(pluginNames).not.toContain("@react-native-firebase/messaging");
+    expect(JSON.stringify(config.plugins)).not.toContain("@notifee");
+  });
+});
+
+describe("APNs environment", () => {
+  it.each([
+    ["development", "development"],
+    ["production", "production"],
+  ])("a %s build registers with the %s APNs host", (profile, apsEnvironment) => {
+    const config = introspect({ EAS_BUILD_PROFILE: profile });
+    expect(config._internal.modResults.ios.entitlements["aps-environment"]).toBe(apsEnvironment);
+    // The app reports this with its token so the sender picks the same host.
+    expect(config.extra.apsEnvironment).toBe(apsEnvironment);
   });
 });

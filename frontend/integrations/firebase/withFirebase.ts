@@ -19,10 +19,7 @@ import path from "path";
 
 // The Firebase plugins to add to the Expo config.
 // Only packages with app.plugin.js (remote-config autolinks without an Expo plugin).
-const FIREBASE_PLUGINS = [
-  "@react-native-firebase/app",
-  "@react-native-firebase/messaging",
-];
+const FIREBASE_PLUGINS = ["@react-native-firebase/app"];
 
 /**
  * Configures the Expo config to use Firebase for iOS and Android.
@@ -70,11 +67,7 @@ export const withFirebase = (config: ExpoConfig) => {
           ...(buildPropertiesPlugin[1] as { ios?: Record<string, unknown> })
             .ios,
           useFrameworks: "static",
-          forceStaticLinking: [
-            "RNFBApp",
-            "RNFBMessaging",
-            "RNFBRemoteConfig",
-          ],
+          forceStaticLinking: ["RNFBApp", "RNFBRemoteConfig"],
         },
       };
     }

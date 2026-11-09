@@ -20,7 +20,7 @@ import {
 } from "@/context/slices/deviceSlice"; // The async thunk
 import { AppDispatch, RootState } from "@/context/store";
 import {
-  getFCMToken,
+  getPushToken,
   requestNotificationPermission,
   setupTokenRefreshListener,
 } from "@/utils/push-notification";
@@ -46,10 +46,10 @@ export const usePushNotificationHandler = () => {
         try {
           await requestNotificationPermission();
 
-          const fcmToken = await getFCMToken();
+          const pushToken = await getPushToken();
 
-          if (fcmToken && fcmToken !== lastSentFCMToken) {
-            dispatch(pushFcmToken({ fcmToken }));
+          if (pushToken && pushToken.token !== lastSentFCMToken) {
+            dispatch(pushFcmToken(pushToken));
           } else {
             console.warn(
               "No FCM token received or token is the same as the last sent token."
@@ -63,15 +63,11 @@ export const usePushNotificationHandler = () => {
       getAndPushToken();
 
       const unsubscribe = setupTokenRefreshListener((refreshedToken) => {
-        if (refreshedToken && refreshedToken !== lastSentFCMToken) {
-          dispatch(
-            pushFcmToken({
-              fcmToken: refreshedToken,
-            })
-          );
+        if (refreshedToken.token !== lastSentFCMToken) {
+          dispatch(pushFcmToken(refreshedToken));
         } else {
           console.warn(
-            "Refreshed token was null/undefined or the same as the last sent token."
+            "Refreshed token is the same as the last sent token."
           );
         }
       });

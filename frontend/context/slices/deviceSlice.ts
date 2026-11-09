@@ -15,6 +15,7 @@
 // under the License.
 import { BASE_URL, LAST_SENT_FCM_TOKEN } from "@/constants/Constants";
 import { enqueueForReconnect } from "@/utils/offlineQueue";
+import type { PushToken } from "@/utils/push-notification";
 import { apiRequest } from "@/utils/requestHandler";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { deleteItemAsync, getItemAsync, setItemAsync } from "expo-secure-store";
@@ -98,19 +99,19 @@ export const clearLastSentFcmToken = createAsyncThunk(
  */
 export const pushFcmToken = createAsyncThunk(
   "device/pushFcmToken",
-  async (
-    { fcmToken }: { fcmToken: string },
-    { dispatch, rejectWithValue }
-  ) => {
+  async (pushToken: PushToken, { dispatch, rejectWithValue }) => {
     try {
-      const url = `${BASE_URL}/users/fcm-tokens?fcmToken=${fcmToken}`;
+      // The current backend reads only the query parameter; the body tells the
+      // next one which sender (and APNs host) the token belongs to.
+      const url = `${BASE_URL}/users/fcm-tokens?fcmToken=${pushToken.token}`;
       const response = await apiRequest({
         url,
         method: "POST",
+        data: pushToken,
       });
 
       if (response?.status === 200) {
-        await setItemAsync(LAST_SENT_FCM_TOKEN, fcmToken);
+        await setItemAsync(LAST_SENT_FCM_TOKEN, pushToken.token);
         return response.data;
       } else {
         console.warn("Failed to push FCM token");
@@ -123,7 +124,7 @@ export const pushFcmToken = createAsyncThunk(
       // Safe to repeat, as the backend upserts on the token.
       if (!error?.response) {
         enqueueForReconnect("pushFcmToken", () =>
-          dispatch(pushFcmToken({ fcmToken }))
+          dispatch(pushFcmToken(pushToken))
         );
       }
       return rejectWithValue(error);
@@ -156,7 +157,7 @@ const deviceSlice = createSlice({
       })
       .addCase(pushFcmToken.fulfilled, (state, action) => {
         state.isPushingToken = false;
-        state.lastSentFCMToken = action.meta.arg.fcmToken;
+        state.lastSentFCMToken = action.meta.arg.token;
       })
       .addCase(pushFcmToken.rejected, (state, action) => {
         state.isPushingToken = false;
