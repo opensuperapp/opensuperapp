@@ -125,6 +125,7 @@ let config: ExpoConfig = {
       tinted: "./assets/images/ios-tinted.png",
     },
   },
+  androidNavigationBar: { enforceContrast: false },
   android: {
     package: ANDROID_PACKAGE,
     permissions: [
@@ -205,15 +206,6 @@ let config: ExpoConfig = {
     [
       "@react-native-google-signin/google-signin",
       { iosUrlScheme: IOS_URL_SCHEME },
-    ],
-    [
-      "react-native-edge-to-edge",
-      {
-        android: {
-          parentTheme: "Default",
-          enforceNavigationBarContrast: false,
-        },
-      },
     ],
     // Raise the Gradle daemon heap/metaspace so release lint analysis does not OOM
     "./plugins/withGradleMemory.ts",
