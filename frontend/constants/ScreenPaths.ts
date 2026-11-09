@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 export enum ScreenPaths {
-  FEED = "/(tabs)",
+  FEED = "/(tabs)/(feed)",
   LIBRARY = "/library",
   MY_APPS = "/(tabs)/apps",
   NOTIFICATIONS = "/(tabs)/apps/notifications",

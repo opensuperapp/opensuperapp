@@ -1,4 +1,4 @@
-// Copyright (c) 2025 WSO2 LLC. (https://www.wso2.com).
+// Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
@@ -13,10 +13,14 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import TabStack from "@/components/headers/TabStack";
+import { PROFILE_TAB_NAME } from "@/constants/Constants";
+import { Stack } from "expo-router";
 
-// This is a shim for web and Android where the tab bar is generally opaque.
-export default undefined;
-
-export function useBottomTabOverflow() {
-  return 0;
+export default function Layout() {
+  return (
+    <TabStack>
+      <Stack.Screen name="index" options={{ title: PROFILE_TAB_NAME }} />
+    </TabStack>
+  );
 }

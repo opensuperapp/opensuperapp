@@ -14,9 +14,10 @@
 // specific language governing permissions and limitations
 // under the License.
 import BrandIcon from "@/components/brand/BrandIcon";
+import { size } from "@/constants/brand";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { router } from "expo-router";
-import { Pressable, StyleProp, ViewStyle } from "react-native";
+import { Pressable, StyleProp, StyleSheet, ViewStyle } from "react-native";
 
 type CloseButtonProps = {
   onPress?: () => void;
@@ -31,7 +32,9 @@ const CloseButton = ({ onPress, style }: CloseButtonProps) => {
       onPress={() => {
         onPress ? onPress() : router.back();
       }}
-      style={style}
+      style={[styles.button, style]}
+      accessibilityRole="button"
+      accessibilityLabel="Close"
     >
       <BrandIcon name="close" size={24} color={colors.accent} />
     </Pressable>
@@ -39,3 +42,13 @@ const CloseButton = ({ onPress, style }: CloseButtonProps) => {
 };
 
 export default CloseButton;
+
+// A plain native-bar icon button with the 44pt minimum target.
+const styles = StyleSheet.create({
+  button: {
+    minWidth: size.minHitTarget,
+    minHeight: size.minHitTarget,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});

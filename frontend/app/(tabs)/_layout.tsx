@@ -13,13 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { HapticTab } from "@/components/HapticTab";
-import OfflineAwareTabBar from "@/components/OfflineAwareTabBar";
-import SimulateOfflineButton from "@/components/SimulateOfflineButton";
-import { tabRootHeaderOptions } from "@/components/headers/navigationTheme";
-import TabBarIcon, { type TabIconName } from "@/components/tabbar/TabBarIcon";
-import TabBarBackground from "@/components/ui/TabBarBackground";
-import { textStyle, type } from "@/constants/brand";
+import { soraFamily } from "@/constants/brand";
 import {
   CHAT_TAB_NAME,
   FEED_TAB_NAME,
@@ -29,74 +23,88 @@ import {
 } from "@/constants/Constants";
 import { selectIsSignedIn } from "@/context/slices/authSlice";
 import { RootState } from "@/context/store";
-import { DEFAULT_TAB_CONFIG } from "@/types/remoteConfig.types";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { useTabVisibilityRules } from "@/hooks/useRemoteConfig";
 import { useRestoreLastTab } from "@/hooks/useRestoreLastTab";
+import { DEFAULT_TAB_CONFIG } from "@/types/remoteConfig.types";
 import { shouldShowTab } from "@/utils/tabVisibility";
-import { Tabs } from "expo-router";
-import { Platform, StyleSheet, Text } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  Icon,
+  Label,
+  NativeTabs,
+} from "expo-router/unstable-native-tabs";
+import type { ImageSourcePropType } from "react-native";
+import type { SFSymbol } from "sf-symbols-typescript";
 import { useSelector } from "react-redux";
 
-// Bar: 6 top padding, a 52+ item (5 padding, 26 icon, 3 gap, label), then the safe area.
-const TAB_BAR_PADDING_TOP = 6;
-const TAB_BAR_CONTENT_HEIGHT = 62;
+interface TabDef {
+  /** Key in the remote visibility rules. */
+  rule: string;
+  /** Route folder under app/(tabs). */
+  route: string;
+  title: string;
+  sf: { default: SFSymbol; selected: SFSymbol };
+  android: { default: ImageSourcePropType; selected: ImageSourcePropType };
+}
 
-type TabType = {
-  name: string;
-  requiresAuth?: boolean;
-  options: {
-    headerShown: boolean;
-    title: string;
-    icon: TabIconName;
-  };
-};
-
-const tabs: TabType[] = [
+// iOS draws SF Symbols; Android draws the brand outline icons (assets/images/tabs).
+const TABS: TabDef[] = [
   {
-    name: "index",
-    options: {
-      headerShown: true,
-      title: FEED_TAB_NAME,
-      icon: "feed",
+    rule: "index",
+    route: "(feed)",
+    title: FEED_TAB_NAME,
+    sf: { default: "newspaper", selected: "newspaper.fill" },
+    android: {
+      default: require("@/assets/images/tabs/feed.png"),
+      selected: require("@/assets/images/tabs/feed-selected.png"),
     },
   },
   {
-    name: "library",
-    options: {
-      headerShown: true,
-      title: LIBRARY_TAB_NAME,
-      icon: "library",
+    rule: "library",
+    route: "library",
+    title: LIBRARY_TAB_NAME,
+    sf: { default: "books.vertical", selected: "books.vertical.fill" },
+    android: {
+      default: require("@/assets/images/tabs/library.png"),
+      selected: require("@/assets/images/tabs/library-selected.png"),
     },
   },
   {
-    name: "apps",
-    options: {
-      headerShown: false,
-      title: MY_APPS_TAB_NAME,
-      icon: "apps",
+    rule: "apps",
+    route: "apps",
+    title: MY_APPS_TAB_NAME,
+    sf: { default: "square.grid.3x3", selected: "square.grid.3x3.fill" },
+    android: {
+      default: require("@/assets/images/tabs/apps.png"),
+      selected: require("@/assets/images/tabs/apps-selected.png"),
     },
   },
   {
-    name: "chat",
-    requiresAuth: true,
-    options: {
-      headerShown: false,
-      title: CHAT_TAB_NAME,
-      icon: "chat",
+    rule: "chat",
+    route: "chat",
+    title: CHAT_TAB_NAME,
+    sf: {
+      default: "bubble.left.and.bubble.right",
+      selected: "bubble.left.and.bubble.right.fill",
+    },
+    android: {
+      default: require("@/assets/images/tabs/chat.png"),
+      selected: require("@/assets/images/tabs/chat-selected.png"),
     },
   },
   {
-    name: "profile",
-    options: {
-      headerShown: true,
-      title: PROFILE_TAB_NAME,
-      icon: "profile",
+    rule: "profile",
+    route: "profile",
+    title: PROFILE_TAB_NAME,
+    sf: { default: "person.crop.circle", selected: "person.crop.circle.fill" },
+    android: {
+      default: require("@/assets/images/tabs/profile.png"),
+      selected: require("@/assets/images/tabs/profile-selected.png"),
     },
   },
 ];
 
+/** The native tab bar (UITabBar on iOS, Material bottom navigation on Android). */
 export default function TabLayout() {
   const authEmail = useSelector((state: RootState) => state.auth.email);
   const workEmail = useSelector(
@@ -105,97 +113,32 @@ export default function TabLayout() {
   const email = authEmail ?? workEmail ?? null;
   const isAuthenticated = useSelector(selectIsSignedIn);
   const { colors } = useBrandTheme();
-  const insets = useSafeAreaInsets();
 
   const { loading, rules } = useTabVisibilityRules();
   const effectiveRules = loading ? DEFAULT_TAB_CONFIG : rules;
+  const isVisible = (rule: string) =>
+    shouldShowTab(rule, email, isAuthenticated, effectiveRules);
 
-  useRestoreLastTab(
-    (tabName) => shouldShowTab(tabName, email, isAuthenticated, effectiveRules),
-    !loading
-  );
+  useRestoreLastTab(isVisible, !loading);
 
   return (
-    <Tabs
-      tabBar={(props) => <OfflineAwareTabBar {...props} />}
-      screenOptions={{
-        ...tabRootHeaderOptions(colors),
-        tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: colors.text3,
-        headerShown: true,
-        tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground
-          ? () => <TabBarBackground />
-          : undefined,
-        // headerRight is taken by some tabs; the left is free on all of them.
-        headerLeft: __DEV__ ? () => <SimulateOfflineButton /> : undefined,
-        tabBarLabelPosition: "below-icon",
-        tabBarIconStyle: styles.icon,
-        tabBarStyle: [
-          {
-            height: TAB_BAR_CONTENT_HEIGHT + insets.bottom,
-            paddingTop: TAB_BAR_PADDING_TOP,
-            borderTopColor: colors.line,
-          },
-          Platform.select({
-            ios: { position: "absolute" as const },
-            default: { backgroundColor: colors.bar },
-          }),
-        ],
-      }}
+    <NativeTabs
+      tintColor={colors.accent}
+      iconColor={colors.text3}
+      labelStyle={{ fontFamily: soraFamily[500], fontSize: 11 }}
+      badgeBackgroundColor={colors.accent}
+      indicatorColor={colors.card2}
     >
-      {tabs.map((tab, index) => {
-        const showTab = shouldShowTab(tab.name, email, isAuthenticated, effectiveRules);
-
-        return (
-          <Tabs.Screen
-            key={`tab-${index}`}
-            name={tab.name}
-            options={{
-              tabBarAccessibilityLabel: `tab_${tab.name}`,
-              headerShown: tab.options.headerShown,
-              title: tab.options.title,
-              headerTitleAllowFontScaling: false,
-              href: showTab ? undefined : null,
-              tabBarIcon: ({ focused, color }) => (
-                <TabBarIcon
-                  name={tab.options.icon}
-                  focused={focused}
-                  color={color}
-                />
-              ),
-              tabBarLabel: ({ focused, color, children }) => (
-                <Text
-                  style={[
-                    styles.label,
-                    focused && styles.labelSelected,
-                    { color },
-                  ]}
-                  allowFontScaling={false}
-                  numberOfLines={1}
-                >
-                  {children}
-                </Text>
-              ),
-            }}
-          />
-        );
-      })}
-    </Tabs>
+      {TABS.map((tab) => (
+        <NativeTabs.Trigger
+          key={tab.route}
+          name={tab.route}
+          hidden={!isVisible(tab.rule)}
+        >
+          <Icon sf={tab.sf} androidSrc={tab.android} />
+          <Label>{tab.title}</Label>
+        </NativeTabs.Trigger>
+      ))}
+    </NativeTabs>
   );
 }
-
-const styles = StyleSheet.create({
-  icon: {
-    width: 26,
-    height: 26,
-  },
-  label: {
-    ...textStyle(type.tabLabel),
-    letterSpacing: 0.11,
-    marginTop: 3,
-  },
-  labelSelected: {
-    ...textStyle(type.tabLabelSelected),
-  },
-});

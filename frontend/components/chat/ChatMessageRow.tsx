@@ -16,9 +16,7 @@
 import BrandIcon from "@/components/brand/BrandIcon";
 import AssistantMessageContent from "@/components/chat/AssistantMessageContent";
 import ChatTypingIndicator from "@/components/chat/ChatTypingIndicator";
-import UserMessageContextMenu, {
-  MessageContextMenuAnchor,
-} from "@/components/chat/UserMessageContextMenu";
+import { ChatMenuAction, showChatActionMenu } from "@/components/chat/chatActions";
 import SuperAppAgentIcon from "@/components/chat/SuperAppAgentIcon";
 import { radius, size, textStyle, type } from "@/constants/brand";
 import {
@@ -29,7 +27,7 @@ import { ChatThemePalette } from "@/constants/ChatTheme";
 import { ChatRole, MessageStatus } from "@/constants/enums/Chat";
 import { ChatMessage } from "@/types/chat.types";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useRef, useState } from "react";
+import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export interface ChatMessageRowProps {
@@ -57,12 +55,6 @@ const ChatMessageRow = ({
   onCopyMessage,
   onCopy,
 }: ChatMessageRowProps): JSX.Element => {
-  const bubbleRef = useRef<View>(null);
-  const [menuVisible, setMenuVisible] = useState(false);
-  const [menuAnchor, setMenuAnchor] = useState<MessageContextMenuAnchor | null>(
-    null
-  );
-
   const isUser = message.role === ChatRole.User;
   const isStreaming =
     message.role === ChatRole.Assistant &&
@@ -71,22 +63,17 @@ const ChatMessageRow = ({
     !message.content;
 
   if (isUser) {
-    const canShowMenu = Boolean(onEdit || onCopyMessage);
+    const menuActions: ChatMenuAction[] = [
+      ...(onEdit ? [{ label: "Edit", onPress: onEdit }] : []),
+      ...(onCopyMessage
+        ? [{ label: "Copy", onPress: () => onCopyMessage(message.content) }]
+        : []),
+    ];
+    const canShowMenu = menuActions.length > 0;
 
-    const handleLongPress = () => {
-      if (!canShowMenu) {
-        return;
-      }
-      bubbleRef.current?.measureInWindow((x, y, width, height) => {
-        setMenuAnchor({ x, y, width, height });
-        setMenuVisible(true);
-      });
-    };
-
-    const dismissMenu = () => {
-      setMenuVisible(false);
-      setMenuAnchor(null);
-    };
+    // Native action menu: ActionSheetIOS on iOS, an Alert with buttons on Android.
+    const handleLongPress = () =>
+      showChatActionMenu(undefined, menuActions, theme.accent);
 
     return (
       <View style={styles.userRow}>
@@ -95,10 +82,16 @@ const ChatMessageRow = ({
           onLongPress={handleLongPress}
           disabled={!canShowMenu}
           delayLongPress={400}
+          accessibilityActions={[
+            ...(onEdit ? [{ name: "edit", label: "Edit message" }] : []),
+            ...(onCopyMessage ? [{ name: "copy", label: "Copy message" }] : []),
+          ]}
+          onAccessibilityAction={({ nativeEvent }) => {
+            if (nativeEvent.actionName === "edit") onEdit?.();
+            if (nativeEvent.actionName === "copy") onCopyMessage?.(message.content);
+          }}
         >
           <View
-            ref={bubbleRef}
-            collapsable={false}
             style={[styles.userBubble, { backgroundColor: theme.userBubble }]}
           >
             <Text style={[styles.userText, { color: theme.userText }]}>
@@ -106,17 +99,6 @@ const ChatMessageRow = ({
             </Text>
           </View>
         </TouchableOpacity>
-
-        <UserMessageContextMenu
-          visible={menuVisible}
-          anchor={menuAnchor}
-          theme={theme}
-          onEdit={onEdit}
-          onCopy={
-            onCopyMessage ? () => onCopyMessage(message.content) : undefined
-          }
-          onDismiss={dismissMenu}
-        />
       </View>
     );
   }

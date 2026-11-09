@@ -1,4 +1,4 @@
-// Copyright (c) 2025 WSO2 LLC. (https://www.wso2.com).
+// Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
@@ -13,21 +13,14 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
-import { PlatformPressable } from "@react-navigation/elements";
-import { impactAsync, ImpactFeedbackStyle } from "expo-haptics";
+import TabStack from "@/components/headers/TabStack";
+import { LIBRARY_TAB_NAME } from "@/constants/Constants";
+import { Stack } from "expo-router";
 
-export function HapticTab(props: BottomTabBarButtonProps) {
+export default function Layout() {
   return (
-    <PlatformPressable
-      android_ripple={undefined}
-      {...props}
-      onPressIn={(ev) => {
-        if (process.env.EXPO_OS === "ios") {
-          impactAsync(ImpactFeedbackStyle.Light);
-        }
-        props.onPressIn?.(ev);
-      }}
-    />
+    <TabStack>
+      <Stack.Screen name="index" options={{ title: LIBRARY_TAB_NAME }} />
+    </TabStack>
   );
 }

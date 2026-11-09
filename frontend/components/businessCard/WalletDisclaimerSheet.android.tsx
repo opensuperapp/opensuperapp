@@ -15,7 +15,7 @@
 // under the License.
 import { createMarkdownStyles } from "@/components/businessCard/walletDisclaimerStyles";
 import BrandIcon from "@/components/brand/BrandIcon";
-import { radius, textStyle, themes } from "@/constants/brand";
+import { textStyle, themes } from "@/constants/brand";
 import { Styles } from "@/constants/Styles";
 import {
   GOOGLE_WALLET_DISCLAIMER_MD,
@@ -55,10 +55,9 @@ type Props = {
  * us. Saving really does hand those fields to a third party, so the Google copy
  * says so and the Apple copy does not. See WalletDisclaimer.ts.
  *
- * A bottom sheet rather than the iOS page sheet: Android has no page-sheet
- * presentation, and the platform's own informational surfaces are anchored to
- * the bottom edge, near the thumb, over a dimmed backdrop that is itself a way
- * out.
+ * A native full-screen modal: Android has no page-sheet presentation, so the
+ * platform's own modal stands in for the iOS sheet, with the system back
+ * gesture and the close control as the ways out.
  */
 const WalletDisclaimerSheet = ({ visible, onClose }: Props) => {
   const colorScheme = useColorScheme() ?? "light";
@@ -81,37 +80,35 @@ const WalletDisclaimerSheet = ({ visible, onClose }: Props) => {
     <Modal
       visible={visible}
       animationType="slide"
-      transparent
+      presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
-      <Pressable style={styles.backdrop} onPress={onClose} />
-      <View style={styles.sheetWrapper} pointerEvents="box-none">
-        <View style={styles.sheet}>
-          <View style={styles.header}>
-            <Text style={styles.title}>{GOOGLE_WALLET_DISCLAIMER_TITLE}</Text>
-            <Pressable
-              onPress={onClose}
-              hitSlop={12}
-              accessibilityRole="button"
-              accessibilityLabel="close_wallet_disclaimer"
-              accessibilityHint="Closes the wallet disclaimer"
-            >
-              <BrandIcon name="close" size={24} color={themes[colorScheme].text} />
-            </Pressable>
-          </View>
-
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={[
-              styles.scrollContent,
-              { paddingBottom: insets.bottom + Styles.Padding.large },
-            ]}
+      <View style={styles.sheet}>
+        {/* The full-screen modal runs under the status bar, as the card's does. */}
+        <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+          <Text style={styles.title}>{GOOGLE_WALLET_DISCLAIMER_TITLE}</Text>
+          <Pressable
+            onPress={onClose}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="close_wallet_disclaimer"
+            accessibilityHint="Closes the wallet disclaimer"
           >
-            <Markdown style={markdownStyles} onLinkPress={openLink}>
-              {GOOGLE_WALLET_DISCLAIMER_MD}
-            </Markdown>
-          </ScrollView>
+            <BrandIcon name="close" size={24} color={themes[colorScheme].text} />
+          </Pressable>
         </View>
+
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: insets.bottom + Styles.Padding.large },
+          ]}
+        >
+          <Markdown style={markdownStyles} onLinkPress={openLink}>
+            {GOOGLE_WALLET_DISCLAIMER_MD}
+          </Markdown>
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -121,22 +118,9 @@ export default WalletDisclaimerSheet;
 
 const createStyles = (colorScheme: "light" | "dark") =>
   StyleSheet.create({
-    backdrop: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: themes[colorScheme].backdrop,
-    },
-    sheetWrapper: {
-      flex: 1,
-      justifyContent: "flex-end",
-    },
     sheet: {
-      // Capped rather than sized to the copy: the disclosure is long enough to
-      // fill a phone screen, and a sheet that covers everything stops reading
-      // as a sheet you can back out of.
-      maxHeight: "85%",
+      flex: 1,
       backgroundColor: themes[colorScheme].sheet,
-      borderTopLeftRadius: radius.sheetTop,
-      borderTopRightRadius: radius.sheetTop,
     },
     header: {
       flexDirection: "row",
@@ -155,10 +139,8 @@ const createStyles = (colorScheme: "light" | "dark") =>
       flexShrink: 1,
       marginRight: Styles.Padding.medium,
     },
-    // flexShrink rather than flex, so the sheet is as tall as its copy up to
-    // the maxHeight above instead of always filling it.
     scroll: {
-      flexShrink: 1,
+      flex: 1,
     },
     scrollContent: {
       paddingHorizontal: Styles.Padding.default,

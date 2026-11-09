@@ -23,12 +23,10 @@ import { useBrandTheme } from "@/hooks/useBrandTheme";
 import useEventsFeed from "@/hooks/useEventsFeed";
 import useNewsFeed from "@/hooks/useNewsFeed";
 import { useTrackActiveScreen } from "@/hooks/useTrackActiveScreen";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 const Discovery = () => {
-  const tabBarHeight: number = useBottomTabBarHeight();
   const { colors } = useBrandTheme();
   const [isMinTimeElapsed, setIsMinTimeElapsed] = useState(false);
 
@@ -50,12 +48,19 @@ const Discovery = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  // The scroll view is the screen's root so the native large title collapses as it scrolls,
+  // and "automatic" insets it under the transparent bar and above the native tab bar.
   return (
-    <View style={{ backgroundColor: colors.bg }}>
+    <ScrollView
+      style={{ backgroundColor: colors.bg }}
+      contentContainerStyle={styles.content}
+      contentInsetAdjustmentBehavior="automatic"
+      scrollEnabled={isMinTimeElapsed && !loading}
+    >
       {!isMinTimeElapsed || loading ? (
         <FeedSkeleton />
       ) : (
-        <ScrollView style={{ padding: 16 }}>
+        <>
           <FeedHero />
 
           {/* Events section */}
@@ -79,7 +84,7 @@ const Discovery = () => {
 
           {/* News section */}
           {newsItems && newsItems.length > 0 && (
-            <View style={{ paddingBottom: tabBarHeight }}>
+            <View>
               <Text style={[styles.header, { color: colors.text }]}>News</Text>
 
               <View style={styles.stack}>
@@ -92,15 +97,19 @@ const Discovery = () => {
               </View>
             </View>
           )}
-        </ScrollView>
+        </>
       )}
-    </View>
+    </ScrollView>
   );
 };
 
 export default Discovery;
 
 const styles = StyleSheet.create({
+  content: {
+    padding: 16,
+    paddingBottom: 24,
+  },
   header: {
     ...textStyle(type.sectionHeading),
     marginTop: 24,

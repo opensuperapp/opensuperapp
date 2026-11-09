@@ -15,7 +15,7 @@
 // under the License.
 import AppGridItem from "@/components/apps/AppGridItem";
 import EmptyState from "@/components/apps/EmptyState";
-import SearchBar from "@/components/SearchBar";
+import { useHeaderSearch } from "@/components/apps/useHeaderSearch";
 import SignInMessage from "@/components/SignInMessage";
 import SyncingModal from "@/components/SyncingModal";
 import { spacing, type ThemeColors } from "@/constants/brand";
@@ -40,7 +40,6 @@ import {
   removeMicroApp,
 } from "@/services/appStoreService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useFocusEffect } from "@react-navigation/native";
 import Constants from "expo-constants";
 import { router } from "expo-router";
@@ -83,11 +82,10 @@ export default function HomeScreen() {
   const { colors } = useBrandTheme();
   const styles = createStyles(colors);
   const version = Constants.expoConfig?.version;
-  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const { width: windowWidth } = useWindowDimensions();
   const { columns, columnGap } = spacing.appGrid;
   const cellWidth =
     (windowWidth - spacing.screen * 2 - columnGap * (columns - 1)) / columns;
-  const tabBarHeight: number = useBottomTabBarHeight();
   const [currentAction, setCurrentAction] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ done: number; total: number }>({
     done: 0,
@@ -97,6 +95,7 @@ export default function HomeScreen() {
   const isCheckingUpdates = useRef(false);
   const isSyncingApps = useRef(false);
   useTrackActiveScreen(ScreenPaths.MY_APPS);
+  useHeaderSearch({ onChangeQuery: setSearchQuery, enabled: isSignedIn });
   const updateCheckInterval = useSelector(
     (state: RootState) =>
       state.appConfig.configs.find(
@@ -321,12 +320,52 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* Search Bar */}
-      <SearchBar
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        placeholder="Search apps..."
+    <>
+      {/* The grid is the screen root, so the large title collapses as it scrolls */}
+      <FlatList
+        data={filteredApps}
+        keyExtractor={(item) => item.appId}
+        numColumns={columns}
+        columnWrapperStyle={styles.gridRow}
+        renderItem={({ item }) => (
+          <AppGridItem
+            width={cellWidth}
+            name={item.name}
+            webViewUri={item.webViewUri ?? ""}
+            clientId={item.clientId ?? ""}
+            exchangedToken={item.exchangedToken ?? ""}
+            exchangedIdToken={item.exchangedIdToken ?? ""}
+            appId={item.appId}
+            displayMode={item.displayMode}
+            version={item.versions?.[0]?.version}
+            isUpdating={updatingApps.includes(item.appId)}
+            downloadProgress={downloadProgress[item.appId]}
+          />
+        )}
+        contentInsetAdjustmentBehavior="automatic"
+        style={{ backgroundColor: colors.bg }}
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingHorizontal: spacing.screen,
+          paddingTop: 6,
+          paddingBottom: spacing.screen,
+        }}
+        showsVerticalScrollIndicator={false}
+        onScrollBeginDrag={Keyboard.dismiss}
+        ListEmptyComponent={
+          <EmptyState
+            icon="store"
+            title={
+              searchQuery.trim() === ""
+                ? "No apps yet"
+                : `No apps match “${searchQuery.trim()}”`
+            }
+            action={{
+              label: "Browse the Store",
+              onPress: () => router.push(ScreenPaths.STORE),
+            }}
+          />
+        }
       />
 
       <SyncingModal
@@ -334,53 +373,7 @@ export default function HomeScreen() {
         currentAction={currentAction}
         progress={progress}
       />
-
-      <View style={{ marginTop: 16 }}>
-        <FlatList
-          data={filteredApps}
-          keyExtractor={(item) => item.appId}
-          numColumns={columns}
-          columnWrapperStyle={styles.gridRow}
-          renderItem={({ item }) => (
-            <AppGridItem
-              width={cellWidth}
-              name={item.name}
-              webViewUri={item.webViewUri ?? ""}
-              clientId={item.clientId ?? ""}
-              exchangedToken={item.exchangedToken ?? ""}
-              exchangedIdToken={item.exchangedIdToken ?? ""}
-              appId={item.appId}
-              displayMode={item.displayMode}
-              version={item.versions?.[0]?.version}
-              isUpdating={updatingApps.includes(item.appId)}
-              downloadProgress={downloadProgress[item.appId]}
-            />
-          )}
-          contentContainerStyle={{
-            minHeight: windowHeight - 3 * tabBarHeight,
-            paddingHorizontal: spacing.screen,
-            paddingTop: 6,
-            paddingBottom: tabBarHeight,
-          }}
-          showsVerticalScrollIndicator={false}
-          onScrollBeginDrag={Keyboard.dismiss}
-          ListEmptyComponent={
-            <EmptyState
-              icon="store"
-              title={
-                searchQuery.trim() === ""
-                  ? "No apps yet"
-                  : `No apps match “${searchQuery.trim()}”`
-              }
-              action={{
-                label: "Browse the Store",
-                onPress: () => router.push(ScreenPaths.STORE),
-              }}
-            />
-          }
-        />
-      </View>
-    </SafeAreaView>
+    </>
   );
 }
 

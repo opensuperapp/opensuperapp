@@ -25,7 +25,7 @@ const FeedSkeleton = () => {
   const card = [styles.card, { backgroundColor: colors.card, borderColor: colors.line }];
 
   return (
-    <View style={{ padding: 16 }}>
+    <View>
       <Skeleton
         style={{ width: "100%", aspectRatio: size.heroAspect }}
         borderRadius={radius.hero}

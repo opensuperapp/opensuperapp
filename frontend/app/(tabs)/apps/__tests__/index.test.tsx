@@ -46,10 +46,6 @@ beforeEach(() => mockConnectivityListeners.clear());
 jest.mock("@/context/slices/userConfigSlice", () => ({
   getUserConfigurations: () => ({ type: "userConfig/mock" }),
 }));
-jest.mock("@react-navigation/bottom-tabs", () => ({
-  ...jest.requireActual("@react-navigation/bottom-tabs"),
-  useBottomTabBarHeight: () => 0,
-}));
 jest.mock("@/hooks/useTrackActiveScreen", () => ({
   useTrackActiveScreen: jest.fn(),
 }));
