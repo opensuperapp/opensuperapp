@@ -27,11 +27,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
  * toast sits on the tab's content instead, whose bottom inset already clears the bar.
  */
 export default function TabStack({ children }: { children?: ReactNode }) {
-  const { colors, isDark } = useBrandTheme();
+  const { colors } = useBrandTheme();
   const insets = useSafeAreaInsets();
   return (
     <>
-      <Stack screenOptions={largeTitleHeaderOptions(colors, isDark)}>
+      <Stack screenOptions={largeTitleHeaderOptions(colors)}>
         {children}
       </Stack>
       <OfflineToast bottom={0} bottomInset={insets.bottom} />

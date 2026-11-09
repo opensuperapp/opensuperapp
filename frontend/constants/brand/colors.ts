@@ -39,7 +39,8 @@ export type ThemeName = "dark" | "light";
 
 export interface ThemeColors {
   bg: string; // screen
-  bar: string; // header / tab bar (use with 18px backdrop blur)
+  bar: string; // translucent bar colour (use with 18px backdrop blur)
+  barSolid: string; // opaque header / tab bar: same as `bg`, so bars and screen read as one surface
   card: string;
   card2: string; // chips, pills, pressed
   line: string; // hairline
@@ -64,6 +65,7 @@ export const themes: Record<ThemeName, ThemeColors> = {
   dark: {
     bg: "#050A1C",
     bar: "rgba(5,10,28,0.86)",
+    barSolid: "#050A1C",
     card: "#0A1128",
     card2: "#111A36",
     line: "rgba(255,255,255,0.08)",
@@ -86,6 +88,7 @@ export const themes: Record<ThemeName, ThemeColors> = {
   light: {
     bg: "#F4F6FA",
     bar: "rgba(255,255,255,0.88)",
+    barSolid: "#F4F6FA",
     card: "#FFFFFF",
     card2: "#EEF1F7",
     line: "rgba(11,22,51,0.08)",

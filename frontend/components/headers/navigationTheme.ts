@@ -42,7 +42,7 @@ const buildTheme = (scheme: ThemeName): Theme => {
     colors: {
       primary: colors.accent,
       background: colors.bg,
-      card: colors.bar,
+      card: colors.barSolid,
       text: colors.text,
       border: colors.line,
       notification: brand.signal,
@@ -63,7 +63,8 @@ export const pushedHeaderOptions = (
 ): NativeStackNavigationOptions => ({
   headerTitleAlign: "center",
   headerTintColor: colors.accent,
-  headerStyle: { backgroundColor: colors.bar },
+  headerStyle: { backgroundColor: colors.barSolid },
+  headerBlurEffect: "none",
   headerTitleStyle: {
     fontFamily: soraFamily[type.pushedTitle.weight],
     fontSize: type.pushedTitle.size,
@@ -74,13 +75,12 @@ export const pushedHeaderOptions = (
 
 /**
  * Tab roots: the native large title that collapses into the bar as the content scrolls.
- * On iOS the bar is transparent with the system chrome blur, so the screen's scroll view
- * must use `contentInsetAdjustmentBehavior="automatic"` for the collapse to track it.
+ * The bar is opaque `barSolid` with no blur, matching the tab bar; the two must stay the
+ * same style (both solid, or both translucent), never mixed.
  * Android has no large title; it gets the native Material top app bar.
  */
 export const largeTitleHeaderOptions = (
   colors: ThemeColors,
-  isDark: boolean,
 ): NativeStackNavigationOptions => ({
   headerTintColor: colors.accent,
   headerShadowVisible: false,
@@ -89,23 +89,18 @@ export const largeTitleHeaderOptions = (
     color: colors.text,
   },
   headerBackTitleStyle: { fontFamily: soraFamily[500] },
+  headerStyle: { backgroundColor: colors.barSolid },
   contentStyle: { backgroundColor: colors.bg },
   ...Platform.select<NativeStackNavigationOptions>({
     ios: {
       headerLargeTitle: true,
-      headerTransparent: true,
-      headerBlurEffect: isDark
-        ? "systemChromeMaterialDark"
-        : "systemChromeMaterialLight",
+      headerBlurEffect: "none",
       headerLargeTitleShadowVisible: false,
-      headerLargeStyle: { backgroundColor: "transparent" },
+      headerLargeStyle: { backgroundColor: colors.barSolid },
       headerLargeTitleStyle: {
         fontFamily: soraFamily[700],
         color: colors.text,
       },
-    },
-    default: {
-      headerStyle: { backgroundColor: colors.bg },
     },
   }),
 });
