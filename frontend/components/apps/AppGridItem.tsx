@@ -38,6 +38,7 @@ type AppGridItemProps = {
   exchangedToken: string;
   exchangedIdToken: string;
   appId: string;
+  iconUrl?: string;
   displayMode?: DisplayMode;
   version?: string;
   isUpdating?: boolean;
@@ -47,7 +48,7 @@ type AppGridItemProps = {
 
 const TILE = sizes.tile.grid;
 
-/** My Apps grid cell: Halo tile and label; opens the micro app on press. */
+/** My Apps grid cell: app tile and label; opens the micro app on press. */
 const AppGridItem = React.memo(function AppGridItem({
   name,
   webViewUri,
@@ -55,6 +56,7 @@ const AppGridItem = React.memo(function AppGridItem({
   exchangedToken,
   exchangedIdToken,
   appId,
+  iconUrl,
   displayMode,
   version,
   isUpdating = false,
@@ -92,7 +94,7 @@ const AppGridItem = React.memo(function AppGridItem({
       accessibilityLabel={name}
     >
       <View style={isUpdating && styles.tileUpdating}>
-        <AppTile name={name} appId={appId} size={TILE} />
+        <AppTile name={name} appId={appId} iconUrl={iconUrl} size={TILE} />
       </View>
       {isUpdating && (
         <View

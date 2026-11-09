@@ -62,6 +62,7 @@ const ListItem = React.memo(
     exchangedIdToken,
     versions,
     description,
+    iconUrl,
     status,
     downloading,
     downloadProgress,
@@ -96,7 +97,7 @@ const ListItem = React.memo(
           disabled={status !== DOWNLOADED}
         >
           <View style={downloading && styles.tileUpdating}>
-            <AppTile name={name} appId={appId} size={TILE} />
+            <AppTile name={name} appId={appId} iconUrl={iconUrl} size={TILE} />
           </View>
           {downloading && downloadProgress !== undefined && (
             <View style={styles.updateOverlay}>

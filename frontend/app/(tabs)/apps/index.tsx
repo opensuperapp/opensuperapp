@@ -336,6 +336,7 @@ export default function HomeScreen() {
             exchangedToken={item.exchangedToken ?? ""}
             exchangedIdToken={item.exchangedIdToken ?? ""}
             appId={item.appId}
+            iconUrl={item.iconUrl}
             displayMode={item.displayMode}
             version={item.versions?.[0]?.version}
             isUpdating={updatingApps.includes(item.appId)}
@@ -345,7 +346,10 @@ export default function HomeScreen() {
         contentInsetAdjustmentBehavior="automatic"
         style={{ backgroundColor: colors.bg }}
         contentContainerStyle={{
-          flexGrow: 1,
+          // Only the empty state needs the full height (to centre). On a grid, flexGrow plus
+          // the automatic bar insets makes the content taller than the screen, so it scrolls
+          // even when every app fits.
+          flexGrow: filteredApps.length === 0 ? 1 : 0,
           paddingHorizontal: spacing.screen,
           paddingTop: 6,
           paddingBottom: spacing.screen,
