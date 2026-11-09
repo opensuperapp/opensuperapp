@@ -78,6 +78,15 @@ describe("expo-notifications native config", () => {
     }
   });
 
+  // notifee's library manifest declares this today; the app must own it so
+  // scheduled sessions still fire on time once notifee is removed.
+  it("declares the exact-alarm permission for scheduled sessions", () => {
+    const permissions = (
+      config._internal.modResults.android.manifest.manifest["uses-permission"] ?? []
+    ).map((p: { $: { "android:name": string } }) => p.$["android:name"]);
+    expect(permissions).toContain("android.permission.SCHEDULE_EXACT_ALARM");
+  });
+
   // @react-native-firebase/messaging's library manifest declares these two
   // keys, so setting them here fails Gradle's manifest merge.
   it.each([

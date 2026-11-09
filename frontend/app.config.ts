@@ -132,6 +132,7 @@ let config: ExpoConfig = {
       "android.permission.CAMERA",
       "android.permission.RECORD_AUDIO",
       "android.permission.POST_NOTIFICATIONS",
+      "android.permission.SCHEDULE_EXACT_ALARM",
     ],
     // Firebase (messaging/remote-config) pulls these in transitively via
     // play-services-measurement. The app does not use the advertising ID,
