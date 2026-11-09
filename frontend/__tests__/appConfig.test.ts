@@ -24,11 +24,16 @@ type Style = { $: { name: string; parent?: string }; item: StyleItem[] };
 
 // Runs the real config plugins and returns what prebuild would write, so these
 // assertions check the generated native files rather than app.config.ts itself.
-function introspect() {
+// Variables set here win over .env, because dotenv never overrides them.
+function introspect(env: Record<string, string> = {}) {
   const out = execFileSync(
     "npx",
     ["expo", "config", "--type", "introspect", "--json"],
-    { cwd: path.resolve(__dirname, ".."), encoding: "utf8" },
+    {
+      cwd: path.resolve(__dirname, ".."),
+      encoding: "utf8",
+      env: { ...process.env, ...env },
+    },
   );
   return JSON.parse(out);
 }
@@ -54,5 +59,41 @@ describe("Android edge-to-edge (Expo built-in, no react-native-edge-to-edge)", (
       (i) => i.$.name === "android:enforceNavigationBarContrast",
     );
     expect(item?._).toBe("false");
+  });
+});
+
+type MetaData = { $: { "android:name": string; "android:value"?: string; "android:resource"?: string } };
+
+describe("expo-notifications native config", () => {
+  const config = introspect({ EXPO_PUBLIC_ADD_ANDROID_NOTIFICATION_ICON: "true" });
+  const metaData: MetaData[] =
+    config._internal.modResults.android.manifest.manifest.application[0]["meta-data"] ?? [];
+  const meta = (name: string) => metaData.find((m) => m.$["android:name"] === name)?.$;
+
+  it("uses the app's small icon for pushes and local notifications", () => {
+    for (const prefix of ["com.google.firebase.messaging", "expo.modules.notifications"]) {
+      expect(meta(`${prefix}.default_notification_icon`)?.["android:resource"]).toBe(
+        "@drawable/notification_icon",
+      );
+    }
+  });
+
+  // @react-native-firebase/messaging's library manifest declares these two
+  // keys, so setting them here fails Gradle's manifest merge.
+  it.each([
+    "com.google.firebase.messaging.default_notification_channel_id",
+    "com.google.firebase.messaging.default_notification_color",
+  ])("leaves %s to the library manifest", (name) => {
+    expect(meta(name)).toBeUndefined();
+  });
+});
+
+describe("APNs environment", () => {
+  it.each([
+    ["development", "development"],
+    ["production", "production"],
+  ])("a %s build registers with the %s APNs host", (profile, apsEnvironment) => {
+    const config = introspect({ EAS_BUILD_PROFILE: profile });
+    expect(config._internal.modResults.ios.entitlements["aps-environment"]).toBe(apsEnvironment);
   });
 });

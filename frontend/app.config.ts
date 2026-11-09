@@ -204,6 +204,14 @@ let config: ExpoConfig = {
     ["expo-screen-orientation", { initialOrientation: "DEFAULT" }],
     ["expo-font", { fonts: ["./assets/fonts/SpaceMono-Regular.ttf"] }],
     [
+      "expo-notifications",
+      // defaultChannel and color wait for @react-native-firebase/messaging to
+      // go: its manifest declares the same FCM meta-data and the merge fails.
+      ADD_ANDROID_NOTIFICATION_ICON === TRUE
+        ? { icon: "./assets/images/notification-icon.png" }
+        : {},
+    ],
+    [
       "@react-native-google-signin/google-signin",
       { iosUrlScheme: IOS_URL_SCHEME },
     ],
