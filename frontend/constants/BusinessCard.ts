@@ -20,8 +20,8 @@ import { brand, radius } from "@/constants/brand";
 export const CARD_ORGANIZATION = "WSO2 LLC";
 export const CARD_WEBSITE = "https://wso2.com";
 
-// Brand Cobalt, the flat colour a signed pass can carry; the in-app preview
-// lays the business-card radial and dot texture over it. Must match the wallet
+// Brand Cobalt. Neither wallet allows a background image on this pass, so the
+// in-app preview is flat Cobalt too, to show what gets installed. Must match the wallet
 // service's pass.go, which still ships the old orange (#F14E23) until it is
 // rebranded too.
 export const PASS_BACKGROUND_COLOR = brand.cobalt;

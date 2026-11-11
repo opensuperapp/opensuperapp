@@ -16,7 +16,6 @@
 import ChoreoLabsLogo from "@/components/brand/ChoreoLabsLogo";
 import ApplePassField from "@/components/businessCard/ApplePassField";
 import { applePassStyles as styles } from "@/components/businessCard/applePassStyles";
-import CardFrontArtwork from "@/components/businessCard/CardFrontArtwork";
 import { PASS, PASS_FOREGROUND_COLOR } from "@/constants/BusinessCard";
 import { BusinessCardData } from "@/types/businessCard.types";
 import { buildVCard } from "@/utils/vcard";
@@ -41,7 +40,6 @@ const WalletPassView = forwardRef<View, Props>(
 
     return (
       <View ref={ref} style={styles.pass} collapsable={false}>
-        <CardFrontArtwork />
         <View style={styles.logo}>
           <ChoreoLabsLogo width={LOGO_WIDTH} color={PASS_FOREGROUND_COLOR} />
         </View>
