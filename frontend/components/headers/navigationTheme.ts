@@ -83,7 +83,6 @@ export const largeTitleHeaderOptions = (
   colors: ThemeColors,
 ): NativeStackNavigationOptions => ({
   headerTintColor: colors.accent,
-  headerShadowVisible: false,
   headerTitleStyle: {
     fontFamily: soraFamily[type.pushedTitle.weight],
     color: colors.text,
@@ -95,6 +94,9 @@ export const largeTitleHeaderOptions = (
     ios: {
       headerLargeTitle: true,
       headerBlurEffect: "none",
+      // As UIKit does: no hairline under the large title, one under the inline bar once
+      // the content scrolls beneath it.
+      headerShadowVisible: true,
       headerLargeTitleShadowVisible: false,
       headerLargeStyle: { backgroundColor: colors.barSolid },
       headerLargeTitleStyle: {
@@ -102,5 +104,6 @@ export const largeTitleHeaderOptions = (
         color: colors.text,
       },
     },
+    android: { headerShadowVisible: false },
   }),
 });
