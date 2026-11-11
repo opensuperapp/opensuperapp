@@ -15,8 +15,11 @@
 // under the License.
 import ChatSuggestionChip from "@/components/chat/ChatSuggestionChip";
 import SuperAppAgentIcon from "@/components/chat/SuperAppAgentIcon";
-import { CHAT_EMPTY_HINT, CHAT_SUGGESTIONS } from "@/constants/Constants";
-import { getChatEmptyTitleContent } from "@/utils/chatEmptyTitle";
+import {
+  CHAT_EMPTY_DEFAULT_MESSAGE,
+  CHAT_EMPTY_HINT,
+  CHAT_SUGGESTIONS,
+} from "@/constants/Constants";
 import { size, textStyle, type } from "@/constants/brand";
 import { ChatThemePalette } from "@/constants/ChatTheme";
 import React from "react";
@@ -24,25 +27,21 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 export interface ChatEmptyStateProps {
   theme: ChatThemePalette;
-  firstName?: string;
   onSuggestionPress: (prompt: string) => void;
   suggestionsDisabled?: boolean;
 }
 
 /**
- * Empty chat state with greeting, headline, and quick-action suggestion chips.
+ * Empty chat state with headline and quick-action suggestion chips.
  *
- * @param {ChatEmptyStateProps} props - Theme, user name, and chip handler.
+ * @param {ChatEmptyStateProps} props - Theme and chip handler.
  * @returns {JSX.Element} Empty chat state UI.
  */
 const ChatEmptyState = ({
   theme,
-  firstName,
   onSuggestionPress,
   suggestionsDisabled = false,
 }: ChatEmptyStateProps): JSX.Element => {
-  const { greeting, message } = getChatEmptyTitleContent(firstName);
-
   return (
     <ScrollView
       contentContainerStyle={styles.container}
@@ -50,18 +49,12 @@ const ChatEmptyState = ({
       keyboardShouldPersistTaps="handled"
     >
       <View style={styles.halo}>
-        <SuperAppAgentIcon size={size.avatar.chatEmpty} animated />
+        <SuperAppAgentIcon size={size.avatar.chatEmpty} />
       </View>
 
       <View style={styles.copyBlock}>
-        {greeting ? (
-          <Text style={[styles.greeting, { color: theme.highlight }]}>
-            {greeting}
-          </Text>
-        ) : null}
-
         <Text style={[styles.message, { color: theme.assistantText }]}>
-          {message}
+          {CHAT_EMPTY_DEFAULT_MESSAGE}
         </Text>
 
         <Text style={[styles.hint, { color: theme.muted }]}>
@@ -108,10 +101,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
     maxWidth: 320,
-  },
-  greeting: {
-    ...textStyle({ size: 21, weight: 600, tracking: -0.035, lineHeight: 1.25 }),
-    textAlign: "center",
   },
   message: {
     ...textStyle({ size: 21, weight: 600, tracking: -0.035, lineHeight: 1.25 }),

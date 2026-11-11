@@ -26,7 +26,6 @@ import { getChatTheme } from "@/constants/ChatTheme";
 import { ChatRole, MessageStatus } from "@/constants/enums/Chat";
 import { CHAT_MENU_BUTTON_SIZE, isIos } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
-import { RootState } from "@/context/store";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { useChat } from "@/hooks/useChat";
 import { useLeaveWhenSessionEnds } from "@/hooks/useLeaveWhenSessionEnds";
@@ -50,7 +49,6 @@ import {
   SafeAreaInsetsContext,
   SafeAreaProvider,
 } from "react-native-safe-area-context";
-import { useSelector } from "react-redux";
 
 /**
  * AI Agent chat screen with Super App branding and SQLite-backed sessions.
@@ -61,7 +59,6 @@ export default function ChatScreen(): JSX.Element {
   const { isDark } = useBrandTheme();
   const theme = getChatTheme(isDark);
   const navigation = useNavigation();
-  const { userInfo } = useSelector((state: RootState) => state.userInfo);
   const {
     activeSessionId,
     isLoading: sessionsLoading,
@@ -294,7 +291,6 @@ export default function ChatScreen(): JSX.Element {
               ListEmptyComponent={
                 <ChatEmptyState
                   theme={theme}
-                  firstName={userInfo?.firstName}
                   onSuggestionPress={handleSuggestionPress}
                   suggestionsDisabled={isGenerating}
                 />
