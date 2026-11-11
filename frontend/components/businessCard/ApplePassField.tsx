@@ -13,7 +13,6 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { soraFamily, textStyle, type } from "@/constants/brand";
 import {
   PASS_FOREGROUND_COLOR,
   PASS_LABEL_COLOR,
@@ -50,24 +49,23 @@ const ApplePassField = ({ label, value, size, style }: Props) => (
 export default ApplePassField;
 
 const styles = StyleSheet.create({
-  // The brand card's field label: 10/600/+.16em, uppercased above.
+  // Uppercased above. System font throughout, as Wallet draws the pass.
   label: {
-    ...textStyle({ ...type.cardFieldLabel, uppercase: false }),
+    fontSize: 10,
+    fontWeight: "600",
     color: PASS_LABEL_COLOR,
     opacity: 0.8,
   },
   secondaryValue: {
     marginTop: 2,
-    fontFamily: soraFamily[600],
+    fontWeight: "600",
     fontSize: 16,
-    letterSpacing: -0.16,
     color: PASS_FOREGROUND_COLOR,
   },
   auxiliaryValue: {
     marginTop: 2,
-    fontFamily: soraFamily[600],
+    fontWeight: "600",
     fontSize: 15,
-    letterSpacing: -0.15,
     color: PASS_FOREGROUND_COLOR,
   },
 });
