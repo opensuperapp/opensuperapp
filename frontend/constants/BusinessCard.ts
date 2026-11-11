@@ -28,8 +28,9 @@ export const PASS_BACKGROUND_COLOR = brand.cobalt;
 export const PASS_FOREGROUND_COLOR = "#FFFFFF";
 export const PASS_LABEL_COLOR = "#FFFFFF";
 
-// The card fills the width it is given, so this alone sets its height.
-export const CARD_ASPECT_RATIO = 2 / 3;
+// The card fills the width it is given, so this alone sets its height. Shorter than an
+// installed pass (about 2:3) by choice: the content fits, and the sheet has less to scroll.
+export const CARD_ASPECT_RATIO = 3 / 4;
 
 // Pass geometry in points, reproduced from the wallet service rather than
 // chosen: the thumbnail ring is 4% of the diameter, as internal/photo draws it.

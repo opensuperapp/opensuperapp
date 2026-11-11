@@ -185,10 +185,10 @@ describe("WalletPassView — artwork", () => {
 });
 
 describe("WalletPassView — card geometry", () => {
-  it("keeps the card in portrait 2:3, so it is taller than it is wide", () => {
+  it("keeps the card in portrait 3:4, so it is taller than it is wide", () => {
     const { root } = render(baseData);
     const pass = root.root.findByProps({ collapsable: false });
-    expect(flatten(pass.props.style).aspectRatio).toBeCloseTo(2 / 3);
+    expect(flatten(pass.props.style).aspectRatio).toBeCloseTo(3 / 4);
   });
 
   it("draws the brand logo pinned to the top-left", () => {
