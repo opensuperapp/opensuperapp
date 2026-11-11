@@ -18,9 +18,7 @@ import { brand, soraFamily, textStyle, themes, type } from "@/constants/brand";
 import { PASS } from "@/constants/BusinessCard";
 import { BusinessCardData } from "@/types/businessCard.types";
 import React from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
-
-const DOTS = require("@/assets/brand/blackout-dots.png");
+import { StyleSheet, Text, View } from "react-native";
 
 type Props = {
   data: BusinessCardData;
@@ -53,17 +51,11 @@ export const backFields = (data: BusinessCardData): BackField[] => {
   return fields;
 };
 
-// The back face of the card: Ink with the dot artwork, the white logo, and the
+// The back face of the card: plain Ink, the white logo, and the
 // fields pass.go puts on the back, separated by hairlines. Fills the card face
 // it is given, so it is the same size as the front it flips from.
 const WalletPassDetails = ({ data }: Props) => (
   <View style={styles.face}>
-    <Image
-      source={DOTS}
-      resizeMode="cover"
-      style={StyleSheet.absoluteFill}
-      accessibilityIgnoresInvertColors
-    />
     <View style={styles.logo}>
       <ChoreoLabsLogo width={79} color="#FFFFFF" />
     </View>
