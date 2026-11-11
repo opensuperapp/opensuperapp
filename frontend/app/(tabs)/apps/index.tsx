@@ -18,7 +18,7 @@ import EmptyState from "@/components/apps/EmptyState";
 import { useHeaderSearch } from "@/components/apps/useHeaderSearch";
 import SignInMessage from "@/components/SignInMessage";
 import SyncingModal from "@/components/SyncingModal";
-import { spacing, type ThemeColors } from "@/constants/brand";
+import { size, spacing, type ThemeColors } from "@/constants/brand";
 import {
   APP_LIST_CONFIG_KEY,
   APP_UPDATE_CHECK_TIMESTAMP_KEY,
@@ -84,8 +84,13 @@ export default function HomeScreen() {
   const version = Constants.expoConfig?.version;
   const { width: windowWidth } = useWindowDimensions();
   const { columns, columnGap } = spacing.appGrid;
+  // The tiles, not their cells, sit on the screen padding: the first and last tiles touch
+  // it and the cells (wider, for the labels) overhang into it by labelOverhang.
+  const tile = size.tile.grid;
   const cellWidth =
-    (windowWidth - spacing.screen * 2 - columnGap * (columns - 1)) / columns;
+    (windowWidth - spacing.screen * 2 - tile - columnGap * (columns - 1)) /
+    (columns - 1);
+  const labelOverhang = (cellWidth - tile) / 2;
   const [currentAction, setCurrentAction] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ done: number; total: number }>({
     done: 0,
@@ -326,7 +331,10 @@ export default function HomeScreen() {
         data={filteredApps}
         keyExtractor={(item) => item.appId}
         numColumns={columns}
-        columnWrapperStyle={styles.gridRow}
+        columnWrapperStyle={[
+          styles.gridRow,
+          { marginHorizontal: -labelOverhang },
+        ]}
         renderItem={({ item }) => (
           <AppGridItem
             width={cellWidth}
