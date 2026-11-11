@@ -115,7 +115,11 @@ let config: ExpoConfig = {
       // fails on a profile without it.
       ...(APPLE_PASS_TYPE_ID
         ? {
-            "com.apple.developer.pass-type-identifiers": [APPLE_PASS_TYPE_ID],
+            // Team-prefixed, as Xcode's Wallet capability writes it: the profile
+            // grants "<team id>.*", which a bare pass type id does not match.
+            "com.apple.developer.pass-type-identifiers": [
+              `$(TeamIdentifierPrefix)${APPLE_PASS_TYPE_ID}`,
+            ],
           }
         : {}),
     },
