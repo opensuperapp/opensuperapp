@@ -13,23 +13,28 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import { isIos } from "@/constants/Constants";
 import { NotificationsProvider } from "@/context/NotificationsContext";
 import { OfflineStatusProvider } from "@/context/OfflineStatusContext";
 import { QrScannerProvider } from "@/context/QrScannerContext";
 import React from "react";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 
 type AppProvidersProps = {
   children: React.ReactNode;
 };
 
 const AppProviders = ({ children }: AppProvidersProps) => {
-  return (
+  const providers = (
     <NotificationsProvider>
       <QrScannerProvider>
         <OfflineStatusProvider>{children}</OfflineStatusProvider>
       </QrScannerProvider>
     </NotificationsProvider>
   );
+  // iOS only: the chat composer follows the keyboard with it. On Android the provider
+  // takes over the window's keyboard insets, and screens there rely on the window resizing.
+  return isIos ? <KeyboardProvider>{providers}</KeyboardProvider> : providers;
 };
 
 export default AppProviders;

@@ -45,10 +45,8 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import Reanimated, {
-  useAnimatedKeyboard,
-  useAnimatedStyle,
-} from "react-native-reanimated";
+import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
+import Reanimated, { useAnimatedStyle } from "react-native-reanimated";
 import {
   SafeAreaInsetsContext,
   SafeAreaProvider,
@@ -84,8 +82,8 @@ function KeyboardLift({
   );
 }
 
-// Separate so Android never mounts useAnimatedKeyboard, which takes over the
-// window's keyboard insets there.
+// Separate so Android never reads the keyboard-controller hook: its provider is iOS
+// only (see AppProviders).
 function AnimatedKeyboardLift({
   screenBottomGap,
   children,
@@ -93,11 +91,14 @@ function AnimatedKeyboardLift({
   screenBottomGap: number;
   children: React.ReactNode;
 }) {
-  const keyboard = useAnimatedKeyboard();
+  // keyboard-controller rather than Reanimated's useAnimatedKeyboard, which jumped
+  // straight to the end height on real devices instead of following the keyboard.
+  // Its height is negative while the keyboard is up.
+  const { height: keyboardHeight } = useReanimatedKeyboardAnimation();
   const { bottom: tabBottom } = useSafeAreaInsets();
   const lift = useAnimatedStyle(() => ({
     paddingBottom: Math.max(
-      keyboard.height.value -
+      -keyboardHeight.value -
         screenBottomGap -
         tabBottom -
         COMPOSER_GAP +
