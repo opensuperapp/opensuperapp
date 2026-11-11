@@ -39,16 +39,76 @@ import {
   Animated,
   FlatList,
   Keyboard,
-  KeyboardAvoidingView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
+import Reanimated, {
+  useAnimatedKeyboard,
+  useAnimatedStyle,
+} from "react-native-reanimated";
 import {
   SafeAreaInsetsContext,
   SafeAreaProvider,
+  useSafeAreaInsets,
 } from "react-native-safe-area-context";
+
+// Composer padding over the tab bar, and the gap it keeps above the keyboard.
+const COMPOSER_GAP = 8;
+const KEYBOARD_GAP = 12;
+
+/**
+ * Lifts the chat by the keyboard, frame by frame with the keyboard's own animation.
+ * The lift starts once the keyboard passes the tab bar, and ends KEYBOARD_GAP above
+ * it, so the composer's padding never has to jump. iOS only: Android resizes the
+ * window for the keyboard itself.
+ */
+function KeyboardLift({
+  enabled,
+  screenBottomGap,
+  children,
+}: {
+  enabled: boolean;
+  screenBottomGap: number;
+  children: React.ReactNode;
+}) {
+  if (!enabled) {
+    return <View style={styles.flex}>{children}</View>;
+  }
+  return (
+    <AnimatedKeyboardLift screenBottomGap={screenBottomGap}>
+      {children}
+    </AnimatedKeyboardLift>
+  );
+}
+
+// Separate so Android never mounts useAnimatedKeyboard, which takes over the
+// window's keyboard insets there.
+function AnimatedKeyboardLift({
+  screenBottomGap,
+  children,
+}: {
+  screenBottomGap: number;
+  children: React.ReactNode;
+}) {
+  const keyboard = useAnimatedKeyboard();
+  const { bottom: tabBottom } = useSafeAreaInsets();
+  const lift = useAnimatedStyle(() => ({
+    paddingBottom: Math.max(
+      keyboard.height.value -
+        screenBottomGap -
+        tabBottom -
+        COMPOSER_GAP +
+        KEYBOARD_GAP,
+      0
+    ),
+  }));
+  return (
+    <Reanimated.View style={[styles.flex, lift]}>{children}</Reanimated.View>
+  );
+}
 
 /**
  * AI Agent chat screen with Super App branding and SQLite-backed sessions.
@@ -78,6 +138,18 @@ export default function ChatScreen(): JSX.Element {
 
   const [inputText, setInputText] = useState("");
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  // How far the screen's bottom edge sits above the window's, which the keyboard
+  // has to rise past before it covers anything.
+  const screenRef = useRef<View>(null);
+  const [screenBottomGap, setScreenBottomGap] = useState(0);
+  const { height: windowHeight } = useWindowDimensions();
+  const measureScreen = useCallback(
+    () =>
+      screenRef.current?.measureInWindow((_x, y, _w, h) =>
+        setScreenBottomGap(Math.max(windowHeight - (y + h), 0))
+      ),
+    [windowHeight]
+  );
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarText, setSnackbarText] = useState("");
   const [editTarget, setEditTarget] = useState<{
@@ -187,8 +259,14 @@ export default function ChatScreen(): JSX.Element {
   // includes the native tab bar the screen extends under; the root provider's inset is
   // only the home indicator. On Android the content ends above the bar, so only a small
   // gap is needed.
+  // On iOS the gap to the keyboard is KeyboardLift's job, so the composer keeps its
+  // tab-bar inset throughout.
   const composerBottomInset = (tabBottomInset: number) =>
-    isKeyboardVisible ? (isIos ? 12 : 16) : (isIos ? tabBottomInset : 0) + 8;
+    isIos
+      ? tabBottomInset + COMPOSER_GAP
+      : isKeyboardVisible
+        ? 16
+        : COMPOSER_GAP;
   const hasMessages = messages.length > 0;
 
   // Native bar buttons: history on the left, "new chat" once there is something to leave.
@@ -267,11 +345,14 @@ export default function ChatScreen(): JSX.Element {
     <>
       {/* Not around EditMessageModal: its sheet has no tab bar under it. */}
       <SafeAreaProvider>
-        <View style={[styles.screen, { backgroundColor: theme.background }]}>
-          <KeyboardAvoidingView
-            style={styles.flex}
-            behavior={isIos ? "padding" : undefined}
-            keyboardVerticalOffset={0}
+        <View
+          ref={screenRef}
+          onLayout={measureScreen}
+          style={[styles.screen, { backgroundColor: theme.background }]}
+        >
+          <KeyboardLift
+            enabled={isIos}
+            screenBottomGap={screenBottomGap}
           >
             <FlatList
               ref={flatListRef}
@@ -311,7 +392,7 @@ export default function ChatScreen(): JSX.Element {
                 />
               )}
             </SafeAreaInsetsContext.Consumer>
-          </KeyboardAvoidingView>
+          </KeyboardLift>
 
           {snackbarVisible && (
             <Animated.View
