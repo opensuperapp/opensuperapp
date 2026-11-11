@@ -24,7 +24,7 @@ interface WheelLoaderProps {
   color: string;
 }
 
-/** The standard Choreo Labs loader. Use it for every wait. */
+/** The Choreo Labs loader. Only for chat loading and the launch screen; every other wait uses the native ActivityIndicator. */
 export default function WheelLoader({ size, color }: WheelLoaderProps) {
   return (
     <BrandLottie

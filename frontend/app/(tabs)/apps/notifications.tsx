@@ -14,7 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 import EmptyState from "@/components/apps/EmptyState";
-import WheelLoader from "@/components/brand/WheelLoader";
 import { NotificationItem } from "@/components/notifications/NotificationItem";
 import { NotificationsFooter } from "@/components/notifications/NotificationsFooter";
 import { spacing } from "@/constants/brand";
@@ -27,7 +26,7 @@ import { convertToUtc } from "@/utils/date";
 import { useIsFocused } from "@react-navigation/native";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FlatList, RefreshControl, View } from "react-native";
+import { ActivityIndicator, FlatList, RefreshControl, View } from "react-native";
 
 export default function Notifications() {
   const { colors } = useBrandTheme();
@@ -135,7 +134,7 @@ export default function Notifications() {
         }}
       >
         {isLoading ? (
-          <WheelLoader size={44} color={colors.text2} />
+          <ActivityIndicator size="large" color={colors.text2} />
         ) : (
           <EmptyState
             icon="bell"

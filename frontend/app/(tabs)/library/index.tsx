@@ -14,7 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 import BrandIcon from "@/components/brand/BrandIcon";
-import WheelLoader from "@/components/brand/WheelLoader";
 import ContentEmptyView from "@/components/ContentEmptyView";
 import AuthorAvatar from "@/components/feed/AuthorAvatar";
 import { CardMeta, cardText, PressableCard } from "@/components/feed/Card";
@@ -34,6 +33,7 @@ import { capitalizeName } from "@/utils/capitalizeName";
 import { Stack } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
   FlatList,
   Linking,
@@ -257,7 +257,7 @@ const Library = () => {
         ListFooterComponent={
           fetchingMore ? (
             <View style={styles.footerLoader}>
-              <WheelLoader size={28} color={colors.text2} />
+              <ActivityIndicator size="small" color={colors.text2} />
             </View>
           ) : null
         }

@@ -13,11 +13,10 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import WheelLoader from "@/components/brand/WheelLoader";
 import { radius, soraFamily } from "@/constants/brand";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity } from "react-native";
 
 interface ActionButtonProps {
   label: string;
@@ -28,7 +27,7 @@ interface ActionButtonProps {
   fixedSize?: boolean;
 }
 
-/** Store pill: card2 fill, radius 999; shows the Wheel while downloading. */
+/** Store pill: card2 fill, radius 999; shows a spinner while downloading. */
 const ActionButton: React.FC<ActionButtonProps> = ({
   label,
   onPress,
@@ -50,7 +49,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
       activeOpacity={0.6}
     >
       {downloading ? (
-        <WheelLoader size={20} color={colors.text2} />
+        <ActivityIndicator size="small" color={colors.text2} />
       ) : (
         <Text
           style={[styles.buttonText, { color: textColor ?? colors.cobalt }]}
@@ -79,7 +78,7 @@ const styles = StyleSheet.create({
     fontFamily: soraFamily[600],
     fontSize: 14,
   },
-  // A Get pill keeps its width while the Wheel replaces the label.
+  // A Get pill keeps its width while the spinner replaces the label.
   fixedSize: {
     minWidth: 84,
   },

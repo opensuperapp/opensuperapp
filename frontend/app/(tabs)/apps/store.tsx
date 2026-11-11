@@ -15,7 +15,6 @@
 // under the License.
 import EmptyState from "@/components/apps/EmptyState";
 import { useHeaderSearch } from "@/components/apps/useHeaderSearch";
-import WheelLoader from "@/components/brand/WheelLoader";
 import ListItem from "@/components/ListItem";
 import SignInMessage from "@/components/SignInMessage";
 import { spacing, type ThemeColors } from "@/constants/brand";
@@ -37,6 +36,7 @@ import {
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
   Keyboard,
@@ -231,7 +231,7 @@ const Store = () => {
       <View
         style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
       >
-        <WheelLoader size={44} color={colors.text2} />
+        <ActivityIndicator size="large" color={colors.text2} />
       </View>
     ) : (
       <FlatList
