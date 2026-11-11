@@ -27,7 +27,10 @@ interface ActionButtonProps {
   fixedSize?: boolean;
 }
 
-/** Store pill: card2 fill, radius 999; shows a spinner while downloading. */
+// iOS "tinted" button: the label colour at low opacity. Labels are #RRGGBB tokens.
+const TINT_ALPHA = "26"; // ~15%
+
+/** Store pill, tinted, radius 999; shows a spinner while downloading. */
 const ActionButton: React.FC<ActionButtonProps> = ({
   label,
   onPress,
@@ -37,22 +40,23 @@ const ActionButton: React.FC<ActionButtonProps> = ({
   fixedSize = false,
 }) => {
   const { colors } = useBrandTheme();
+  const tint = textColor ?? colors.cobalt;
 
   return (
     <TouchableOpacity
       style={[
         styles.button,
         fixedSize && styles.fixedSize,
-        { backgroundColor: backgroundColor ?? colors.card2 },
+        { backgroundColor: backgroundColor ?? `${tint}${TINT_ALPHA}` },
       ]}
       onPress={onPress}
       activeOpacity={0.6}
     >
       {downloading ? (
-        <ActivityIndicator size="small" color={colors.text2} />
+        <ActivityIndicator size="small" color={tint} />
       ) : (
         <Text
-          style={[styles.buttonText, { color: textColor ?? colors.cobalt }]}
+          style={[styles.buttonText, { color: tint }]}
           allowFontScaling={false}
         >
           {label}
