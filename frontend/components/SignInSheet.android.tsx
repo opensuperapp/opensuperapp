@@ -13,108 +13,125 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import ChoreoLabsLogo from "@/components/brand/ChoreoLabsLogo";
-import PrimaryButton from "@/components/brand/PrimaryButton";
-import SignInArtwork from "@/components/signIn/SignInArtwork";
-import { radius, size, textStyle, themes, type } from "@/constants/brand";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { useSignInSheet } from "@/hooks/useSignInSheet";
-import Constants from "expo-constants";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-// The sheet sits on the always-dark sign-in artwork, so it reads the dark tokens.
-const colors = themes.dark;
-
 /**
- * The sign-in sheet laid out as a modal bottom sheet over the sign-in artwork.
+ * The sign-in sheet as a plain Material bottom sheet: theme surface, system type,
+ * the reason over a filled Sign In button and a text "Not now" button. No artwork or logo.
  */
 const SignInSheet = () => {
-  const { title, message, isSigningIn, signIn, dismiss } =
-    useSignInSheet();
+  const { title, message, isSigningIn, signIn, dismiss } = useSignInSheet();
   // The app draws edge to edge, so the sheet runs under the navigation bar.
   const { bottom } = useSafeAreaInsets();
-  const version = Constants.expoConfig?.version;
+  const { colors } = useBrandTheme();
 
   return (
-    <SignInArtwork style={[styles.sheet, { paddingBottom: bottom + 8 }]}>
+    <View
+      style={[
+        styles.sheet,
+        { backgroundColor: colors.card, paddingBottom: bottom + 16 },
+      ]}
+    >
       {/* react-native-screens only draws a grabber on iOS. Swipe-down and back
           already dismiss, so the handle is decoration for TalkBack. */}
-      <View style={styles.handle} importantForAccessibility="no" />
-      <View style={styles.logo} importantForAccessibility="no-hide-descendants">
-        <ChoreoLabsLogo width={168} color="#FFFFFF" />
-      </View>
-      <Text style={styles.title} accessibilityRole="header">
+      <View
+        style={[styles.handle, { backgroundColor: colors.text3 }]}
+        importantForAccessibility="no"
+      />
+      <Text
+        style={[styles.title, { color: colors.text }]}
+        accessibilityRole="header"
+      >
         {title}
       </Text>
-      <Text style={styles.message}>{message}</Text>
-      <PrimaryButton
-        title="Sign In"
-        onPress={signIn}
-        loading={isSigningIn}
-        style={styles.signInButton}
-      />
+      <Text style={[styles.message, { color: colors.text2 }]}>{message}</Text>
       <Pressable
-        style={styles.notNowButton}
-        android_ripple={{ color: colors.card2, foreground: true }}
+        onPress={signIn}
+        disabled={isSigningIn}
+        accessibilityRole="button"
+        accessibilityLabel="Sign In"
+        accessibilityState={{ busy: isSigningIn, disabled: isSigningIn }}
+        android_ripple={{ color: "rgba(255,255,255,0.24)", foreground: true }}
+        style={[styles.signInButton, { backgroundColor: colors.accent }]}
+      >
+        {isSigningIn ? (
+          <ActivityIndicator color="#FFFFFF" />
+        ) : (
+          <Text style={styles.signInText}>Sign In</Text>
+        )}
+      </Pressable>
+      <Pressable
         onPress={dismiss}
         accessibilityRole="button"
+        android_ripple={{ color: colors.text3, foreground: true }}
+        style={styles.notNowButton}
       >
-        <Text style={styles.notNowText}>Not now</Text>
+        <Text style={[styles.notNowText, { color: colors.accent }]}>
+          Not now
+        </Text>
       </Pressable>
-      <Text style={styles.version}>version {version}</Text>
-    </SignInArtwork>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   sheet: {
     paddingHorizontal: 24,
-    alignItems: "center",
   },
   handle: {
-    width: 40,
-    height: 5,
-    borderRadius: 3,
-    marginTop: 8,
-    marginBottom: 32,
-    backgroundColor: colors.line2,
-  },
-  logo: {
-    marginBottom: 28,
+    alignSelf: "center",
+    width: 32,
+    height: 4,
+    borderRadius: 2,
+    marginTop: 16,
+    marginBottom: 24,
+    opacity: 0.4,
   },
   title: {
-    ...textStyle(type.sectionHeading),
-    color: colors.text,
+    fontSize: 24,
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: 16,
   },
   message: {
-    ...textStyle({ ...type.excerpt, size: 15 }),
-    color: colors.text2,
+    fontSize: 14,
+    lineHeight: 20,
     textAlign: "center",
     marginBottom: 24,
   },
   signInButton: {
-    alignSelf: "stretch",
-  },
-  notNowButton: {
-    alignSelf: "stretch",
     height: 48,
-    marginTop: 8,
-    borderRadius: radius.buttonPrimary,
+    borderRadius: 24,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
-    minHeight: size.minHitTarget,
+  },
+  signInText: {
+    fontSize: 14,
+    fontWeight: "500",
+    letterSpacing: 0.1,
+    color: "#FFFFFF",
+  },
+  notNowButton: {
+    height: 48,
+    marginTop: 8,
+    borderRadius: 24,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
   },
   notNowText: {
-    ...textStyle(type.storeRowName),
-    color: colors.accent,
-  },
-  version: {
-    ...textStyle({ size: 13, weight: 400, tracking: 0.02 }),
-    color: colors.text3,
-    marginTop: 6,
+    fontSize: 14,
+    fontWeight: "500",
+    letterSpacing: 0.1,
   },
 });
 

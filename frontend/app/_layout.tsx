@@ -251,7 +251,10 @@ export default function RootLayout() {
                       name="micro-app"
                       options={{ headerBackTitle: "Back" }}
                     />
-                    <Stack.Screen name="sign-in" options={signInSheetOptions} />
+                    <Stack.Screen
+                      name="sign-in"
+                      options={signInSheetOptions({ scheme, isDark, colors })}
+                    />
                     <Stack.Screen name="+not-found" />
                   </Stack>
                   <StackOfflineToast />
