@@ -18,23 +18,36 @@ import { largeTitleHeaderOptions } from "@/components/headers/navigationTheme";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { Stack } from "expo-router";
 import type { ReactNode } from "react";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { StyleSheet } from "react-native";
+import {
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+
+/** Reads the insets of the provider around it, which includes the tab bar. */
+function TabOfflineToast() {
+  const insets = useSafeAreaInsets();
+  return <OfflineToast bottom={0} bottomInset={insets.bottom} />;
+}
 
 /**
  * A tab's own native stack: large-title bar on its root, native pushes beneath it.
  *
  * The offline toast lives here rather than in the tab bar: the bar is native now, so the
- * toast sits on the tab's content instead, whose bottom inset already clears the bar.
+ * toast sits on the tab's content instead. That content runs under the bar on iOS, and
+ * the root provider's bottom inset is only the home indicator, so the toast measures
+ * its own provider here, whose safe area includes the bar.
  */
 export default function TabStack({ children }: { children?: ReactNode }) {
   const { colors } = useBrandTheme();
-  const insets = useSafeAreaInsets();
   return (
     <>
       <Stack screenOptions={largeTitleHeaderOptions(colors)}>
         {children}
       </Stack>
-      <OfflineToast bottom={0} bottomInset={insets.bottom} />
+      <SafeAreaProvider style={StyleSheet.absoluteFill} pointerEvents="box-none">
+        <TabOfflineToast />
+      </SafeAreaProvider>
     </>
   );
 }
