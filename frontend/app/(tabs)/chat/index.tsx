@@ -20,6 +20,7 @@ import ChatComposer from "@/components/chat/ChatComposer";
 import ChatEmptyState from "@/components/chat/ChatEmptyState";
 import ChatMenuButton from "@/components/chat/ChatMenuButton";
 import ChatMessageRow from "@/components/chat/ChatMessageRow";
+import ChatSessionDrawer from "@/components/chat/ChatSessionDrawer";
 import { useChatSessionsContext } from "@/components/chat/ChatSessionsContext";
 import { textStyle } from "@/constants/brand";
 import { getChatTheme } from "@/constants/ChatTheme";
@@ -153,6 +154,7 @@ export default function ChatScreen(): JSX.Element {
   );
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarText, setSnackbarText] = useState("");
+  const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<{
     id: string;
     content: string;
@@ -276,7 +278,7 @@ export default function ChatScreen(): JSX.Element {
       headerLeft: () => (
         <ChatMenuButton
           theme={theme}
-          onPress={() => router.push("/chat/history")}
+          onPress={() => setDrawerOpen(true)}
           accessibilityLabel="Open chat history"
         />
       ),
@@ -344,7 +346,7 @@ export default function ChatScreen(): JSX.Element {
 
   return (
     <>
-      {/* Not around EditMessageModal: its sheet has no tab bar under it. */}
+      {/* Not around EditMessageModal or the drawer: neither has the tab bar under it. */}
       <SafeAreaProvider>
         <View
           ref={screenRef}
@@ -429,6 +431,11 @@ export default function ChatScreen(): JSX.Element {
           }
         }}
         onClose={() => setEditTarget(null)}
+      />
+      <ChatSessionDrawer
+        visible={isDrawerOpen}
+        theme={theme}
+        onClose={() => setDrawerOpen(false)}
       />
     </>
   );

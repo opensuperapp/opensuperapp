@@ -16,12 +16,9 @@
 import { ChatSessionsProvider } from "@/components/chat/ChatSessionsContext";
 import TabStack from "@/components/headers/TabStack";
 import { CHAT_TAB_NAME } from "@/constants/Constants";
-import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { Stack } from "expo-router";
 
 export default function Layout() {
-  const { colors } = useBrandTheme();
-
   return (
     <ChatSessionsProvider>
       <TabStack>
@@ -29,18 +26,6 @@ export default function Layout() {
         <Stack.Screen
           name="index"
           options={{ title: CHAT_TAB_NAME, headerLargeTitle: false }}
-        />
-        <Stack.Screen
-          name="history"
-          options={{
-            presentation: "formSheet",
-            headerShown: false,
-            sheetAllowedDetents: [0.6, 1],
-            sheetGrabberVisible: true,
-            sheetCornerRadius: 22,
-            sheetExpandsWhenScrolledToEdge: true,
-            contentStyle: { backgroundColor: colors.sheet },
-          }}
         />
       </TabStack>
     </ChatSessionsProvider>
