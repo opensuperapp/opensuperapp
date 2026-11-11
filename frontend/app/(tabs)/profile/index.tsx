@@ -55,7 +55,6 @@ import {
   Alert,
   Image,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -73,7 +72,6 @@ const AVATAR_SIZE = size.avatar.profile;
 const RING = size.profileAvatarRing;
 
 type VerticalInsets = Pick<EdgeInsets, "top" | "bottom">;
-const NO_INSETS: VerticalInsets = { top: 0, bottom: 0 };
 
 /** Reports the top/bottom insets of the nearest SafeAreaProvider when they change. */
 function InsetsProbe({
@@ -105,8 +103,7 @@ const SettingsScreen = () => {
     avatarUri: "",
   });
   const [cardVisible, setCardVisible] = useState(false);
-  const [viewportHeight, setViewportHeight] = useState(0);
-  const [screenInsets, setScreenInsets] = useState<VerticalInsets>(NO_INSETS);
+  const [screenInsets, setScreenInsets] = useState<VerticalInsets | null>(null);
   const { cardEnabled } = useWalletPassConfig();
 
   useTrackActiveScreen(ScreenPaths.PROFILE);
@@ -176,7 +173,7 @@ const SettingsScreen = () => {
           style: "destructive",
           onPress: () => signOut(dispatch),
         },
-      ]
+      ],
     );
   }, [dispatch]);
 
@@ -192,76 +189,73 @@ const SettingsScreen = () => {
     });
   }, []);
 
-  if (!isSignedIn) {
-    return (
-      <SafeAreaView style={[styles.signIn, { backgroundColor: colors.bg }]}>
-        <View style={styles.signInCard}>
-          <SignInMessage message="To view your profile, please sign in" />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
-    <>
+    // A vertical stack: the profile section scrolls and takes the free height, and the
+    // Sign Out foot is the last item, pinned to the bottom outside the scroll view.
+    <View style={[styles.stack, { backgroundColor: colors.bg }]}>
       <ScrollView
-        style={{ backgroundColor: colors.bg }}
+        style={styles.profileSection}
         contentInsetAdjustmentBehavior="automatic"
-        // The content fills the visible area exactly, so there is nothing to
-        // scroll. Bounce only when it overflows (small screens, large text).
+        // Bounce only when it overflows (small screens, large text).
         alwaysBounceVertical={false}
         overScrollMode="never"
-        onLayout={(e) => setViewportHeight(e.nativeEvent.layout.height)}
-        contentContainerStyle={[
-          styles.content,
-          // iOS insets the content for the bars it runs under (the tab bar,
-          // and the nav bar when it overlaps), so the visible area is the
-          // viewport minus those insets. flexGrow alone would fill the whole
-          // viewport and leave Sign Out behind the tab bar.
-          {
-            minHeight: isIos
-              ? viewportHeight - screenInsets.top - screenInsets.bottom
-              : viewportHeight,
-          },
-        ]}
+        contentContainerStyle={isSignedIn ? styles.content : styles.signIn}
       >
-        {/* User info */}
+        {!isSignedIn ? (
+          <View style={styles.signInCard}>
+            <SignInMessage message="To view your profile, please sign in" />
+          </View>
+        ) : (
+          <>
+            {/* User info */}
+            <View
+              style={[
+                styles.avatarRing,
+                { backgroundColor: colors.card, borderColor: colors.line },
+              ]}
+            >
+              {basicUserInfo.avatarUri ? (
+                <Image
+                  source={{ uri: basicUserInfo.avatarUri }}
+                  style={[styles.avatar, { backgroundColor: colors.card2 }]}
+                />
+              ) : (
+                <Avatar
+                  initials={`${basicUserInfo.firstName?.charAt(
+                    0,
+                  )}${basicUserInfo.lastName?.charAt(0)}`}
+                  size={AVATAR_SIZE}
+                />
+              )}
+            </View>
+
+            <View style={[styles.listCard, { backgroundColor: colors.card }]}>
+              <ProfileListItem
+                icon="user"
+                title="Name"
+                value={`${basicUserInfo.firstName} ${basicUserInfo.lastName}`}
+              />
+              <View
+                style={[styles.divider, { backgroundColor: colors.line }]}
+              />
+              <ProfileListItem
+                icon="mail"
+                title="Email"
+                value={basicUserInfo.workEmail}
+              />
+            </View>
+          </>
+        )}
+      </ScrollView>
+
+      {/* On iOS the screen runs under the tab bar, so the foot clears it itself. */}
+      {isSignedIn && (
         <View
           style={[
-            styles.avatarRing,
-            { backgroundColor: colors.card, borderColor: colors.line },
+            styles.foot,
+            { paddingBottom: 24 + (isIos ? (screenInsets?.bottom ?? 0) : 0) },
           ]}
         >
-          {basicUserInfo.avatarUri ? (
-            <Image
-              source={{ uri: basicUserInfo.avatarUri }}
-              style={[styles.avatar, { backgroundColor: colors.card2 }]}
-            />
-          ) : (
-            <Avatar
-              initials={`${basicUserInfo.firstName?.charAt(
-                0
-              )}${basicUserInfo.lastName?.charAt(0)}`}
-              size={AVATAR_SIZE}
-            />
-          )}
-        </View>
-
-        <View style={[styles.listCard, { backgroundColor: colors.card }]}>
-          <ProfileListItem
-            icon="user"
-            title="Name"
-            value={`${basicUserInfo.firstName} ${basicUserInfo.lastName}`}
-          />
-          <View style={[styles.divider, { backgroundColor: colors.line }]} />
-          <ProfileListItem
-            icon="mail"
-            title="Email"
-            value={basicUserInfo.workEmail}
-          />
-        </View>
-
-        <View style={styles.foot}>
           <Text style={[styles.versionText, { color: colors.text3 }]}>
             version {version}
           </Text>
@@ -301,10 +295,9 @@ const SettingsScreen = () => {
             </TouchableOpacity>
           )}
         </View>
-      </ScrollView>
+      )}
 
-      {/* After the ScrollView, which must stay the first child for the large title
-          to collapse. This provider measures the screen's own safe area, which on
+      {/* This provider measures the screen's own safe area, which on
           iOS includes the tab bar; the root provider only has the home indicator. */}
       <SafeAreaProvider style={StyleSheet.absoluteFill} pointerEvents="none">
         <InsetsProbe onChange={setScreenInsets} />
@@ -314,23 +307,27 @@ const SettingsScreen = () => {
         visible={cardVisible}
         onClose={() => setCardVisible(false)}
       />
-    </>
+    </View>
   );
 };
 
 export default SettingsScreen;
 
 const styles = StyleSheet.create({
-  // minHeight (set inline) lets the foot's marginTop: "auto" pin Sign Out to the
-  // bottom of the visible area when the content is shorter than the screen.
+  stack: {
+    flex: 1,
+    flexDirection: "column",
+  },
+  profileSection: {
+    flex: 1,
+  },
   content: {
     paddingHorizontal: spacing.screen,
     paddingTop: 16,
-    paddingBottom: 24,
   },
   // Same layout as the signed-out My Apps and Store screens.
   signIn: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -361,8 +358,8 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
   },
   foot: {
-    marginTop: "auto",
-    paddingTop: 32,
+    paddingHorizontal: spacing.screen,
+    paddingTop: 16,
     alignItems: "center",
     gap: 14,
   },
