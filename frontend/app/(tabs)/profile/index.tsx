@@ -207,6 +207,10 @@ const SettingsScreen = () => {
       <ScrollView
         style={{ backgroundColor: colors.bg }}
         contentInsetAdjustmentBehavior="automatic"
+        // The content fills the visible area exactly, so there is nothing to
+        // scroll. Bounce only when it overflows (small screens, large text).
+        alwaysBounceVertical={false}
+        overScrollMode="never"
         onLayout={(e) => setViewportHeight(e.nativeEvent.layout.height)}
         contentContainerStyle={[
           styles.content,
