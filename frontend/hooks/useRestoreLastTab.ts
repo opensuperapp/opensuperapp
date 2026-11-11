@@ -16,9 +16,10 @@
 import { LAST_ACTIVE_PATH_KEY } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { selectSessionStatus } from "@/context/slices/authSlice";
+import { openTabTracking } from "@/hooks/useTrackActiveScreen";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 
 const validPaths = Object.values(ScreenPaths);
@@ -49,7 +50,6 @@ export const useRestoreLastTab = (
   areRulesLoaded = true
 ) => {
   const router = useRouter();
-  const [isRestored, setIsRestored] = useState(false);
   // Which tabs a user may see depends on the session and the visibility rules, so nothing
   // is decided until both are known, and then only once.
   const isSessionKnown = useSelector(selectSessionStatus) !== "restoring";
@@ -72,23 +72,20 @@ export const useRestoreLastTab = (
 
         if (lastRoute && isValidPath(lastRoute) && canRestore(lastRoute)) {
           setTimeout(() => {
-            router.replace(lastRoute as ScreenPaths);
-            setIsRestored(true);
+            router.navigate(lastRoute as ScreenPaths);
+            openTabTracking();
           }, 100);
         } else {
           // If no last tab is found, go to Discovery
-          router.replace(ScreenPaths.FEED);
-          setIsRestored(true);
+          router.navigate(ScreenPaths.FEED);
+          openTabTracking();
         }
       } catch (error) {
         console.error("Failed to restore last tab:", error);
+        openTabTracking();
       }
     };
 
     restoreTab();
   }, [isSessionKnown, areRulesLoaded, router]);
-
-  // Prevent Discovery from showing on initial load if it's already being processed
-  if (!isRestored) return null; // Prevent rendering until restored
-  return null;
 };

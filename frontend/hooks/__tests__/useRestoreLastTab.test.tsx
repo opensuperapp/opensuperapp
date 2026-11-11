@@ -34,7 +34,7 @@ jest.mock("react-redux", () =>
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require("react-redux/alternate-renderers")
 );
-const mockRouter = { replace: jest.fn() };
+const mockRouter = { navigate: jest.fn() };
 jest.mock("expo-router", () => ({ useRouter: () => mockRouter }));
 
 type SetStatus = { type: "set"; sessionStatus: SessionStatus };
@@ -117,7 +117,7 @@ const mount = async (
 
 beforeEach(async () => {
   jest.useFakeTimers();
-  mockRouter.replace.mockClear();
+  mockRouter.navigate.mockClear();
   await AsyncStorage.clear();
 });
 
@@ -129,8 +129,8 @@ describe("useRestoreLastTab", () => {
   it("puts a signed-in user back on the tab they left", async () => {
     await mount("authenticated", ScreenPaths.CHAT);
 
-    expect(mockRouter.replace).toHaveBeenCalledTimes(1);
-    expect(mockRouter.replace).toHaveBeenCalledWith(ScreenPaths.CHAT);
+    expect(mockRouter.navigate).toHaveBeenCalledTimes(1);
+    expect(mockRouter.navigate).toHaveBeenCalledWith(ScreenPaths.CHAT);
   });
 
   it.each<SessionStatus>(["signedOut", "expired"])(
@@ -138,21 +138,21 @@ describe("useRestoreLastTab", () => {
     async (status) => {
       await mount(status, ScreenPaths.CHAT);
 
-      expect(mockRouter.replace).toHaveBeenCalledTimes(1);
-      expect(mockRouter.replace).toHaveBeenCalledWith(ScreenPaths.FEED);
+      expect(mockRouter.navigate).toHaveBeenCalledTimes(1);
+      expect(mockRouter.navigate).toHaveBeenCalledWith(ScreenPaths.FEED);
     }
   );
 
   it("still restores a tab a signed-out user can see", async () => {
     await mount("signedOut", ScreenPaths.PROFILE);
 
-    expect(mockRouter.replace).toHaveBeenCalledWith(ScreenPaths.PROFILE);
+    expect(mockRouter.navigate).toHaveBeenCalledWith(ScreenPaths.PROFILE);
   });
 
   it("decides nothing while the session is still being restored", async () => {
     await mount("restoring", ScreenPaths.CHAT);
 
-    expect(mockRouter.replace).not.toHaveBeenCalled();
+    expect(mockRouter.navigate).not.toHaveBeenCalled();
   });
 
   it("restores once the session is known, and only once", async () => {
@@ -162,8 +162,8 @@ describe("useRestoreLastTab", () => {
     await setStatus("refreshing");
     await setStatus("authenticated");
 
-    expect(mockRouter.replace).toHaveBeenCalledTimes(1);
-    expect(mockRouter.replace).toHaveBeenCalledWith(ScreenPaths.CHAT);
+    expect(mockRouter.navigate).toHaveBeenCalledTimes(1);
+    expect(mockRouter.navigate).toHaveBeenCalledWith(ScreenPaths.CHAT);
   });
 
   it("waits for the visibility rules before deciding", async () => {
@@ -171,13 +171,13 @@ describe("useRestoreLastTab", () => {
       loaded: false,
       chatHidden: false,
     });
-    expect(mockRouter.replace).not.toHaveBeenCalled();
+    expect(mockRouter.navigate).not.toHaveBeenCalled();
 
     // The loaded rules hide Chat, which the defaults used while loading had shown.
     await setRules({ loaded: true, chatHidden: true });
 
-    expect(mockRouter.replace).toHaveBeenCalledTimes(1);
-    expect(mockRouter.replace).toHaveBeenCalledWith(ScreenPaths.FEED);
+    expect(mockRouter.navigate).toHaveBeenCalledTimes(1);
+    expect(mockRouter.navigate).toHaveBeenCalledWith(ScreenPaths.FEED);
   });
 
   it("goes to the Feed when a restore ends signed out", async () => {
@@ -185,7 +185,7 @@ describe("useRestoreLastTab", () => {
 
     await setStatus("signedOut");
 
-    expect(mockRouter.replace).toHaveBeenCalledTimes(1);
-    expect(mockRouter.replace).toHaveBeenCalledWith(ScreenPaths.FEED);
+    expect(mockRouter.navigate).toHaveBeenCalledTimes(1);
+    expect(mockRouter.navigate).toHaveBeenCalledWith(ScreenPaths.FEED);
   });
 });
