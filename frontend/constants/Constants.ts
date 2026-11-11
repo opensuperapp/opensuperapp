@@ -205,6 +205,7 @@ export const CHAT_RENAME_MODAL_TITLE = "Rename chat";
 export const CHAT_RENAME_PLACEHOLDER = "Chat name";
 
 export const CHAT_ERROR_STOPPED = "Stopped";
+export const CHAT_THINKING = "Thinking…";
 
 export const CHAT_ERROR_GENERIC = "Something went wrong";
 

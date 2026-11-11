@@ -15,22 +15,34 @@
 // under the License.
 import ChoreoMark from "@/components/brand/ChoreoMark";
 import WaveMark from "@/components/brand/WaveMark";
-import { brand } from "@/constants/brand";
+import { brand, easing, wave } from "@/constants/brand";
 import React, { JSX } from "react";
 import { StyleSheet, View, ViewStyle } from "react-native";
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeOut,
+  LayoutAnimationConfig,
+} from "react-native-reanimated";
 
 export interface SuperAppAgentIconProps {
   size?: number;
   style?: ViewStyle;
-  /** Play the Wave (AI) animation instead of the static mark. */
+  /** Waiting for a reply: plays the Wave in place of the static mark. */
   animated?: boolean;
 }
 
+// The Wave's own intro (fade + grow) brings it in; leaving, it fades over the same
+// time while the static mark fades back, so the reply never cuts the animation off.
+const CROSSFADE = Easing.bezier(...easing.standard);
+const markIn = FadeIn.duration(wave.introMs).easing(CROSSFADE);
+const markOut = FadeOut.duration(wave.introMs).easing(CROSSFADE);
+
 /**
- * Assistant avatar: a Signal disc holding the Ink Choreo mark.
- * The empty state plays the Wave; message rows use the static mark.
+ * Assistant avatar: a Signal disc holding the Ink Choreo mark, which becomes the
+ * Wave while a reply is awaited.
  *
- * @param {SuperAppAgentIconProps} props - Disc size, animation and optional style.
+ * @param {SuperAppAgentIconProps} props - Disc size, waiting state and optional style.
  * @returns {JSX.Element} Assistant avatar.
  */
 const SuperAppAgentIcon = ({
@@ -38,8 +50,8 @@ const SuperAppAgentIcon = ({
   style,
   animated = false,
 }: SuperAppAgentIconProps): JSX.Element => {
-  // Prototype: the mark is 46% of the 80px disc and 50% of the 30px avatar.
-  const markWidth = Math.round(size * (animated ? 0.46 : 0.5));
+  // Prototype: the mark is 50% of the disc.
+  const markWidth = Math.round(size * 0.5);
 
   return (
     <View
@@ -48,13 +60,29 @@ const SuperAppAgentIcon = ({
         { width: size, height: size, borderRadius: size / 2 },
         style,
       ]}
-      accessibilityLabel="Choreo Labs AI assistant"
+      accessibilityLabel={
+        animated ? "Assistant is typing" : "Choreo Labs AI assistant"
+      }
+      accessibilityRole={animated ? "progressbar" : undefined}
     >
-      {animated ? (
-        <WaveMark size={markWidth} color={brand.ink} />
-      ) : (
-        <ChoreoMark width={markWidth} color={brand.ink} />
-      )}
+      {/* skipEntering: a row that mounts already answered (history, scrolling back)
+          shows its mark at once; only a reply arriving fades it in. */}
+      <LayoutAnimationConfig skipEntering>
+        {animated ? (
+          <Animated.View key="wave" style={styles.layer} exiting={markOut}>
+            <WaveMark size={markWidth} color={brand.ink} />
+          </Animated.View>
+        ) : (
+          <Animated.View
+            key="mark"
+            style={styles.layer}
+            entering={markIn}
+            exiting={markOut}
+          >
+            <ChoreoMark width={markWidth} color={brand.ink} />
+          </Animated.View>
+        )}
+      </LayoutAnimationConfig>
     </View>
   );
 };
@@ -66,5 +94,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: brand.signal,
+  },
+  // Both marks share the disc's centre, so the crossfade happens in place.
+  layer: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
