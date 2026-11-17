@@ -55,6 +55,9 @@ import {
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 
+// How far an edge label may reach into the screen padding: it stays this far from the edge.
+const LABEL_OVERHANG = 8;
+
 export default function HomeScreen() {
   const dispatch = useDispatch<AppDispatch>();
   const apps = useSelector((state: RootState) => state.apps.apps);
@@ -83,14 +86,16 @@ export default function HomeScreen() {
   const styles = createStyles(colors);
   const version = Constants.expoConfig?.version;
   const { width: windowWidth } = useWindowDimensions();
-  const { columns, columnGap } = spacing.appGrid;
-  // The tiles, not their cells, sit on the screen padding: the first and last tiles touch
-  // it and the cells (wider, for the labels) overhang into it by labelOverhang.
-  const tile = size.tile.grid;
-  const cellWidth =
-    (windowWidth - spacing.screen * 2 - tile - columnGap * (columns - 1)) /
-    (columns - 1);
-  const labelOverhang = (cellWidth - tile) / 2;
+  const { columns, columnGapRatio } = spacing.appGrid;
+  // The slots fill the row edge to edge with a gap that is a fixed share of a slot, so
+  // both scale with the screen; the tile inside a slot stops growing at the design size.
+  // A cell is its slot plus LABEL_OVERHANG a side, for the label, so an edge label
+  // overhangs the slot but stops LABEL_OVERHANG short of the screen edge.
+  const rowWidth = windowWidth - spacing.screen * 2;
+  const slot = rowWidth / (columns + columnGapRatio * (columns - 1));
+  const tile = Math.min(slot, size.tile.grid);
+  const cellWidth = slot + LABEL_OVERHANG * 2;
+  const cellGap = Math.max(slot * columnGapRatio - LABEL_OVERHANG * 2, 0);
   const [currentAction, setCurrentAction] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ done: number; total: number }>({
     done: 0,
@@ -333,11 +338,12 @@ export default function HomeScreen() {
         numColumns={columns}
         columnWrapperStyle={[
           styles.gridRow,
-          { marginHorizontal: -labelOverhang },
+          { marginHorizontal: -LABEL_OVERHANG, gap: cellGap },
         ]}
         renderItem={({ item }) => (
           <AppGridItem
             width={cellWidth}
+            tile={tile}
             name={item.name}
             webViewUri={item.webViewUri ?? ""}
             clientId={item.clientId ?? ""}
@@ -414,7 +420,6 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: "center",
     },
     gridRow: {
-      gap: spacing.appGrid.columnGap,
       marginBottom: spacing.appGrid.rowGap,
     },
   });

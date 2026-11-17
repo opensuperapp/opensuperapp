@@ -17,7 +17,6 @@ import UpdateOverlay from "@/components/UpdateOverlay";
 import {
   press,
   radius,
-  size as sizes,
   soraFamily,
   textStyle,
   themes,
@@ -44,9 +43,8 @@ type AppGridItemProps = {
   isUpdating?: boolean;
   downloadProgress?: number;
   width: number;
+  tile: number;
 };
-
-const TILE = sizes.tile.grid;
 
 /** My Apps grid cell: app tile and label; opens the micro app on press. */
 const AppGridItem = React.memo(function AppGridItem({
@@ -62,6 +60,7 @@ const AppGridItem = React.memo(function AppGridItem({
   isUpdating = false,
   downloadProgress,
   width,
+  tile,
 }: AppGridItemProps) {
   const { colors } = useBrandTheme();
 
@@ -94,11 +93,19 @@ const AppGridItem = React.memo(function AppGridItem({
       accessibilityLabel={name}
     >
       <View style={isUpdating && styles.tileUpdating}>
-        <AppTile name={name} appId={appId} iconUrl={iconUrl} size={TILE} />
+        <AppTile name={name} appId={appId} iconUrl={iconUrl} size={tile} />
       </View>
       {isUpdating && (
         <View
-          style={[styles.updateOverlay, { backgroundColor: colors.backdrop }]}
+          style={[
+            styles.updateOverlay,
+            {
+              width: tile,
+              height: tile,
+              borderRadius: tile * radius.appTileRatio,
+              backgroundColor: colors.backdrop,
+            },
+          ]}
         >
           <UpdateOverlay
             size={32}
@@ -142,9 +149,6 @@ const styles = StyleSheet.create({
   updateOverlay: {
     position: "absolute",
     top: 0,
-    width: TILE,
-    height: TILE,
-    borderRadius: TILE * radius.appTileRatio,
     justifyContent: "center",
     alignItems: "center",
   },
