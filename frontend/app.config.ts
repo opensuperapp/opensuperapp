@@ -159,8 +159,8 @@ let config: ExpoConfig = {
       "expo-build-properties",
       {
         android: {
-          compileSdkVersion: 35,
-          targetSdkVersion: 35,
+          compileSdkVersion: 36,
+          targetSdkVersion: 36,
           minSdkVersion: 24,
           extraMavenRepos: [
             // https://github.com/invertase/notifee/issues/799#issuecomment-2569217836
@@ -220,6 +220,12 @@ let config: ExpoConfig = {
           enforceNavigationBarContrast: false,
         },
       },
+    ],
+    // Brand orange for native Android alert buttons, cursors and selection handles
+    // (matches colors.accent: Burn on light, Signal on dark). AppCompat's default is teal.
+    [
+      "./plugins/withAndroidAccent.ts",
+      { light: "#C43300", dark: "#FF4600" },
     ],
     // Raise the Gradle daemon heap/metaspace so release lint analysis does not OOM
     "./plugins/withGradleMemory.ts",
