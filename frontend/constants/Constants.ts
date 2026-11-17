@@ -174,6 +174,11 @@ export const ANDROID_NOTIFICATION_SMALL_ICON_ACCENT_COLOR =
 // Platform
 export const isAndroid = Platform.OS === "android";
 export const isIos = Platform.OS === "ios";
+// Bottom clearance a tab screen needs beyond its own safe-area inset. Both platforms lay
+// the screen out under the tab bar, but only iOS counts the bar in the inset; on Android
+// (react-native-screens 4.16) the inset is just the system nav bar, so add the Material
+// bar's height.
+export const TAB_BAR_EXTRA_INSET = isIos ? 0 : 80;
 
 // Query Keys
 export const NOTIFICATIONS_QUERY_KEY = "notifications";

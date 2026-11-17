@@ -28,7 +28,10 @@ import {
   textStyle,
   type,
 } from "@/constants/brand";
-import { isIos, SUPER_APP_DEVELOPER_GROUP } from "@/constants/Constants";
+import {
+  SUPER_APP_DEVELOPER_GROUP,
+  TAB_BAR_EXTRA_INSET,
+} from "@/constants/Constants";
 import { Event } from "@/constants/enums/Event";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { selectIsSignedIn } from "@/context/slices/authSlice";
@@ -248,12 +251,18 @@ const SettingsScreen = () => {
         )}
       </ScrollView>
 
-      {/* On iOS the screen runs under the tab bar, so the foot clears it itself. */}
+      {/* The screen runs under the tab bar on both platforms, so the foot clears it
+          itself (see TAB_BAR_EXTRA_INSET). */}
       {isSignedIn && (
         <View
           style={[
             styles.foot,
-            { paddingBottom: 24 + (isIos ? (screenInsets?.bottom ?? 0) : 0) },
+            {
+              paddingBottom:
+                24 +
+                (screenInsets?.bottom ?? 0) +
+                TAB_BAR_EXTRA_INSET,
+            },
           ]}
         >
           <Text style={[styles.versionText, { color: colors.text3 }]}>
@@ -298,10 +307,14 @@ const SettingsScreen = () => {
       )}
 
       {/* This provider measures the screen's own safe area, which on
-          iOS includes the tab bar; the root provider only has the home indicator. */}
-      <SafeAreaProvider style={StyleSheet.absoluteFill} pointerEvents="none">
-        <InsetsProbe onChange={setScreenInsets} />
-      </SafeAreaProvider>
+          iOS includes the tab bar; the root provider only has the home indicator.
+          The native provider ignores pointerEvents on Android and swallows every tap
+          on the screen, so a plain View (which honours it) wraps it. */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <SafeAreaProvider style={StyleSheet.absoluteFill}>
+          <InsetsProbe onChange={setScreenInsets} />
+        </SafeAreaProvider>
+      </View>
 
       <BusinessCardSheet
         visible={cardVisible}

@@ -32,9 +32,10 @@ const AppProviders = ({ children }: AppProvidersProps) => {
       </QrScannerProvider>
     </NotificationsProvider>
   );
-  // iOS only: the chat composer follows the keyboard with it. On Android the provider
-  // takes over the window's keyboard insets, and screens there rely on the window resizing.
-  return isIos ? <KeyboardProvider>{providers}</KeyboardProvider> : providers;
+  // The chat composer follows the keyboard with it. On Android, enabling the provider
+  // stops the window resizing for the keyboard (which every other screen relies on), so
+  // it starts off and the chat screen switches it on only while it is focused.
+  return <KeyboardProvider enabled={isIos}>{providers}</KeyboardProvider>;
 };
 
 export default AppProviders;

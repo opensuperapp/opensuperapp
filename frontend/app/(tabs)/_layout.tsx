@@ -145,7 +145,11 @@ export default function TabLayout() {
       // so a short screen sitting at the scroll edge (My Apps, Profile) fell back to `text3`.
       iconColor={{ default: colors.text3, selected: colors.accent }}
       labelStyle={{
-        default: { fontFamily: soraFamily[500], fontSize: 11 },
+        default: {
+          fontFamily: soraFamily[500],
+          fontSize: 11,
+          color: colors.text3,
+        },
         selected: {
           fontFamily: soraFamily[500],
           fontSize: 11,
@@ -154,6 +158,8 @@ export default function TabLayout() {
       }}
       badgeBackgroundColor={colors.accent}
       indicatorColor={colors.card2}
+      // Material's default ("auto") hides unselected labels once there are 4+ tabs.
+      labelVisibilityMode="labeled"
       // Opaque, like the tab-root navbars (TabStack): solid colour, no blur, and it
       // stays solid at the scroll edge instead of turning clear.
       backgroundColor={colors.barSolid}

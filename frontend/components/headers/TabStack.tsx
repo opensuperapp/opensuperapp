@@ -18,7 +18,7 @@ import { largeTitleHeaderOptions } from "@/components/headers/navigationTheme";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { Stack } from "expo-router";
 import type { ReactNode } from "react";
-import { StyleSheet } from "react-native";
+import { Platform, StyleSheet } from "react-native";
 import {
   SafeAreaProvider,
   useSafeAreaInsets,
@@ -45,9 +45,16 @@ export default function TabStack({ children }: { children?: ReactNode }) {
       <Stack screenOptions={largeTitleHeaderOptions(colors)}>
         {children}
       </Stack>
-      <SafeAreaProvider style={StyleSheet.absoluteFill} pointerEvents="box-none">
-        <TabOfflineToast />
-      </SafeAreaProvider>
+      {Platform.OS === "ios" ? (
+        <SafeAreaProvider style={StyleSheet.absoluteFill} pointerEvents="box-none">
+          <TabOfflineToast />
+        </SafeAreaProvider>
+      ) : (
+        // Android lays the tab's content out above the bar, so no inset is needed. A
+        // full-screen SafeAreaProvider here swallows scroll gestures on Android even
+        // with box-none, freezing every list in the tab.
+        <OfflineToast bottom={0} bottomInset={0} />
+      )}
     </>
   );
 }
