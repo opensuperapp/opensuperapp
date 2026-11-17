@@ -25,7 +25,7 @@
  *
  * The two platforms get two texts because they are two different disclosures,
  * not one disclosure with the vendor's name swapped. An Apple pass is signed by
- * WSO2 and lives on the device; the only thing Apple handles is a contentless
+ * Choreo Labs and lives on the device; the only thing Apple handles is a contentless
  * push telling the device to re-fetch. A Google pass is the opposite: the card
  * fields are sent to Google, which stores and renders the object on its own
  * servers and pulls the employee photo from us. Saying "your details are shared
@@ -42,12 +42,12 @@
  */
 
 /**
- * WSO2's public, external-facing privacy policy — the document the disclosure
+ * Choreo Labs' public, external-facing privacy policy — the document the disclosure
  * points at for what governs this processing. Public and the same everywhere,
  * so it is a constant rather than configuration: the deployment-specific
  * internal People Operations URL is what this file deliberately does not carry.
  */
-export const WSO2_PRIVACY_POLICY_URL = "https://wso2.com/privacy-policy";
+export const PRIVACY_POLICY_URL = "https://choreolabs.com/privacy-policy";
 
 /**
  * Google's privacy policy, named by the Google disclosure as covering what
@@ -57,7 +57,7 @@ export const WSO2_PRIVACY_POLICY_URL = "https://wso2.com/privacy-policy";
 export const GOOGLE_PRIVACY_POLICY_URL = "https://policies.google.com/privacy";
 
 /** Data Protection Officer, per §8.0 of the People Operations policy. */
-export const DPO_EMAIL = "dpo@wso2.com";
+export const DPO_EMAIL = "dpo@choreolabs.com";
 
 /** Sheet titles, which are the `#` heading of each document. */
 export const APPLE_WALLET_DISCLAIMER_TITLE = "Apple Wallet Disclaimer";
@@ -95,7 +95,7 @@ The card also carries a QR code holding the same details as a contact file, so a
  */
 const yourRights = (wallet: string) => `## Your data
 
-These are employee details, and WSO2 processes them under the [WSO2 Privacy Policy](${WSO2_PRIVACY_POLICY_URL}). You can ask to see, correct or erase them at any time, and you can delete the card from your wallet whenever you like.
+These are employee details, and Choreo Labs processes them under the [Choreo Labs Privacy Policy](${PRIVACY_POLICY_URL}). You can ask to see, correct or erase them at any time, and you can delete the card from your wallet whenever you like.
 
 Any questions related to the data processing can be directed to [${DPO_EMAIL}](mailto:${DPO_EMAIL}).
 
@@ -106,9 +106,9 @@ export const APPLE_WALLET_DISCLAIMER_MD = `${WHAT_IS_USED}
 
 ## How it works
 
-WSO2 builds and signs the card, then hands it to **Apple Wallet on this device**. It is stored on your phone, not with Apple.
+Choreo Labs builds and signs the card, then hands it to **Apple Wallet on this device**. It is stored on your phone, not with Apple.
 
-To keep it current, Wallet registers the card with WSO2 and Apple's push service tells your device when something has changed. That message carries no content, so **Apple never receives your card details**.
+To keep it current, Wallet registers the card with Choreo Labs and Apple's push service tells your device when something has changed. That message carries no content, so **Apple never receives your card details**.
 
 ${yourRights("Apple Wallet")}`;
 
@@ -117,6 +117,6 @@ export const GOOGLE_WALLET_DISCLAIMER_MD = `${WHAT_IS_USED}
 
 ## How it works
 
-WSO2 builds the card and saves it to **Google Wallet**. Unlike a card held only on your phone, Google stores and renders this one on **Google's servers** — so saving it **shares the details above with Google**, and Google fetches your directory photo from WSO2. [Google's own privacy policy](${GOOGLE_PRIVACY_POLICY_URL}) covers what it does with them from there.
+Choreo Labs builds the card and saves it to **Google Wallet**. Unlike a card held only on your phone, Google stores and renders this one on **Google's servers** — so saving it **shares the details above with Google**, and Google fetches your directory photo from Choreo Labs. [Google's own privacy policy](${GOOGLE_PRIVACY_POLICY_URL}) covers what it does with them from there.
 
 ${yourRights("Google Wallet")}`;

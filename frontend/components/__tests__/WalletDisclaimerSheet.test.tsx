@@ -17,8 +17,8 @@
 // Both platform sheets are covered here, imported by their explicit platform
 // paths. The mechanics — a modal, a close control, a scroll view — are the same
 // on both, but the copy is not, and the copy is the product: this screen is
-// what WSO2 tells an employee about handing their details to a wallet. An Apple
-// pass is signed by WSO2 and stays on the device, a Google pass is stored and
+// what Choreo Labs tells an employee about handing their details to a wallet. An Apple
+// pass is signed by Choreo Labs and stays on the device, a Google pass is stored and
 // rendered on Google's servers, and the two sheets have to say so separately.
 // Swapping one text for the other would leave the app either warning about a
 // disclosure that does not happen or silent about one that does.
@@ -154,7 +154,7 @@ describe("WalletDisclaimerSheet — the disclosure each platform owes", () => {
     const { root } = render(AppleSheet);
 
     expect(copy(root)).toContain("Apple Wallet on this device");
-    // WSO2 signs the pass and Apple only carries a contentless push, so a
+    // Choreo Labs signs the pass and Apple only carries a contentless push, so a
     // warning that the card details reach a third party would be false here.
     expect(copy(root)).not.toContain("Google's servers");
     expect(copy(root)).toContain("Apple never receives your card details");
@@ -182,7 +182,7 @@ describe("WalletDisclaimerSheet — the disclosure each platform owes", () => {
   // disclosure screen cannot afford, so both documents carry a reachable
   // policy link rather than only the DPO's address.
   it("links the policy it says governs the processing", () => {
-    expect(copy(render(AppleSheet).root)).toContain("WSO2 Privacy Policy");
-    expect(copy(render(AndroidSheet).root)).toContain("WSO2 Privacy Policy");
+    expect(copy(render(AppleSheet).root)).toContain("Choreo Labs Privacy Policy");
+    expect(copy(render(AndroidSheet).root)).toContain("Choreo Labs Privacy Policy");
   });
 });
