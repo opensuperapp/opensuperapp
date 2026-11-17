@@ -50,7 +50,7 @@ type Props = {
  * it informs, it does not gate, so the only control it needs is a way out.
  *
  * The Apple copy is not the Google copy with a name swapped. A pass here is
- * signed by WSO2 and lands in Wallet on this device, and the only thing Apple
+ * signed by Choreo Labs and lands in Wallet on this device, and the only thing Apple
  * carries is a contentless push telling the device to re-fetch — so there is no
  * disclosure to Apple to warn about, and claiming one would be false. See
  * WalletDisclaimer.ts.

@@ -47,7 +47,7 @@ export const GOOGLE_USER_INFO_KEY =
   process.env.EXPO_PUBLIC_GOOGLE_USER_INFO_KEY ?? "";
 export const LIBRARY_ARTICLE_FALLBACK_IMAGE =
   process.env.EXPO_PUBLIC_LIBRARY_ARTICLE_FALLBACK_IMAGE ?? "";
-// Please note that the developer app-related URL is required only for the WSO2 Super App.
+// Please note that the developer app-related URL is required only for the Choreo Labs super app.
 export const DEVELOPER_APP_IOS_DEFAULT_URL =
   process.env.EXPO_PUBLIC_DEVELOPER_APP_IOS_DEFAULT_URL ?? "";
 export const DEVELOPER_APP_ANDROID_DEFAULT_URL =
@@ -185,7 +185,6 @@ export const NOTIFICATIONS_QUERY_KEY = "notifications";
 
 // Chat Agent
 export const CHAT_AGENT_URL = process.env.EXPO_PUBLIC_CHAT_AGENT_URL ?? "";
-export const WSO2_EMAIL_DOMAIN = "@wso2.com";
 
 export const CHAT_BRAND_NAME = "Super App AI";
 

@@ -21,7 +21,7 @@ import { LibraryArticle } from "@/types/library.types";
 import axios from "axios";
 
 /**
- * Fetches articles from the WSO2 Library.
+ * Fetches articles from the Choreo Labs Library.
  *
  * @param {Object} params - Parameters for fetching articles.
  * @param {boolean} params.isInitial - Indicates if it's the initial fetch.

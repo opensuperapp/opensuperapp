@@ -15,7 +15,7 @@
 // under the License.
 
 /**
- * Represents a single article in the WSO2 Library.
+ * Represents a single article in the Choreo Labs Library.
  */
 export type LibraryArticle = {
   nid: string;

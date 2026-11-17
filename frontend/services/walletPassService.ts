@@ -77,7 +77,7 @@ export const addToAppleWallet = async (enabled: boolean): Promise<boolean> => {
 
     // Write only once the response is a confirmed 2xx carrying at least one
     // byte, so the pass handed to iOS is never empty.
-    const file = new File(Paths.cache, "wso2-business-card.pkpass");
+    const file = new File(Paths.cache, "choreo-labs-business-card.pkpass");
     file.create({ overwrite: true });
     file.write(new Uint8Array(response.data));
 

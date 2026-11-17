@@ -122,7 +122,7 @@ describe("addToAppleWallet — native add sheet", () => {
     const path = mockShowAddPassControllerFromFile.mock.calls[0][0];
     expect(path).not.toContain("file://");
     expect(path).toBe(
-      "/var/mobile/Containers/Data/Caches/wso2-business-card.pkpass"
+      "/var/mobile/Containers/Data/Caches/choreo-labs-business-card.pkpass"
     );
   });
 
