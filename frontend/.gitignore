@@ -58,3 +58,6 @@ app.json
 
 # google service(s) configuration(s)
 google-services/
+
+# Display-email alias list (EMAIL_ALIASES_FILE): holds people's addresses
+email-aliases*.json
