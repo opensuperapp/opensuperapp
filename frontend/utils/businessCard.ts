@@ -17,6 +17,7 @@ import { CARD_ORGANIZATION, CARD_WEBSITE } from "@/constants/BusinessCard";
 import { UserInfo } from "@/context/slices/userInfoSlice";
 import { BusinessCardData } from "@/types/businessCard.types";
 import { DecodedAccessToken } from "@/types/decodeAccessToken.types";
+import { displayEmail } from "@/utils/displayEmail";
 
 // Optional because /user-info only returns the four `UserInfo` fields; the
 // richer HR shape reaches the wallet service by its own route.
@@ -74,7 +75,11 @@ export const toBusinessCardData = (
 ): BusinessCardData | null => {
   const firstName = firstPresent(userInfo?.firstName, claims?.given_name) ?? "";
   const lastName = firstPresent(userInfo?.lastName, claims?.family_name) ?? "";
-  const workEmail = firstPresent(userInfo?.workEmail, claims?.email) ?? "";
+  // The card shows the address people use, which is not always the one the
+  // IdP issues; the wallet service applies the same rules to the pass.
+  const workEmail = displayEmail(
+    firstPresent(userInfo?.workEmail, claims?.email) ?? ""
+  );
 
   // The screen renders its own empty state rather than a blank card.
   if (!firstName && !lastName && !workEmail) {

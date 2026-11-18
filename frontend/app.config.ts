@@ -26,6 +26,14 @@ import withAndroidNotificationIconConfiguration from "./integrations/android-not
 /* Plugin to set expo-updates channel for locally built APKs */
 import withUpdatesChannel from "./plugins/withUpdatesChannel";
 
+import { readFileSync } from "fs";
+import { resolve } from "path";
+import {
+  EmailDisplayRules,
+  parseEmailAliases,
+  parseEnabledFlag,
+} from "./utils/emailDisplayRules";
+
 const PRODUCTION = "production";
 const DEVELOPMENT = "development";
 const TRUE = "true";
@@ -50,6 +58,24 @@ const ADD_ANDROID_NOTIFICATION_ICON =
 const APPLE_PASS_TYPE_ID = process.env.EXPO_PUBLIC_APPLE_PASS_TYPE_ID ?? "";
 const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID ?? ""; // Comment this if EAS is not used
 const UPDATES_CHANNEL = process.env.EXPO_PUBLIC_UPDATES_CHANNEL ?? ""; // Comment this if EAS is not used
+
+// TEMPORARY display-only email rules; see utils/emailDisplayRules.ts. Same
+// variables as the wallet service. A bad alias file fails the build rather
+// than shipping an app that shows the wrong addresses.
+const EMAIL_ALIASES_FILE = process.env.EMAIL_ALIASES_FILE?.trim() ?? "";
+const EMAIL_DISPLAY: EmailDisplayRules = {
+  domain: {
+    enabled: parseEnabledFlag(process.env.EMAIL_DOMAIN_REPLACE_ENABLED),
+    from: process.env.EMAIL_DOMAIN_REPLACE_FROM ?? "",
+    to: process.env.EMAIL_DOMAIN_REPLACE_TO ?? "",
+  },
+  aliases: EMAIL_ALIASES_FILE
+    ? parseEmailAliases(
+        readFileSync(resolve(EMAIL_ALIASES_FILE), "utf8"),
+        "EMAIL_ALIASES_FILE"
+      )
+    : {},
+};
 
 /* =============== Firebase Configuration ===============
  *
@@ -241,6 +267,7 @@ let config: ExpoConfig = {
   extra: {
     router: { origin: false },
     eas: { projectId: EAS_PROJECT_ID }, // Comment this if EAS is not used
+    emailDisplay: EMAIL_DISPLAY,
   },
   assetBundlePatterns: ["**/*"],
 };

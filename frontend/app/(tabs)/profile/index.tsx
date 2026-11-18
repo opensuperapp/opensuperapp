@@ -42,6 +42,7 @@ import { useTrackActiveScreen } from "@/hooks/useTrackActiveScreen";
 import { useWalletPassConfig } from "@/hooks/useWalletPassConfig";
 import { BasicUserInfo } from "@/types/basicUserInfo.types";
 import { DecodedAccessToken } from "@/types/decodeAccessToken.types";
+import { displayEmail } from "@/utils/displayEmail";
 import { authEmitter } from "@/utils/eventEmitter";
 import { signOut } from "@/utils/signOut";
 import Constants from "expo-constants";
@@ -244,7 +245,10 @@ const SettingsScreen = () => {
               <ProfileListItem
                 icon="mail"
                 title="Email"
-                value={basicUserInfo.workEmail}
+                value={
+                  basicUserInfo.workEmail &&
+                  displayEmail(basicUserInfo.workEmail)
+                }
               />
             </View>
           </>

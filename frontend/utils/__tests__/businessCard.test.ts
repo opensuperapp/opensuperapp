@@ -24,14 +24,14 @@ import {
 const baseUserInfo: UserInfo = {
   firstName: "Jane",
   lastName: "Doe",
-  workEmail: "jane.doe@wso2.com",
+  workEmail: "jane.doe@example.com",
   employeeThumbnail: null,
 };
 
 // A representative access-token payload, trimmed to the claims this
 // module reads.
 const baseClaims: DecodedAccessToken = {
-  email: "jane.doe@wso2.com",
+  email: "jane.doe@example.com",
   given_name: "Jane",
   family_name: "Doe",
   userid: "00000000-0000-4000-8000-000000000000",
@@ -78,7 +78,7 @@ describe("toBusinessCardData — nothing worth putting on a card", () => {
       {
         firstName: " ",
         lastName: " ",
-        workEmail: "jane.doe@wso2.com",
+        workEmail: "jane.doe@example.com",
         employeeThumbnail: null,
       },
       null
@@ -94,7 +94,7 @@ describe("toBusinessCardData — token claims alone", () => {
     expect(result).toMatchObject({
       firstName: "Jane",
       lastName: "Doe",
-      workEmail: "jane.doe@wso2.com",
+      workEmail: "jane.doe@example.com",
       jobTitle: "Software Engineer",
       mobile: "+94771234567",
     });
@@ -108,7 +108,7 @@ describe("toBusinessCardData — token claims alone", () => {
 
   it("leaves absent claims undefined rather than rendering empty rows", () => {
     const result = toBusinessCardData(null, {
-      email: "nobody@wso2.com",
+      email: "nobody@example.com",
       given_name: "No",
       family_name: "Body",
     });
@@ -123,7 +123,7 @@ describe("toBusinessCardData — precedence", () => {
     const result = toBusinessCardData(baseUserInfo, baseClaims);
     expect(result?.firstName).toBe("Jane");
     expect(result?.lastName).toBe("Doe");
-    expect(result?.workEmail).toBe("jane.doe@wso2.com");
+    expect(result?.workEmail).toBe("jane.doe@example.com");
   });
 
   it("falls back to the claim when the directory field is blank", () => {
@@ -174,14 +174,14 @@ describe("toBusinessCardData — trimming", () => {
       {
         firstName: "  Jane  ",
         lastName: "  Doe  ",
-        workEmail: "  jane.doe@wso2.com  ",
+        workEmail: "  jane.doe@example.com  ",
         employeeThumbnail: null,
       },
       { jobtitle: "  Software Engineer  " }
     );
     expect(result?.firstName).toBe("Jane");
     expect(result?.lastName).toBe("Doe");
-    expect(result?.workEmail).toBe("jane.doe@wso2.com");
+    expect(result?.workEmail).toBe("jane.doe@example.com");
     expect(result?.jobTitle).toBe("Software Engineer");
   });
 });
