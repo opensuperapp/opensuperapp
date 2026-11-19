@@ -14,7 +14,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import { brand, themes } from "@/constants/brand";
+
 /**
+ * Legacy colour keys, now mapped onto the Choreo Labs tokens in `constants/brand`.
+ * New code should use `useBrandTheme()` and the token names directly.
+ *
  * Below are the colors that are used in the app. The colors are defined for light and dark modes.
  * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
  */
@@ -68,79 +73,80 @@ interface AppColors {
 
 export const Colors: AppColors = {
   light: {
-    text: "#1F2937", // Main text color (gray-950)
-    icon: "#687076", // Default icon color
-    tabIconDefault: "#687076", // Bottom tab icon default color
+    text: themes.light.text,
+    icon: themes.light.text3,
+    tabIconDefault: themes.light.text3,
 
-    primaryTextColor: "#1F2937", // Primary content text
-    secondaryTextColor: "#374151", // Secondary/description text
-    ternaryTextColor: "#000000", // Minor/deemphasized text
+    primaryTextColor: themes.light.text,
+    secondaryTextColor: themes.light.text2,
+    ternaryTextColor: themes.light.text,
 
-    defaultAppTextColor: "#989898", // Default app text color
+    defaultAppTextColor: themes.light.text3,
 
-    primaryBackgroundColor: "#FFFFFF", // Main app background
-    secondaryBackgroundColor: "#EEEEEF", // Card/section background
+    primaryBackgroundColor: themes.light.bg,
+    secondaryBackgroundColor: themes.light.card2,
 
-    profileFontColor: "#FFFFFF", // Font color for profile initials
-    profileBackgroundColor: "#BDBFC4", // Profile circle background
+    profileFontColor: "#FFFFFF", // Initials sit on the dark dot artwork
+    profileBackgroundColor: brand.ink,
 
-    libraryCardBackgroundColor: "#FFFFFF", // Background for library cards
-    mutedTextColor: "#242424", // Author name on library cards
-    articleTextColor: "#494848", // Text content inside articles
+    libraryCardBackgroundColor: themes.light.card,
+    mutedTextColor: themes.light.text2,
+    articleTextColor: themes.light.text2,
 
-    borderColor: "#EEEEEF", // Border color (gray-300)
-    discoveryContentBackgroundColor: "#FFFFFF", // Discovery section background
-    ternaryBackgroundColor: "#F3F4F6", // Another ternary background color (gray-200)
+    borderColor: themes.light.line,
+    discoveryContentBackgroundColor: themes.light.card,
+    ternaryBackgroundColor: themes.light.card2,
 
-    skeletonColorOne: "#E5E7EB", // Skeleton loader first color
-    skeletonColorTwo: "#D1D5DB", // Skeleton loader second color
+    skeletonColorOne: themes.light.card,
+    skeletonColorTwo: themes.light.card2,
 
-    contentItemBackgroundColor: "#F7F7F7", // Background for content items
+    contentItemBackgroundColor: themes.light.card,
 
-    overLayColor: "#FFFFFF78", // White overlay (about 47% opacity)
-    modalBorderColor: "#D0D0D0", // Modal outline border color
-    offlineBackgroundColor: "#FF6969", // No-connection toast
-    offlineTextColor: "#000000", // Text on the no-connection toast (7.5:1)
+    overLayColor: themes.light.backdrop,
+    modalBorderColor: themes.light.line2,
+    offlineBackgroundColor: themes.light.error, // No-connection toast
+    offlineTextColor: "#FFFFFF", // White on #B42318 (6.6:1)
   },
 
   dark: {
-    text: "#F9FAFB", // Main text color (gray-50)
-    icon: "#9BA1A6", // Default icon color
-    tabIconDefault: "#9BA1A6", // Bottom tab icon default color
+    text: themes.dark.text,
+    icon: themes.dark.text3,
+    tabIconDefault: themes.dark.text3,
 
-    primaryTextColor: "#9CA3AF", // Primary content text
-    secondaryTextColor: "#6B7280", // Secondary/description text
-    ternaryTextColor: "#DCE0E6", // Minor/deemphasized text
-    defaultAppTextColor: "#606b8a", // Default app text color
+    primaryTextColor: themes.dark.text,
+    secondaryTextColor: themes.dark.text2,
+    ternaryTextColor: themes.dark.text,
+    defaultAppTextColor: themes.dark.text3,
 
-    primaryBackgroundColor: "#030712", // Main app background
-    secondaryBackgroundColor: "#1F2937", // Card/section background
+    primaryBackgroundColor: themes.dark.bg,
+    secondaryBackgroundColor: themes.dark.card2,
 
-    profileFontColor: "#B6B6B6", // Font color for profile initials
-    profileBackgroundColor: "#464849", // Profile circle background
+    profileFontColor: "#FFFFFF",
+    profileBackgroundColor: brand.ink,
 
-    libraryCardBackgroundColor: "#1E1E1E", // Background for library cards
-    mutedTextColor: "#CCCCCC", // Author name on library cards
-    articleTextColor: "#BDC1C6", // Text content inside articles
+    libraryCardBackgroundColor: themes.dark.card,
+    mutedTextColor: themes.dark.text2,
+    articleTextColor: themes.dark.text2,
 
-    borderColor: "#1d2333", // Border color
-    discoveryContentBackgroundColor: "#000", // Discovery section background
-    ternaryBackgroundColor: "#2E2E2E", // Ternary background color
+    borderColor: themes.dark.line,
+    discoveryContentBackgroundColor: themes.dark.card,
+    ternaryBackgroundColor: themes.dark.card2,
 
-    skeletonColorOne: "#242424", // Skeleton loader first color
-    skeletonColorTwo: "#2B2B2B", // Skeleton loader second color
+    skeletonColorOne: themes.dark.card,
+    skeletonColorTwo: themes.dark.card2,
 
-    contentItemBackgroundColor: "#1C1C1C", // Content item background
+    contentItemBackgroundColor: themes.dark.card,
 
-    overLayColor: "#00000078", // Black overlay (about 47% opacity)
-    modalBorderColor: "#EBEBEB", // Modal outline border color
-    offlineBackgroundColor: "#A33A3A", // No-connection toast, darkened for dark mode
-    offlineTextColor: "#FFFFFF", // Text on the no-connection toast (6.5:1)
+    overLayColor: themes.dark.backdrop,
+    modalBorderColor: themes.dark.line2,
+    offlineBackgroundColor: themes.dark.error, // No-connection toast
+    offlineTextColor: brand.ink, // Ink on #FF7A7F (7.4:1)
   },
 
-  companyOrange: "#FF7300", // Company brand accent color
-  companyOrange20: "#FF730033", // Company brand accent color 20% opacity
-  companyOrange15: "#FF730026", // Company brand accent color 15% opacity
-  actionButtonTextColor: "#4989F7", // Action button text color
-  removeButtonTextColor: "#EB4E3D", // Remove button text color
+  // Signal: fills only. Orange text/icons should use the theme's `accent` (Burn on light).
+  companyOrange: brand.signal,
+  companyOrange20: "#FF460033",
+  companyOrange15: "#FF460026",
+  actionButtonTextColor: themes.dark.cobalt, // Prefer theme `cobalt` per scheme
+  removeButtonTextColor: themes.dark.error, // Prefer theme `error` per scheme
 };

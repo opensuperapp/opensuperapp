@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 import { Colors } from "@/constants/Colors";
+import { themes } from "@/constants/brand";
 import { DOWNLOADED } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { Version } from "@/context/slices/appSlice";
@@ -151,7 +152,7 @@ const ListItem = React.memo(
               <ActionButton
                 label="Remove"
                 onPress={onRemove}
-                textColor={Colors.removeButtonTextColor}
+                textColor={themes[colorScheme].error}
               />
             ) : (
               <ActionButton
