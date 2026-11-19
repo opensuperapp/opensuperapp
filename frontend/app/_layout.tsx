@@ -47,6 +47,13 @@ import {
   QueryClientProvider,
   useQueryClient,
 } from "@tanstack/react-query";
+import {
+  Sora_300Light,
+  Sora_400Regular,
+  Sora_500Medium,
+  Sora_600SemiBold,
+  Sora_700Bold,
+} from "@expo-google-fonts/sora";
 import { useFonts } from "expo-font";
 import { Stack, useSegments } from "expo-router";
 import { lockAsync, OrientationLock } from "expo-screen-orientation";
@@ -135,9 +142,16 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [isAppReady, setIsAppReady] = useState(false);
   const [isMinTimeElapsed, setIsMinTimeElapsed] = useState(false);
-  const [fontsLoaded] = useFonts({
+  // A font that fails to load falls back to the system face; it must not hold the splash forever.
+  const [fontsReady, fontError] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
+    Sora_300Light,
+    Sora_400Regular,
+    Sora_500Medium,
+    Sora_600SemiBold,
+    Sora_700Bold,
   });
+  const fontsLoaded = fontsReady || fontError !== null;
 
   // Called when all app initialization is done
   const onAppLoadComplete = useCallback(() => {

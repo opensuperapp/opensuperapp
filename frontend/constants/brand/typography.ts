@@ -18,8 +18,8 @@
  * Choreo Labs type scale. Font: Sora only (300–700).
  *
  * React Native notes:
- * - Load with `@expo-google-fonts/sora` (not installed yet). Custom fonts on Android
- *   don't synthesise weights, so pick the family per weight via `soraFamily`.
+ * - The five weights come from `@expo-google-fonts/sora`, loaded in `app/_layout.tsx`. Custom
+ *   fonts on Android don't synthesise weights, so pick the family per weight via `soraFamily`.
  * - RN `letterSpacing` is in px; the spec is in em. `textStyle()` converts.
  */
 
