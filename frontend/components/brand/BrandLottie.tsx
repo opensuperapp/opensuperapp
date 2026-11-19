@@ -15,11 +15,11 @@
 // under the License.
 import { easing } from "@/constants/brand";
 import LottieView, { type AnimationObject } from "lottie-react-native";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { AccessibilityInfo } from "react-native";
 import Animated, {
   Easing,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
@@ -34,13 +34,32 @@ interface BrandLottieProps {
   intro: { durationMs: number; fromScaleX: number };
 }
 
+/** Follows the OS reduce-motion setting live, not just its value at startup. */
+function useReduceMotion() {
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (mounted) setReduceMotion(enabled);
+    });
+    const subscription = AccessibilityInfo.addEventListener("reduceMotionChanged", setReduceMotion);
+    return () => {
+      mounted = false;
+      subscription.remove();
+    };
+  }, []);
+
+  return reduceMotion;
+}
+
 /**
  * Plays one of the baked brand loops (assets/brand/lottie) tinted to `color`.
  * The file is a seamless loop; the spec's intro (fade + grow) is played here.
  * With reduce-motion on, the static mark is shown instead.
  */
 export default function BrandLottie({ source, width, aspect, color, intro }: BrandLottieProps) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useReduceMotion();
   const progress = useSharedValue(0);
 
   useEffect(() => {
