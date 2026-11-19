@@ -100,6 +100,7 @@ const FeedHero = () => {
   const reduceMotion = useReducedMotion();
   const { width: windowWidth } = useWindowDimensions();
   const [width, setWidth] = useState(0);
+  const [measuredHeight, setMeasuredHeight] = useState(0);
   const pan = useSharedValue(0);
 
   useEffect(() => {
@@ -115,8 +116,15 @@ const FeedHero = () => {
   }, [pan, reduceMotion]);
 
   // Mirrors CSS background-position: offset = (box - image) * percentage.
-  const height = width / size.heroAspect;
-  const artWidth = width * ARTWORK_SCALE;
+  // The aspect ratio is only a minimum: large font scales grow the hero, and
+  // the artwork scales up so it still covers the taller box.
+  const minHeight = width / size.heroAspect;
+  const height = Math.max(minHeight, measuredHeight);
+  const coverScale =
+    width > 0
+      ? Math.max(ARTWORK_SCALE, height / (width * ARTWORK_ASPECT))
+      : ARTWORK_SCALE;
+  const artWidth = width * coverScale;
   const artHeight = artWidth * ARTWORK_ASPECT;
   const slackX = width - artWidth;
   const slackY = height - artHeight;
@@ -128,8 +136,10 @@ const FeedHero = () => {
     ],
   }));
 
-  const onLayout = (e: LayoutChangeEvent) =>
+  const onLayout = (e: LayoutChangeEvent) => {
     setWidth(e.nativeEvent.layout.width);
+    setMeasuredHeight(e.nativeEvent.layout.height);
+  };
 
   const now = new Date();
   const greeting = greetingFor(now.getHours());
@@ -149,7 +159,10 @@ const FeedHero = () => {
   });
 
   return (
-    <View style={styles.hero} onLayout={onLayout}>
+    <View
+      style={[styles.hero, width > 0 && { aspectRatio: undefined, minHeight }]}
+      onLayout={onLayout}
+    >
       {width > 0 && (
         <>
           <Animated.View
