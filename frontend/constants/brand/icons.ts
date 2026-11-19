@@ -26,7 +26,7 @@
  *   GLYPH_FILLS lists which base (`f`) / accent (`af`) paths get the soft Halo fill.
  */
 
-export const ICON_PATHS: Record<string, readonly string[]> = {
+export const ICON_PATHS = {
   feed: ['M12 3 3 7.5l9 4.5 9-4.5L12 3Z', 'M3 12l9 4.5 9-4.5', 'M3 16.5 12 21l9-4.5'],
   library: ['M12 6.5C10 5 7 4.5 3.5 4.5v14c3.5 0 6.5.5 8.5 2 2-1.5 5-2 8.5-2v-14C17 4.5 14 5 12 6.5Z', 'M12 6.5v14'],
   chat: ['M5 4.5h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-8l-5 3.5v-3.5H5a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Z', 'M8 11h.01M12 11h.01M16 11h.01'],
@@ -57,7 +57,7 @@ export const ICON_PATHS: Record<string, readonly string[]> = {
   flip: ['M4 12a8 8 0 0 1 13.7-5.6L20 8.5', 'M20 4v4.5h-4.5', 'M20 12a8 8 0 0 1-13.7 5.6L4 15.5', 'M4 20v-4.5h4.5'],
   edit: ['M4 20h4L19 9l-4-4L4 16v4Z', 'M13.5 6.5l4 4'],
   copy: ['M9 9h10v11H9Z', 'M5 15V4h10']
-};
+} satisfies Record<string, readonly string[]>;
 
 export interface Glyph { b: readonly string[]; a: readonly string[]; dot?: readonly [number, number] }
 
