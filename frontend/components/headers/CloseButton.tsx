@@ -13,10 +13,10 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
-import { Ionicons } from "@expo/vector-icons";
+import BrandIcon from "@/components/brand/BrandIcon";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { router } from "expo-router";
-import { Pressable, StyleProp, useColorScheme, ViewStyle } from "react-native";
+import { Pressable, StyleProp, ViewStyle } from "react-native";
 
 type CloseButtonProps = {
   onPress?: () => void;
@@ -24,7 +24,7 @@ type CloseButtonProps = {
 };
 
 const CloseButton = ({ onPress, style }: CloseButtonProps) => {
-  const colorScheme = useColorScheme() ?? "light";
+  const { colors } = useBrandTheme();
 
   return (
     <Pressable
@@ -33,7 +33,7 @@ const CloseButton = ({ onPress, style }: CloseButtonProps) => {
       }}
       style={style}
     >
-      <Ionicons name="close" size={24} color={Colors[colorScheme].text} />
+      <BrandIcon name="close" size={24} color={colors.accent} />
     </Pressable>
   );
 };

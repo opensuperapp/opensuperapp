@@ -13,19 +13,19 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
+import { soraFamily, textStyle, type } from "@/constants/brand";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { Link } from "expo-router";
-import { SafeAreaView, Text, useColorScheme } from "react-native";
+import { SafeAreaView, Text } from "react-native";
 
 const NotFound = () => {
-  const colorScheme = useColorScheme();
+  const { colors } = useBrandTheme();
 
   return (
     <>
       <SafeAreaView
         style={{
-          backgroundColor:
-            Colors[colorScheme ?? "light"].primaryBackgroundColor,
+          backgroundColor: colors.bg,
           flex: 1,
           alignItems: "center",
           justifyContent: "center",
@@ -34,10 +34,9 @@ const NotFound = () => {
       >
         <Text
           style={{
-            color: Colors[colorScheme ?? "light"].text,
-            fontSize: 30,
-            lineHeight: 36,
-            fontWeight: 700,
+            ...textStyle(type.articleTitle),
+            color: colors.text,
+            textAlign: "center",
           }}
         >
           This screen doesn't exist.
@@ -48,12 +47,12 @@ const NotFound = () => {
         >
           <Text
             style={{
-              fontSize: 20,
-              lineHeight: 28,
-              color: Colors[colorScheme ?? "light"].text,
+              fontFamily: soraFamily[500],
+              fontSize: 16,
+              color: colors.accent,
             }}
           >
-            Go to home screen!
+            Go to home screen →
           </Text>
         </Link>
       </SafeAreaView>

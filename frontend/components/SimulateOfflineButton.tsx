@@ -13,19 +13,19 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
 import { Event } from "@/constants/enums/Event";
 import { useIsOffline } from "@/context/OfflineStatusContext";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { reachabilityEmitter } from "@/utils/eventEmitter";
 import { Ionicons } from "@expo/vector-icons";
-import { TouchableOpacity, useColorScheme } from "react-native";
+import { TouchableOpacity } from "react-native";
 
 /**
  * Dev only: fakes the backend going out of reach, and back, to try the offline toast
  * without touching airplane mode. Goes through the same event a failed request raises.
  */
 const SimulateOfflineButton = () => {
-  const colorScheme = useColorScheme() ?? "light";
+  const { colors } = useBrandTheme();
   const offline = useIsOffline();
 
   return (
@@ -39,7 +39,7 @@ const SimulateOfflineButton = () => {
       <Ionicons
         name={offline ? "cloud-offline-outline" : "cloud-done-outline"}
         size={24}
-        color={Colors[colorScheme].text}
+        color={colors.accent}
       />
     </TouchableOpacity>
   );

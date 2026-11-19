@@ -13,21 +13,16 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
+import BrandIcon from "@/components/brand/BrandIcon";
+import PrimaryButton from "@/components/brand/PrimaryButton";
+import { soraFamily, textStyle, type } from "@/constants/brand";
 import { RootState } from "@/context/store";
-import { Ionicons } from "@expo/vector-icons";
-import {
-  Linking,
-  SafeAreaView,
-  Text,
-  TouchableOpacity,
-  useColorScheme,
-  View,
-} from "react-native";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
+import { Linking, SafeAreaView, Text, View } from "react-native";
 import { useSelector } from "react-redux";
 
 const UpdateScreen = () => {
-  const colorScheme = useColorScheme();
+  const { colors } = useBrandTheme();
   const { versions } = useSelector((state: RootState) => state.version);
 
   const handleUpdatePress = () => {
@@ -43,7 +38,7 @@ const UpdateScreen = () => {
     <SafeAreaView
       style={{
         flex: 1,
-        backgroundColor: Colors[colorScheme ?? "light"].primaryBackgroundColor,
+        backgroundColor: colors.bg,
       }}
     >
       <View
@@ -55,21 +50,21 @@ const UpdateScreen = () => {
         }}
       >
         {/* Update Icon */}
-        <Ionicons
-          style={{ margin: 20 }}
-          name="rocket-sharp"
-          size={70}
-          color={Colors.companyOrange}
-        />
+        <View style={{ margin: 20 }}>
+          <BrandIcon
+            name="download"
+            size={64}
+            color={colors.accent}
+            strokeWidth={1.4}
+          />
+        </View>
 
         {/* Title */}
         <Text
           style={{
-            fontSize: 24,
-            lineHeight: 32,
-            fontWeight: 700,
+            ...textStyle(type.articleTitle),
             textAlign: "center",
-            color: colorScheme == "dark" ? "#e5e7eb" : "#1f2937",
+            color: colors.text,
           }}
           allowFontScaling={false}
         >
@@ -79,8 +74,11 @@ const UpdateScreen = () => {
         {/* Description */}
         <Text
           style={{
+            fontFamily: soraFamily[400],
+            fontSize: 15,
+            lineHeight: 23,
             textAlign: "center",
-            color: colorScheme == "dark" ? "#9ca3af" : "#4b5563",
+            color: colors.text2,
             marginTop: 16,
           }}
           allowFontScaling={false}
@@ -90,29 +88,11 @@ const UpdateScreen = () => {
         </Text>
 
         {/* Update Button */}
-        <TouchableOpacity
-          style={{
-            backgroundColor: "#2564eb",
-            width: "100%",
-            paddingVertical: 13,
-            paddingHorizontal: 20,
-            borderRadius: 16,
-            marginTop: 30,
-          }}
+        <PrimaryButton
+          title="Update Now"
           onPress={handleUpdatePress}
-        >
-          <Text
-            style={{
-              color: colorScheme == "dark" ? "#d1d5db" : "#f9fafb",
-              textAlign: "center",
-              fontWeight: 600,
-              fontSize: 15,
-            }}
-            allowFontScaling={false}
-          >
-            Update Now
-          </Text>
-        </TouchableOpacity>
+          style={{ width: "100%", marginTop: 30 }}
+        />
       </View>
     </SafeAreaView>
   );

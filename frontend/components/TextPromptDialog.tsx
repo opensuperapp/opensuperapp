@@ -13,7 +13,14 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
+import {
+  radius,
+  soraFamily,
+  textStyle,
+  type,
+  type ThemeColors,
+} from "@/constants/brand";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -25,7 +32,6 @@ import {
   TextInput,
   type TextInputProps,
   TouchableWithoutFeedback,
-  useColorScheme,
   View,
 } from "react-native";
 
@@ -67,8 +73,8 @@ const TextPromptDialog = ({
   onClose,
   onCancel,
 }: TextPromptDialogProps) => {
-  const colorScheme = useColorScheme() ?? "light";
-  const styles = createStyles(colorScheme);
+  const { colors } = useBrandTheme();
+  const styles = createStyles(colors);
   const [value, setValue] = useState(defaultValue);
   const prevVisible = useRef(false);
   const canConfirm = value.trim().length > 0;
@@ -115,13 +121,13 @@ const TextPromptDialog = ({
                   value={value}
                   onChangeText={setValue}
                   placeholder={placeholder ?? message}
-                  placeholderTextColor={Colors[colorScheme].mutedTextColor}
+                  placeholderTextColor={colors.text3}
                   autoCapitalize={autoCapitalize}
                   autoCorrect={autoCorrect}
                   keyboardType={keyboardType}
                   autoFocus
                   style={styles.input}
-                  selectionColor={Colors.companyOrange}
+                  selectionColor={colors.accent}
                 />
                 <View style={styles.actions}>
                   <Pressable
@@ -151,16 +157,14 @@ const TextPromptDialog = ({
   );
 };
 
-const createStyles = (colorScheme: "light" | "dark") => {
-  const isLight = colorScheme === "light";
-
-  return StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
     keyboardView: {
       flex: 1,
     },
     overlay: {
       flex: 1,
-      backgroundColor: isLight ? "rgba(15, 23, 42, 0.55)" : "rgba(0, 0, 0, 0.72)",
+      backgroundColor: colors.backdrop,
       justifyContent: "center",
       alignItems: "center",
       padding: 24,
@@ -168,16 +172,17 @@ const createStyles = (colorScheme: "light" | "dark") => {
     card: {
       width: "100%",
       maxWidth: 400,
-      backgroundColor: isLight
-        ? Colors.light.primaryBackgroundColor
-        : Colors.dark.secondaryBackgroundColor,
+      backgroundColor: colors.card,
+      borderRadius: radius.card,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.line,
       padding: 24,
       ...Platform.select({
         ios: {
           shadowColor: "#000000",
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: isLight ? 0.2 : 0.45,
-          shadowRadius: 16,
+          shadowOffset: { width: 0, height: 20 },
+          shadowOpacity: 0.35,
+          shadowRadius: 24,
         },
         android: {
           elevation: 12,
@@ -185,31 +190,27 @@ const createStyles = (colorScheme: "light" | "dark") => {
       }),
     },
     title: {
-      fontSize: 18,
-      fontWeight: "bold",
-      color: isLight
-        ? Colors.light.text
-        : Colors.dark.ternaryTextColor,
+      ...textStyle(type.pushedTitle),
+      color: colors.text,
       marginBottom: 8,
     },
     message: {
+      fontFamily: soraFamily[400],
       fontSize: 14,
-      color: isLight
-        ? Colors.light.secondaryTextColor
-        : Colors.dark.ternaryTextColor,
+      color: colors.text2,
       marginBottom: 12,
       lineHeight: 20,
     },
     input: {
-      paddingHorizontal: 12,
-      paddingVertical: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      fontFamily: soraFamily[400],
       fontSize: 16,
-      color: isLight
-        ? Colors.light.text
-        : Colors.dark.ternaryTextColor,
-      backgroundColor: isLight
-        ? Colors.light.ternaryBackgroundColor
-        : Colors.dark.ternaryBackgroundColor,
+      color: colors.text,
+      backgroundColor: colors.field,
+      borderWidth: 1,
+      borderColor: colors.line2,
+      borderRadius: radius.input,
       marginBottom: 20,
     },
     actions: {
@@ -221,32 +222,30 @@ const createStyles = (colorScheme: "light" | "dark") => {
       paddingVertical: 10,
       paddingHorizontal: 16,
       minWidth: 88,
+      minHeight: 44,
+      justifyContent: "center",
       alignItems: "center",
+      borderRadius: radius.buttonSmall,
     },
     cancelButton: {
-      backgroundColor: isLight
-        ? Colors.light.ternaryBackgroundColor
-        : Colors.dark.ternaryBackgroundColor,
+      backgroundColor: colors.card2,
     },
     confirmButton: {
-      backgroundColor: Colors.companyOrange,
+      backgroundColor: colors.primaryFill,
     },
     confirmButtonDisabled: {
       opacity: 0.45,
     },
     cancelButtonText: {
+      fontFamily: soraFamily[600],
       fontSize: 16,
-      fontWeight: "600",
-      color: isLight
-        ? Colors.light.text
-        : Colors.dark.ternaryTextColor,
+      color: colors.text,
     },
     confirmButtonText: {
+      fontFamily: soraFamily[600],
       fontSize: 16,
-      fontWeight: "600",
-      color: "#FFFFFF",
+      color: colors.primaryText,
     },
   });
-};
 
 export default TextPromptDialog;

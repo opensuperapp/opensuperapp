@@ -13,8 +13,8 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
-import { Ionicons } from "@expo/vector-icons";
+import BrandIcon from "@/components/brand/BrandIcon";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { StyleSheet, TouchableOpacity } from "react-native";
 
 type BusinessCardHeaderButtonProps = {
@@ -23,18 +23,22 @@ type BusinessCardHeaderButtonProps = {
 
 const BusinessCardHeaderButton = ({
   onPress,
-}: BusinessCardHeaderButtonProps) => (
-  <TouchableOpacity
-    activeOpacity={0.5}
-    onPress={onPress}
-    hitSlop={12}
-    style={styles.button}
-    accessibilityRole="button"
-    accessibilityLabel="open_business_card"
-  >
-    <Ionicons name="card-outline" size={24} color={Colors.companyOrange} />
-  </TouchableOpacity>
-);
+}: BusinessCardHeaderButtonProps) => {
+  const { colors } = useBrandTheme();
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.5}
+      onPress={onPress}
+      hitSlop={12}
+      style={styles.button}
+      accessibilityRole="button"
+      accessibilityLabel="open_business_card"
+    >
+      <BrandIcon name="card" size={24} color={colors.accent} />
+    </TouchableOpacity>
+  );
+};
 
 export default BusinessCardHeaderButton;
 
