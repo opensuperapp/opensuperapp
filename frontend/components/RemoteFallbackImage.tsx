@@ -15,7 +15,12 @@
 // under the License.
 import { LIBRARY_ARTICLE_FALLBACK_IMAGE } from "@/constants/Constants";
 import React, { useState } from "react";
-import { Image, ImageResizeMode, ImageStyle } from "react-native";
+import {
+  Image,
+  ImageResizeMode,
+  ImageStyle,
+  StyleProp,
+} from "react-native";
 
 const RemoteFallbackImage = ({
   source,
@@ -25,7 +30,7 @@ const RemoteFallbackImage = ({
 }: {
   source: string;
   fallback?: string;
-  style: ImageStyle;
+  style: StyleProp<ImageStyle>;
   resizeMode?: ImageResizeMode;
 }) => {
   const [error, setError] = useState(false);

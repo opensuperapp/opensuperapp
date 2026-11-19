@@ -13,8 +13,9 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { useEffect, useRef } from "react";
-import { Animated, StyleSheet } from "react-native";
+import { Animated } from "react-native";
 
 interface SkeletonProps {
   width?: string | number;
@@ -31,59 +32,37 @@ export const Skeleton = ({
   style,
   borderRadius,
 }: SkeletonProps) => {
-  const colorAnim = useRef(new Animated.Value(0)).current;
-  const opacityAnim = useRef(new Animated.Value(0.6)).current;
+  const { colors } = useBrandTheme();
+  const opacityAnim = useRef(new Animated.Value(1)).current;
 
-  const shimmerColors = ["#333333", "#5C5C5C"];
-
-  // Shimmer effect for background color
+  // Bones are card2 so they read on both card and screen backgrounds; the pulse is opacity only.
   useEffect(() => {
-    Animated.loop(
+    const pulse = Animated.loop(
       Animated.sequence([
-        Animated.timing(colorAnim, {
+        Animated.timing(opacityAnim, {
+          toValue: 0.5,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
           toValue: 1,
-          duration: 1200,
-          useNativeDriver: false,
-        }),
-        Animated.timing(colorAnim, {
-          toValue: 0,
-          duration: 1200,
-          useNativeDriver: false,
+          duration: 1000,
+          useNativeDriver: true,
         }),
       ])
-    ).start();
-
-    // Blinking effect for opacity
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(opacityAnim, {
-          toValue: 0.3,
-          duration: 1000,
-          useNativeDriver: false,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 0.6,
-          duration: 1000,
-          useNativeDriver: false,
-        }),
-      ])
-    ).start();
-  }, [colorAnim, opacityAnim]);
-
-  const backgroundColor = colorAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: shimmerColors,
-  });
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [opacityAnim]);
 
   return (
     <Animated.View
       style={[
-        styles.skeleton,
         {
           width,
           height,
           borderRadius: borderRadius ? borderRadius : circle ? 100 : 4,
-          backgroundColor,
+          backgroundColor: colors.card2,
           opacity: opacityAnim,
         },
         style,
@@ -91,9 +70,3 @@ export const Skeleton = ({
     />
   );
 };
-
-const styles = StyleSheet.create({
-  skeleton: {
-    backgroundColor: "#2C2C2C",
-  },
-});

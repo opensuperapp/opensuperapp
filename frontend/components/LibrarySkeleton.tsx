@@ -13,18 +13,21 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
+import { radius, size } from "@/constants/brand";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import React from "react";
-import { StyleSheet, useColorScheme, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Skeleton } from "./Skeleton";
 
 const LibrarySkelton = () => {
   const skeletonData = [1, 2];
-  const colorScheme = useColorScheme();
-  const styles = createStyles(colorScheme ?? "light");
+  const { colors } = useBrandTheme();
 
   return skeletonData.map((_, index) => (
-    <View key={`library-skeleton-${index}`} style={styles.card}>
+    <View
+      key={`library-skeleton-${index}`}
+      style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}
+    >
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Skeleton width={20} height={20} />
@@ -32,26 +35,21 @@ const LibrarySkelton = () => {
         </View>
         <Skeleton width={60} height={12} />
       </View>
-      <Skeleton style={{ width: "100%" }} height={180} borderRadius={12} />
+      <Skeleton style={{ width: "100%" }} height={180} borderRadius={14} />
       <Skeleton
         height={18}
         style={{ width: "100%", marginBottom: 18, marginTop: 10 }}
       />
       <View style={styles.authorContainer}>
-        <Skeleton width={40} height={40} circle />
+        <Skeleton width={size.avatar.author} height={size.avatar.author} circle />
         <View style={styles.authorTextContainer}>
           <Skeleton width={120} height={12} />
           <Skeleton width={150} height={10} style={{ marginTop: 4 }} />
         </View>
       </View>
-      <View style={styles.tagContainer}>
-        <Skeleton
-          width={60}
-          height={25}
-          borderRadius={999}
-          style={{ marginRight: 2 }}
-        />
-        <Skeleton width={60} height={25} borderRadius={999} />
+      <View style={[styles.tagContainer, { borderTopColor: colors.line }]}>
+        <Skeleton width={72} height={size.tagHeight} borderRadius={radius.pill} />
+        <Skeleton width={96} height={size.tagHeight} borderRadius={radius.pill} />
       </View>
     </View>
   ));
@@ -59,40 +57,39 @@ const LibrarySkelton = () => {
 
 export default LibrarySkelton;
 
-const createStyles = (colorScheme: "light" | "dark") =>
-  StyleSheet.create({
-    card: {
-      backgroundColor: Colors[colorScheme].libraryCardBackgroundColor,
-      borderRadius: 14,
-      padding: 16,
-      marginTop: 15,
-      marginHorizontal: 10,
-    },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: 10,
-    },
-    headerLeft: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 2,
-    },
-    authorContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 10,
-      marginBottom: 18,
-    },
-    authorTextContainer: {
-      width: "80%",
-    },
-    tagContainer: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      borderTopColor: Colors[colorScheme].primaryTextColor,
-      borderTopWidth: 0.25,
-      paddingTop: 12,
-    },
-  });
+const styles = StyleSheet.create({
+  card: {
+    borderRadius: radius.card,
+    borderWidth: 1,
+    padding: 18,
+    marginTop: 12,
+    marginHorizontal: 16,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+  },
+  authorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 16,
+  },
+  authorTextContainer: {
+    width: "80%",
+  },
+  tagContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    borderTopWidth: 1,
+    paddingTop: 14,
+  },
+});

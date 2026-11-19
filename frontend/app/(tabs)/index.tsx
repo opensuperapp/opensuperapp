@@ -13,37 +13,23 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import BannerSlider from "@/components/BannerSlider";
 import Event from "@/components/Event";
 import FeedSkeleton from "@/components/FeedSkeleton";
+import FeedHero from "@/components/feed/FeedHero";
 import News from "@/components/News";
-import { Colors } from "@/constants/Colors";
+import { textStyle, type } from "@/constants/brand";
 import { ScreenPaths } from "@/constants/ScreenPaths";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import useEventsFeed from "@/hooks/useEventsFeed";
 import useNewsFeed from "@/hooks/useNewsFeed";
 import { useTrackActiveScreen } from "@/hooks/useTrackActiveScreen";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import React, { useEffect, useState } from "react";
-import {
-  Dimensions,
-  ScrollView,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from "react-native";
-
-const screenWidth = Dimensions.get("window").width;
-const bannerImages = [
-  require("../../assets/images/banner1.png"),
-  require("../../assets/images/banner2.png"),
-  require("../../assets/images/banner3.png"),
-];
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 const Discovery = () => {
   const tabBarHeight: number = useBottomTabBarHeight();
-  const colorScheme = useColorScheme();
-  const styles = createStyles(colorScheme ?? "light", tabBarHeight);
+  const { colors } = useBrandTheme();
   const [isMinTimeElapsed, setIsMinTimeElapsed] = useState(false);
 
   useTrackActiveScreen(ScreenPaths.FEED);
@@ -64,31 +50,26 @@ const Discovery = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % bannerImages.length);
-    }, 10000); // 10 seconds
-
-    return () => clearInterval(intervalId); // Clean up on unmount
-  }, []);
-
   return (
-    <View style={styles.background}>
+    <View style={{ backgroundColor: colors.bg }}>
       {!isMinTimeElapsed || loading ? (
         <FeedSkeleton />
       ) : (
-        <ScrollView style={{ padding: 16, marginTop: 5 }}>
-          {/* Banner image slider */}
-          <BannerSlider />
+        <ScrollView style={{ padding: 16 }}>
+          <FeedHero />
 
           {/* Events section */}
           {eventItems && eventItems.length > 0 && (
-            <View style={{ marginTop: 10 }}>
-              <Text style={styles.header}>Events</Text>
+            <View>
+              <Text style={[styles.header, { color: colors.text }]}>
+                Events
+              </Text>
 
-              <ScrollView horizontal={true}>
+              <ScrollView
+                horizontal={true}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.stack}
+              >
                 {eventItems.map((item, index) => (
                   <Event key={index} item={item} />
                 ))}
@@ -99,14 +80,16 @@ const Discovery = () => {
           {/* News section */}
           {newsItems && newsItems.length > 0 && (
             <View style={{ paddingBottom: tabBarHeight }}>
-              <Text style={styles.header}>News</Text>
+              <Text style={[styles.header, { color: colors.text }]}>News</Text>
 
-              {newsItems.map((news, index) => (
-                <News
-                  item={news}
-                  key={`${news.guid?.["#text"] || news.link}-${index}`}
-                />
-              ))}
+              <View style={styles.stack}>
+                {newsItems.map((news, index) => (
+                  <News
+                    item={news}
+                    key={`${news.guid?.["#text"] || news.link}-${index}`}
+                  />
+                ))}
+              </View>
             </View>
           )}
         </ScrollView>
@@ -117,20 +100,14 @@ const Discovery = () => {
 
 export default Discovery;
 
-const createStyles = (colorScheme: "light" | "dark", tabBarHeight: number) =>
-  StyleSheet.create({
-    background: {
-      backgroundColor: Colors[colorScheme].primaryBackgroundColor,
-    },
-    image: {
-      width: "100%",
-      height: (screenWidth - 32) * (22 / 35),
-      borderRadius: 12,
-    },
-    header: {
-      color: Colors[colorScheme ?? "light"].ternaryTextColor,
-      fontSize: 24,
-      fontWeight: "700",
-      marginVertical: 10,
-    },
-  });
+const styles = StyleSheet.create({
+  header: {
+    ...textStyle(type.sectionHeading),
+    marginTop: 24,
+    marginBottom: 12,
+    marginHorizontal: 4,
+  },
+  stack: {
+    gap: 12,
+  },
+});

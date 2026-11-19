@@ -13,30 +13,44 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
-import { StyleSheet, Text, useColorScheme, View } from "react-native";
+import { textStyle } from "@/constants/brand";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
+import { StyleSheet, Text, View } from "react-native";
 
 interface ContentEmptyViewProps {
   title: string;
   description: string;
   header: React.ReactNode;
   footer?: React.ReactNode;
+  titleAccessibilityLabel?: string;
 }
 
+/** Empty state: icon in a card2 circle, title and a supporting line. */
 const ContentEmptyView = ({
   title,
   description,
   header,
   footer,
+  titleAccessibilityLabel,
 }: ContentEmptyViewProps) => {
-  const colorScheme = useColorScheme() ?? "light";
-  const styles = createStyles(colorScheme);
+  const { colors } = useBrandTheme();
 
   return (
     <View style={styles.container}>
-      {header && <View style={styles.header}>{header}</View>}
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.description}>{description}</Text>
+      {header && (
+        <View style={[styles.header, { backgroundColor: colors.card2 }]}>
+          {header}
+        </View>
+      )}
+      <Text
+        style={[styles.title, { color: colors.text }]}
+        accessibilityLabel={titleAccessibilityLabel}
+      >
+        {title}
+      </Text>
+      <Text style={[styles.description, { color: colors.text2 }]}>
+        {description}
+      </Text>
       {footer && <View style={styles.footer}>{footer}</View>}
     </View>
   );
@@ -44,30 +58,34 @@ const ContentEmptyView = ({
 
 export default ContentEmptyView;
 
-const createStyles = (colorScheme: "light" | "dark") =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      width: "100%",
-      justifyContent: "center",
-      alignItems: "center",
-      gap: 8,
-    },
-    header: {
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    footer: {
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    title: {
-      fontSize: 20,
-      fontWeight: "bold",
-      color: Colors[colorScheme].text,
-    },
-    description: {
-      fontSize: 16,
-      color: Colors[colorScheme].text,
-    },
-  });
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    width: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+  },
+  header: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 6,
+  },
+  footer: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  title: {
+    ...textStyle({ size: 16, weight: 600 }),
+    textAlign: "center",
+  },
+  description: {
+    ...textStyle({ size: 14, weight: 400, lineHeight: 1.5 }),
+    textAlign: "center",
+  },
+});
