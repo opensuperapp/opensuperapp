@@ -70,12 +70,27 @@ const EditMessageModal = ({
     if (!isIos) {
       return;
     }
-    const sub = Keyboard.addListener("keyboardWillChangeFrame", (e) =>
+    const frameSub = Keyboard.addListener("keyboardWillChangeFrame", (e) => {
+      const { screenY, height } = e.endCoordinates;
+      const windowHeight = Dimensions.get("window").height;
+      // "Prefer Cross-Fade Transitions" reports screenY 0, which would turn the whole
+      // window into padding; KeyboardAvoidingView treats that as no keyboard.
+      if (screenY === 0 || height === 0) {
+        setKeyboardInset(0);
+        return;
+      }
       setKeyboardInset(
-        Math.max(Dimensions.get("window").height - e.endCoordinates.screenY, 0)
-      )
+        Math.min(Math.max(windowHeight - screenY, 0), windowHeight - 1)
+      );
+    });
+    // An undocked or floating keyboard hides after its last frame change.
+    const hideSub = Keyboard.addListener("keyboardWillHide", () =>
+      setKeyboardInset(0)
     );
-    return () => sub.remove();
+    return () => {
+      frameSub.remove();
+      hideSub.remove();
+    };
   }, []);
 
   const handleSend = () => {
