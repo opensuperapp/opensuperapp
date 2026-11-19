@@ -26,7 +26,6 @@ import { RootState } from "@/context/store";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { useTabVisibilityRules } from "@/hooks/useRemoteConfig";
 import { useRestoreLastTab } from "@/hooks/useRestoreLastTab";
-import { DEFAULT_TAB_CONFIG } from "@/types/remoteConfig.types";
 import { shouldShowTab } from "@/utils/tabVisibility";
 import {
   Icon,
@@ -114,10 +113,11 @@ export default function TabLayout() {
   const isAuthenticated = useSelector(selectIsSignedIn);
   const { colors } = useBrandTheme();
 
+  // rules holds the defaults until the first fetch lands and keeps the last good
+  // value through a refresh, so a refetch never flips a tab's hidden prop.
   const { loading, rules } = useTabVisibilityRules();
-  const effectiveRules = loading ? DEFAULT_TAB_CONFIG : rules;
   const isVisible = (rule: string) =>
-    shouldShowTab(rule, email, isAuthenticated, effectiveRules);
+    shouldShowTab(rule, email, isAuthenticated, rules);
 
   useRestoreLastTab(isVisible, !loading);
 

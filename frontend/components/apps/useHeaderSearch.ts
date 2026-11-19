@@ -15,7 +15,7 @@
 // under the License.
 import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { NavigationContext } from "@react-navigation/native";
-import { useContext, useLayoutEffect } from "react";
+import { useContext, useEffect, useLayoutEffect, useRef } from "react";
 
 interface HeaderSearchOptions {
   /** Receives the query as typed; cancel clears it. */
@@ -60,4 +60,12 @@ export function useHeaderSearch({
         : undefined,
     });
   }, [navigation, enabled, pinned, onChangeQuery, colors]);
+
+  // Removing the bar does not clear the caller's query, which would keep the list
+  // filtered by text nobody can see. Clear it once, on the enabled -> disabled edge.
+  const wasEnabled = useRef(enabled);
+  useEffect(() => {
+    if (wasEnabled.current && !enabled) onChangeQuery("");
+    wasEnabled.current = enabled;
+  }, [enabled, onChangeQuery]);
 }
