@@ -32,7 +32,7 @@ import { fetchLibraryArticles } from "@/services/libraryService";
 import { LibraryArticle } from "@/types/library.types";
 import { capitalizeName } from "@/utils/capitalizeName";
 import { Stack } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Dimensions,
   FlatList,
@@ -61,22 +61,30 @@ const Library = () => {
 
   useTrackActiveScreen(ScreenPaths.LIBRARY);
 
+  // Bumped by every first-page load (search or refresh). A response from an
+  // older generation is dropped, so a pending page can't move the new cursor.
+  const requestGeneration = useRef(0);
+
   const fetchArticles = async (
     isInitial: boolean = false,
     debouncedQuery: string = ""
   ) => {
     if (!hasMore && !isInitial) return;
 
+    const generation = isInitial
+      ? ++requestGeneration.current
+      : requestGeneration.current;
+
     if (isInitial) {
       setLoading(true);
-      setStart(0);
-      setHasMore(true);
     } else {
       setFetchingMore(true);
     }
 
     try {
       const data = await fetchLibraryArticles(isInitial, start, debouncedQuery);
+      if (generation !== requestGeneration.current) return;
+
       const newArticles: LibraryArticle[] = data;
       if (isInitial) {
         setArticles(newArticles);
@@ -84,18 +92,21 @@ const Library = () => {
         setArticles((prev) => [...prev, ...newArticles]);
       }
 
-      if (newArticles.length < LIBRARY_ARTICLE_FETCH_LIMIT) {
-        setHasMore(false);
-      } else {
-        setStart((prev) => prev + LIBRARY_ARTICLE_FETCH_LIMIT);
-      }
+      // Commit the cursor with the accepted data; a failed reload keeps the
+      // cursor that belongs to the articles still on screen.
+      const fullPage = newArticles.length >= LIBRARY_ARTICLE_FETCH_LIMIT;
+      setStart(
+        (prev) =>
+          (isInitial ? 0 : prev) + (fullPage ? LIBRARY_ARTICLE_FETCH_LIMIT : 0)
+      );
+      setHasMore(fullPage);
     } catch (err) {
       console.error(err);
     } finally {
-      if (isInitial) {
-        setLoading(false);
-      } else {
+      if (!isInitial) {
         setFetchingMore(false);
+      } else if (generation === requestGeneration.current) {
+        setLoading(false);
       }
     }
   };
