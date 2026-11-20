@@ -141,10 +141,24 @@ export default function TabLayout() {
   return (
     <NativeTabs
       tintColor={colors.accent}
-      iconColor={colors.text3}
-      labelStyle={{ fontFamily: soraFamily[500], fontSize: 11 }}
+      // Selected colours must be explicit: `tintColor` only reaches the standard appearance,
+      // so a short screen sitting at the scroll edge (My Apps, Profile) fell back to `text3`.
+      iconColor={{ default: colors.text3, selected: colors.accent }}
+      labelStyle={{
+        default: { fontFamily: soraFamily[500], fontSize: 11 },
+        selected: {
+          fontFamily: soraFamily[500],
+          fontSize: 11,
+          color: colors.accent,
+        },
+      }}
       badgeBackgroundColor={colors.accent}
       indicatorColor={colors.card2}
+      // Opaque, like the tab-root navbars (TabStack): solid colour, no blur, and it
+      // stays solid at the scroll edge instead of turning clear.
+      backgroundColor={colors.barSolid}
+      blurEffect="none"
+      disableTransparentOnScrollEdge
     >
       {TABS.map((tab) => (
         <NativeTabs.Trigger

@@ -17,23 +17,36 @@ import { LAST_ACTIVE_PATH_KEY } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
-import { useCallback } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
+// Shut until useRestoreLastTab has read the saved tab. The app always opens on Feed, so
+// recording before then would overwrite the tab it is about to restore.
+let isTrackingOpen = false;
+const listeners = new Set<() => void>();
+
+/** Lets screens record themselves as the last tab. Called once the restore is done. */
+export const openTabTracking = () => {
+  if (isTrackingOpen) return;
+  isTrackingOpen = true;
+  listeners.forEach((listener) => listener());
+};
+
+const subscribe = (listener: () => void) => {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+};
+const getIsTrackingOpen = () => isTrackingOpen;
+
+/** Records this tab as the one to reopen on the next launch while it is focused. */
 export const useTrackActiveScreen = (pathname: ScreenPaths) => {
+  const isOpen = useSyncExternalStore(subscribe, getIsTrackingOpen);
+
   useFocusEffect(
     useCallback(() => {
-      if (!pathname) return;
-
-      const savePath = async () => {
-        // Optional delay — only if needed
-        if (pathname === ScreenPaths.FEED) {
-          await new Promise((resolve) => setTimeout(resolve, 500));
-        }
-
-        await AsyncStorage.setItem(LAST_ACTIVE_PATH_KEY, pathname);
-      };
-
-      savePath();
-    }, [pathname])
+      if (!pathname || !isOpen) return;
+      AsyncStorage.setItem(LAST_ACTIVE_PATH_KEY, pathname).catch((error) =>
+        console.error("Failed to save the last tab:", error),
+      );
+    }, [pathname, isOpen]),
   );
 };
