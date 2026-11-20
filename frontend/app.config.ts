@@ -174,7 +174,9 @@ let config: ExpoConfig = {
           image: "./assets/images/splash-icon.png",
           backgroundColor: "#050A1C",
         },
-        imageWidth: 200,
+        // splash-icon.png's mark spans ~48.6% of the canvas, so 236 draws it ~115pt wide,
+        // matching SplashModal's Wheel (launchMark, 0.3 × 393pt) so the handoff does not jump.
+        imageWidth: 236,
       },
     ],
     [
