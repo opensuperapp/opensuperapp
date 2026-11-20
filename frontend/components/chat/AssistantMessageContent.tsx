@@ -13,10 +13,11 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import BrandIcon from "@/components/brand/BrandIcon";
+import { soraFamily, textStyle, type } from "@/constants/brand";
 import { ChatThemePalette } from "@/constants/ChatTheme";
-import { Ionicons } from "@expo/vector-icons";
 import React, { ReactNode } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Markdown from "react-native-markdown-display";
 
 export interface AssistantMessageContentProps {
@@ -36,27 +37,59 @@ const AssistantMessageContent = ({
   theme,
   onCopy,
 }: AssistantMessageContentProps): JSX.Element => {
+  const codeSurface = {
+    backgroundColor: theme.surface,
+    borderColor: theme.border,
+    color: theme.assistantText,
+  };
   const markdownStyles = {
     body: {
+      ...textStyle({ ...type.body, lineHeight: 1.6 }),
       color: theme.assistantText,
-      fontSize: 16,
-      lineHeight: 24,
     },
-    strong: { fontWeight: "700" as const },
+    paragraph: { marginTop: 0, marginBottom: 8 },
+    strong: { fontFamily: soraFamily[600], fontWeight: "normal" as const },
     heading1: {
-      fontSize: 22,
-      fontWeight: "600" as const,
+      ...textStyle({ size: 20, weight: 600, tracking: -0.03, lineHeight: 1.3 }),
       color: theme.assistantText,
       marginBottom: 8,
     },
     heading2: {
-      fontSize: 18,
-      fontWeight: "600" as const,
+      ...textStyle({ size: 17, weight: 600, tracking: -0.025, lineHeight: 1.35 }),
       color: theme.assistantText,
       marginBottom: 6,
     },
+    heading3: {
+      ...textStyle({ size: 15, weight: 600, lineHeight: 1.4 }),
+      color: theme.assistantText,
+      marginBottom: 4,
+    },
+    link: { color: theme.accent, textDecorationLine: "none" as const },
     bullet_list: { marginVertical: 6 },
+    ordered_list: { marginVertical: 6 },
     list_item: { marginVertical: 3 },
+    bullet_list_icon: { color: theme.muted, marginLeft: 4, marginRight: 10 },
+    ordered_list_icon: { color: theme.muted, marginLeft: 4, marginRight: 10 },
+    code_inline: {
+      ...codeSurface,
+      borderWidth: 0,
+      paddingHorizontal: 4,
+      paddingVertical: 0,
+      borderRadius: 6,
+    },
+    code_block: { ...codeSurface, borderRadius: 12, padding: 12 },
+    fence: { ...codeSurface, borderRadius: 12, padding: 12 },
+    blockquote: {
+      backgroundColor: theme.surface,
+      borderColor: theme.inputBorder,
+      borderLeftWidth: 3,
+      marginLeft: 0,
+      paddingHorizontal: 12,
+      borderRadius: 4,
+    },
+    hr: { backgroundColor: theme.border },
+    table: { borderColor: theme.border, borderRadius: 12 },
+    tr: { borderColor: theme.border },
   };
 
   const COPYABLE_PATTERN = /#\(([^)]+)\)/g;
@@ -86,12 +119,12 @@ const AssistantMessageContent = ({
         : "Value";
     parts.push(
       <View key={partKey++} style={styles.chipBlock}>
-        <Text style={[styles.chipLabel, { color: theme.muted }]}>{label}</Text>
+        <Text style={[styles.chipLabel, { color: theme.subtle }]}>{label}</Text>
         <View
           style={[
             styles.chip,
             {
-              backgroundColor: theme.surface,
+              backgroundColor: theme.card,
               borderColor: theme.border,
             },
           ]}
@@ -103,12 +136,12 @@ const AssistantMessageContent = ({
             {value}
           </Text>
           <TouchableOpacity
-            style={[styles.copyBtn, { backgroundColor: theme.accentMuted }]}
+            style={styles.copyBtn}
             onPress={() => onCopy(value, label)}
             accessibilityLabel={`Copy ${label}`}
             accessibilityRole="button"
           >
-            <Ionicons name="copy-outline" size={16} color="#fff" />
+            <BrandIcon name="copy" size={18} color={theme.accent} />
           </TouchableOpacity>
         </View>
       </View>
@@ -142,12 +175,13 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   chipLabel: {
-    fontSize: 13,
+    ...textStyle({ size: 12, weight: 400 }),
     marginBottom: 6,
   },
   chip: {
     flexDirection: "row",
     alignItems: "center",
+    minHeight: 44,
     borderRadius: 12,
     borderWidth: 1,
     overflow: "hidden",
@@ -155,13 +189,14 @@ const styles = StyleSheet.create({
   chipValue: {
     flex: 1,
     fontSize: 14,
-    fontFamily: "monospace",
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
     paddingVertical: 12,
     paddingHorizontal: 14,
   },
   copyBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    minWidth: 44,
+    alignSelf: "stretch",
+    paddingHorizontal: 12,
     justifyContent: "center",
     alignItems: "center",
   },

@@ -13,13 +13,14 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import BrandIcon from "@/components/brand/BrandIcon";
+import { radius, size, textStyle } from "@/constants/brand";
 import { CHAT_INPUT_PLACEHOLDER } from "@/constants/Constants";
 import { ChatThemePalette } from "@/constants/ChatTheme";
 import { MAX_MESSAGE_LENGTH } from "@/types/chat.types";
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import React, { useState } from "react";
 import {
-  Platform,
   StyleSheet,
   TextInput,
   TouchableOpacity,
@@ -52,6 +53,7 @@ const ChatComposer = ({
   bottomInset,
 }: ChatComposerProps): JSX.Element => {
   const canSend = value.trim().length > 0 && !isGenerating;
+  const [focused, setFocused] = useState(false);
 
   return (
     <View style={[styles.wrapper, { paddingBottom: bottomInset }]}>
@@ -60,16 +62,7 @@ const ChatComposer = ({
           styles.pill,
           {
             backgroundColor: theme.inputSurface,
-            borderColor: theme.inputBorder,
-            ...Platform.select({
-              ios: {
-                shadowColor: theme.shadow,
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.14,
-                shadowRadius: 6,
-              },
-              android: { elevation: 4 },
-            }),
+            borderColor: focused ? theme.highlight : theme.inputBorder,
           },
         ]}
       >
@@ -78,7 +71,10 @@ const ChatComposer = ({
           value={value}
           onChangeText={onChangeText}
           placeholder={CHAT_INPUT_PLACEHOLDER}
-          placeholderTextColor={theme.muted}
+          placeholderTextColor={theme.subtle}
+          selectionColor={theme.highlight}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           multiline
           maxLength={MAX_MESSAGE_LENGTH}
           editable={!isGenerating}
@@ -97,16 +93,17 @@ const ChatComposer = ({
           <TouchableOpacity
             style={[
               styles.sendBtn,
-              { backgroundColor: canSend ? theme.accent : theme.surface },
+              { backgroundColor: canSend ? theme.signal : theme.surface },
             ]}
             onPress={onSend}
             disabled={!canSend}
             accessibilityLabel="send_message"
           >
-            <Ionicons
+            <BrandIcon
               name="send"
               size={20}
-              color={canSend ? "#fff" : theme.muted}
+              strokeWidth={1.8}
+              color={canSend ? theme.onSignal : theme.subtle}
             />
           </TouchableOpacity>
         )}
@@ -117,32 +114,36 @@ const ChatComposer = ({
 
 export default ChatComposer;
 
+// Composer pill: 54 high, 6 right / 18 left padding, 42px send button.
+const SEND_SIZE = 42;
+const INPUT_LINE_HEIGHT = 22;
+
 const styles = StyleSheet.create({
   wrapper: {
     paddingHorizontal: 16,
-    paddingTop: 4,
+    paddingTop: 10,
   },
   pill: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 32,
+    gap: 6,
+    borderRadius: radius.pill,
     borderWidth: 1,
-    minHeight: 56,
-    paddingRight: 8,
-    paddingLeft: 16,
+    minHeight: size.chatComposerHeight,
+    paddingRight: 6,
+    paddingLeft: 18,
   },
   input: {
     flex: 1,
-    fontSize: 16,
-    lineHeight: 22,
+    ...textStyle({ size: 16, weight: 400 }),
+    lineHeight: INPUT_LINE_HEIGHT,
     maxHeight: 120,
-    paddingVertical: 14,
-    paddingRight: 8,
+    paddingVertical: (size.chatComposerHeight - 2 - INPUT_LINE_HEIGHT) / 2,
   },
   sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: SEND_SIZE,
+    height: SEND_SIZE,
+    borderRadius: SEND_SIZE / 2,
     alignItems: "center",
     justifyContent: "center",
   },

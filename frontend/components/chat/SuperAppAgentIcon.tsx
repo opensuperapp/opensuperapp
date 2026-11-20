@@ -13,47 +13,48 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import ChoreoMark from "@/components/brand/ChoreoMark";
+import WaveMark from "@/components/brand/WaveMark";
+import { brand } from "@/constants/brand";
 import React, { JSX } from "react";
 import { StyleSheet, View, ViewStyle } from "react-native";
 
 export interface SuperAppAgentIconProps {
   size?: number;
   style?: ViewStyle;
+  /** Play the Wave (AI) animation instead of the static mark. */
+  animated?: boolean;
 }
 
 /**
- * Super App AI agent icon using the Lucide Bot glyph.
+ * Assistant avatar: a Signal disc holding the Ink Choreo mark.
+ * The empty state plays the Wave; message rows use the static mark.
  *
- * @param {SuperAppAgentIconProps} props - Icon size and optional style.
- * @returns {JSX.Element} Bot icon badge.
+ * @param {SuperAppAgentIconProps} props - Disc size, animation and optional style.
+ * @returns {JSX.Element} Assistant avatar.
  */
 const SuperAppAgentIcon = ({
-  size = 52,
+  size = 30,
   style,
+  animated = false,
 }: SuperAppAgentIconProps): JSX.Element => {
-  const iconSize = size * 0.5;
+  // Prototype: the mark is 46% of the 80px disc and 50% of the 30px avatar.
+  const markWidth = Math.round(size * (animated ? 0.46 : 0.5));
 
   return (
     <View
       style={[
         styles.wrap,
-        {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          backgroundColor: Colors.companyOrange,
-        },
+        { width: size, height: size, borderRadius: size / 2 },
         style,
       ]}
-      accessibilityLabel="Super App AI bot"
+      accessibilityLabel="Choreo Labs AI assistant"
     >
-      <MaterialCommunityIcons
-        name="robot-excited"
-        size={iconSize}
-        color="#ffffff"
-      />
+      {animated ? (
+        <WaveMark size={markWidth} color={brand.ink} />
+      ) : (
+        <ChoreoMark width={markWidth} color={brand.ink} />
+      )}
     </View>
   );
 };
@@ -64,10 +65,6 @@ const styles = StyleSheet.create({
   wrap: {
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    elevation: 3,
+    backgroundColor: brand.signal,
   },
 });

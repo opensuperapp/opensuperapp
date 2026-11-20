@@ -13,76 +13,33 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import WaveMark from "@/components/brand/WaveMark";
+import { size } from "@/constants/brand";
 import { ChatThemePalette } from "@/constants/ChatTheme";
-import React, { useEffect, useRef } from "react";
-import { Animated, StyleSheet, View } from "react-native";
+import React from "react";
+import { StyleSheet, View } from "react-native";
 
 export interface ChatTypingIndicatorProps {
   theme: ChatThemePalette;
 }
 
 /**
- * Animated three-dot typing indicator for assistant responses.
+ * Assistant "thinking" state: the 22px Wave mark in place of typing dots.
  *
  * @param {ChatTypingIndicatorProps} props - Theme palette.
- * @returns {JSX.Element} Typing dots UI.
+ * @returns {JSX.Element} Wave thinking indicator.
  */
 const ChatTypingIndicator = ({
   theme,
-}: ChatTypingIndicatorProps): JSX.Element => {
-  const dot1 = useRef(new Animated.Value(0.3)).current;
-  const dot2 = useRef(new Animated.Value(0.3)).current;
-  const dot3 = useRef(new Animated.Value(0.3)).current;
-
-  useEffect(() => {
-    const animateDot = (dot: Animated.Value, delay: number) =>
-      Animated.loop(
-        Animated.sequence([
-          Animated.delay(delay),
-          Animated.timing(dot, {
-            toValue: 1,
-            duration: 320,
-            useNativeDriver: true,
-          }),
-          Animated.timing(dot, {
-            toValue: 0.3,
-            duration: 320,
-            useNativeDriver: true,
-          }),
-        ])
-      );
-
-    const a1 = animateDot(dot1, 0);
-    const a2 = animateDot(dot2, 160);
-    const a3 = animateDot(dot3, 320);
-    a1.start();
-    a2.start();
-    a3.start();
-
-    return () => {
-      a1.stop();
-      a2.stop();
-      a3.stop();
-    };
-  }, [dot1, dot2, dot3]);
-
-  const renderDot = (opacity: Animated.Value) => (
-    <Animated.View
-      style={[
-        styles.dot,
-        { backgroundColor: theme.accent, opacity },
-      ]}
-    />
-  );
-
-  return (
-    <View style={styles.row}>
-      {renderDot(dot1)}
-      {renderDot(dot2)}
-      {renderDot(dot3)}
-    </View>
-  );
-};
+}: ChatTypingIndicatorProps): JSX.Element => (
+  <View
+    style={styles.row}
+    accessibilityLabel="Assistant is typing"
+    accessibilityRole="progressbar"
+  >
+    <WaveMark size={size.chatTypingMark} color={theme.muted} />
+  </View>
+);
 
 export default ChatTypingIndicator;
 
@@ -90,12 +47,6 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingVertical: 4,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    paddingVertical: 6,
   },
 });

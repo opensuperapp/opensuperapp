@@ -13,24 +13,28 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import BrandIcon from "@/components/brand/BrandIcon";
 import ChatMenuButton from "@/components/chat/ChatMenuButton";
 import {
   CHAT_HEADER_BOTTOM_PADDING,
+  CHAT_MENU_BUTTON_SIZE,
   CHAT_HEADER_TOP_OFFSET,
   CHAT_SCREEN_HORIZONTAL_PADDING,
 } from "@/constants/Constants";
 import { ChatThemePalette } from "@/constants/ChatTheme";
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export interface ChatHeaderProps {
   theme: ChatThemePalette;
   onOpenHistory: () => void;
+  /** When set, an edit icon on the right starts a new chat. */
+  onNewChat?: () => void;
 }
 
 /**
- * Chat top bar with history menu on the left.
+ * Chat top bar: history menu on the left, optional new-chat action on the right.
  *
  * @param {ChatHeaderProps} props - Theme and handlers.
  * @returns {JSX.Element} Chat header bar.
@@ -38,6 +42,7 @@ export interface ChatHeaderProps {
 const ChatHeader = ({
   theme,
   onOpenHistory,
+  onNewChat,
 }: ChatHeaderProps): JSX.Element => {
   const insets = useSafeAreaInsets();
 
@@ -56,6 +61,16 @@ const ChatHeader = ({
         onPress={onOpenHistory}
         accessibilityLabel="Open chat history"
       />
+      {onNewChat ? (
+        <TouchableOpacity
+          onPress={onNewChat}
+          style={styles.action}
+          accessibilityLabel="New chat"
+          accessibilityRole="button"
+        >
+          <BrandIcon name="edit" size={22} color={theme.accent} />
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 };
@@ -66,7 +81,14 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: CHAT_SCREEN_HORIZONTAL_PADDING,
     paddingBottom: CHAT_HEADER_BOTTOM_PADDING,
+  },
+  action: {
+    width: CHAT_MENU_BUTTON_SIZE,
+    height: CHAT_MENU_BUTTON_SIZE,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

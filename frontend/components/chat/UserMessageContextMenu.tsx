@@ -13,8 +13,9 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import BrandIcon from "@/components/brand/BrandIcon";
+import { textStyle } from "@/constants/brand";
 import { ChatThemePalette } from "@/constants/ChatTheme";
-import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
   Dimensions,
@@ -99,8 +100,8 @@ const UserMessageContextMenu = ({
               top: menuTop,
               left: menuLeft,
               width: menuWidth,
-              backgroundColor: theme.surface,
-              borderColor: theme.border,
+              backgroundColor: theme.card,
+              borderColor: theme.inputBorder,
             },
           ]}
         >
@@ -111,8 +112,8 @@ const UserMessageContextMenu = ({
               accessibilityLabel="Edit message"
               accessibilityRole="button"
             >
-              <Ionicons name="pencil-outline" size={18} color={theme.assistantText} />
-              <Text style={[styles.actionText, { color: theme.assistantText }]}>
+              <BrandIcon name="edit" size={18} color={theme.accent} />
+              <Text style={[styles.actionText, { color: theme.accent }]}>
                 Edit
               </Text>
             </TouchableOpacity>
@@ -127,8 +128,8 @@ const UserMessageContextMenu = ({
               accessibilityLabel="Copy message"
               accessibilityRole="button"
             >
-              <Ionicons name="copy-outline" size={18} color={theme.assistantText} />
-              <Text style={[styles.actionText, { color: theme.assistantText }]}>
+              <BrandIcon name="copy" size={18} color={theme.accent} />
+              <Text style={[styles.actionText, { color: theme.accent }]}>
                 Copy
               </Text>
             </TouchableOpacity>
@@ -157,10 +158,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 8,
   },
   action: {
     flex: 1,
@@ -171,8 +172,7 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   actionText: {
-    fontSize: 14,
-    fontWeight: "500",
+    ...textStyle({ size: 14, weight: 500 }),
   },
   divider: {
     width: 1,

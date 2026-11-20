@@ -13,7 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
+import { brand, themes } from "@/constants/brand";
 
 export interface ChatThemePalette {
   background: string;
@@ -33,51 +33,54 @@ export interface ChatThemePalette {
   shadow: string;
   newChatButton: string;
   gradientBottom: string;
+  /** Raised surface (cards, menus); `surface` is the chip/pill tone. */
+  card: string;
+  /** Tertiary text: placeholders, timestamps, the "Recent" label. */
+  subtle: string;
+  /** Drawer and modal sheet background. */
+  sheet: string;
+  /** Backdrop behind the drawer and modals. */
+  backdrop: string;
+  /** Signal fill for the bot avatar and the active send button. */
+  signal: string;
+  /** Ink: the mark and icons drawn on a Signal fill. */
+  onSignal: string;
+  /** Cobalt brand highlight (the greeting name). Never interactive. */
+  highlight: string;
 }
 
 /**
- * Resolves chat UI colors for light or dark mode.
+ * Resolves chat UI colors for light or dark mode from the Choreo Labs tokens.
  *
  * @param {boolean} isDark - Whether dark mode is active.
  * @returns {ChatThemePalette} Theme palette for chat screens.
  */
-export const getChatTheme = (isDark: boolean): ChatThemePalette =>
-  isDark
-    ? {
-        background: "#131314",
-        surface: "#1e1f20",
-        inputSurface: "#282a2d",
-        inputBorder: "#3c4043",
-        userBubble: "#3c4043",
-        userText: "#e3e3e3",
-        assistantText: "#e3e3e3",
-        muted: "#9aa0a6",
-        border: "#3c4043",
-        chipBg: "#282a2d",
-        chipText: "#c4c7c5",
-        accent: Colors.companyOrange,
-        accentMuted: Colors.companyOrange,
-        drawerActive: "#282a2d",
-        newChatButton: "#282a2d",
-        shadow: "rgba(0,0,0,0.4)",
-        gradientBottom: "rgba(255,115,0,0.08)",
-      }
-    : {
-        background: "#ffffff",
-        surface: "#f5f5f6",
-        inputSurface: "#ffffff",
-        inputBorder: "#e0e3e7",
-        userBubble: "#f0f4f9",
-        userText: "#1f1f1f",
-        assistantText: "#1f1f1f",
-        muted: "#5f6368",
-        border: "#e8eaed",
-        chipBg: "#f5f5f6",
-        chipText: "#444746",
-        accent: Colors.companyOrange,
-        accentMuted: Colors.companyOrange,
-        drawerActive: Colors.companyOrange15,
-        newChatButton: "#f5f5f6",
-        shadow: "rgba(60,64,67,0.12)",
-        gradientBottom: "rgba(255,115,0,0.12)",
-      };
+export const getChatTheme = (isDark: boolean): ChatThemePalette => {
+  const c = themes[isDark ? "dark" : "light"];
+  return {
+    background: c.bg,
+    surface: c.card2,
+    inputSurface: c.field,
+    inputBorder: c.line2,
+    userBubble: c.userBubble,
+    userText: "#FFFFFF",
+    assistantText: c.text,
+    muted: c.text2,
+    border: c.line,
+    chipBg: c.card2,
+    chipText: c.text,
+    accent: c.accent,
+    accentMuted: c.text2,
+    drawerActive: c.card2,
+    shadow: c.backdrop,
+    newChatButton: c.primaryFill,
+    gradientBottom: "transparent",
+    card: c.card,
+    subtle: c.text3,
+    sheet: c.sheet,
+    backdrop: c.backdrop,
+    signal: brand.signal,
+    onSignal: brand.ink,
+    highlight: c.cobalt,
+  };
+};

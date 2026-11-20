@@ -184,7 +184,7 @@ export const WSO2_EMAIL_DOMAIN = "@wso2.com";
 
 export const CHAT_BRAND_NAME = "Super App AI";
 
-export const CHAT_INPUT_PLACEHOLDER = "Type a message…";
+export const CHAT_INPUT_PLACEHOLDER = "Type a message...";
 
 export const CHAT_SEARCH_PLACEHOLDER = "Search chats";
 
@@ -207,10 +207,6 @@ export const CHAT_RENAME_PLACEHOLDER = "Chat name";
 export const CHAT_ERROR_STOPPED = "Stopped";
 
 export const CHAT_ERROR_GENERIC = "Something went wrong";
-
-export const CHAT_DRAWER_WIDTH_RATIO = 0.88;
-
-export const CHAT_DRAWER_ANIMATION_MS = 260;
 
 export const CHAT_DEFAULT_SESSION_TITLE = "New Chat";
 
