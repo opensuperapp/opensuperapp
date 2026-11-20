@@ -84,6 +84,7 @@ const ChatSessionDrawer = ({
   const {
     sessions,
     activeSessionId,
+    error,
     selectSession,
     createNewSession,
     removeSession,
@@ -94,6 +95,10 @@ const ChatSessionDrawer = ({
   const [mounted, setMounted] = useState(visible);
   const [searchQuery, setSearchQuery] = useState("");
   const [renameTarget, setRenameTarget] = useState<ChatSession | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  // The ref blocks a second tap that lands before the disabled button re-renders.
+  const creatingRef = useRef(false);
+  const [createFailed, setCreateFailed] = useState(false);
   const slide = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -116,6 +121,7 @@ const ChatSessionDrawer = ({
         setMounted(false);
         setSearchQuery("");
         setRenameTarget(null);
+        setCreateFailed(false);
       }
     });
   }, [visible, mounted, slide]);
@@ -129,6 +135,28 @@ const ChatSessionDrawer = ({
       session.title.toLowerCase().includes(query),
     );
   }, [sessions, searchQuery]);
+
+  // Close only once the new session is active: until then the previous conversation is
+  // still the one a sent message would land in. On failure stay open and show why.
+  const startNewSession = async () => {
+    if (creatingRef.current) {
+      return;
+    }
+    creatingRef.current = true;
+    setIsCreating(true);
+    setCreateFailed(false);
+    try {
+      const session = await createNewSession();
+      if (session) {
+        onClose();
+      } else {
+        setCreateFailed(true);
+      }
+    } finally {
+      creatingRef.current = false;
+      setIsCreating(false);
+    }
+  };
 
   const showSessionOptions = (session: ChatSession) =>
     showChatActionMenu(
@@ -239,11 +267,17 @@ const ChatSessionDrawer = ({
           <PrimaryButton
             title={CHAT_NEW_SESSION_LABEL}
             style={styles.newChat}
-            onPress={() => {
-              createNewSession();
-              onClose();
-            }}
+            loading={isCreating}
+            onPress={startNewSession}
           />
+          {createFailed && error ? (
+            <Text
+              style={[styles.createError, { color: theme.muted }]}
+              accessibilityRole="alert"
+            >
+              {error}
+            </Text>
+          ) : null}
 
           <Text style={[styles.sectionLabel, { color: theme.subtle }]}>
             {CHAT_RECENT_SECTION_LABEL}
@@ -367,6 +401,12 @@ const styles = StyleSheet.create({
   newChat: {
     height: 48,
     marginBottom: 16,
+  },
+  createError: {
+    ...textStyle(type.metaLabel),
+    marginTop: -8,
+    marginBottom: 16,
+    paddingHorizontal: 4,
   },
   sectionLabel: {
     ...textStyle(type.metaLabel),

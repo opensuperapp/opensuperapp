@@ -21,11 +21,14 @@ import ChatScreen from "@/app/(tabs)/chat";
 import React from "react";
 import { act, create, ReactTestRenderer } from "react-test-renderer";
 
-type HeaderLeft = () => React.ReactElement<{ onPress: () => void }>;
-let capturedHeaderLeft: HeaderLeft | undefined;
+type HeaderButton = () => React.ReactElement<{ onPress: () => void }>;
+let capturedHeaderLeft: HeaderButton | undefined;
+let capturedHeaderRight: HeaderButton | undefined;
 const mockSetOptions = jest.fn(
-  (options: { headerLeft?: HeaderLeft }) =>
-    (capturedHeaderLeft = options.headerLeft),
+  (options: { headerLeft?: HeaderButton; headerRight?: HeaderButton }) => {
+    capturedHeaderLeft = options.headerLeft;
+    capturedHeaderRight = options.headerRight;
+  },
 );
 // useFocusEffect's callback runs on focus and its cleanup on blur. The screen
 // may register more than one, so the suite keeps the latest of each by call
@@ -61,16 +64,23 @@ jest.mock("@/hooks/useTrackActiveScreen", () => ({
 jest.mock("@/hooks/useBrandTheme", () => ({
   useBrandTheme: () => ({ isDark: false }),
 }));
+const mockCreateNewSession = jest.fn();
+const mockSessions = {
+  sessions: [] as { id: string; title: string; isPinned: boolean }[],
+  activeSessionId: "session-1",
+  isLoading: false,
+  error: null as string | null,
+  createNewSession: (...args: unknown[]) => mockCreateNewSession(...args),
+  selectSession: jest.fn(),
+  removeSession: jest.fn(),
+  togglePinSession: jest.fn(),
+  renameSession: jest.fn(),
+};
 jest.mock("@/components/chat/ChatSessionsContext", () => ({
-  useChatSessionsContext: () => ({
-    activeSessionId: "session-1",
-    isLoading: false,
-    error: null,
-    createNewSession: jest.fn(),
-  }),
+  useChatSessionsContext: () => mockSessions,
 }));
 const mockChat = {
-  messages: [],
+  messages: [] as { id: string }[],
   isGenerating: false,
   error: null,
   sendMessage: jest.fn(),
@@ -88,6 +98,9 @@ jest.mock("@/components/chat/ChatEmptyState", () => "ChatEmptyState");
 jest.mock("@/components/chat/ChatMessageRow", () => "ChatMessageRow");
 jest.mock("@/components/brand/BrandIcon", () => "BrandIcon");
 jest.mock("@/components/brand/WheelLoader", () => "WheelLoader");
+jest.mock("@/components/brand/PrimaryButton", () => "PrimaryButton");
+jest.mock("@/components/TextPromptDialog", () => "TextPromptDialog");
+jest.mock("@expo/vector-icons/MaterialIcons", () => "MaterialIcons");
 
 jest.mock("expo-clipboard", () => ({ setStringAsync: jest.fn() }));
 jest.mock("react-native-keyboard-controller", () => ({
@@ -133,7 +146,10 @@ afterEach(() => {
   act(() => root?.unmount());
   root = undefined;
   capturedHeaderLeft = undefined;
+  capturedHeaderRight = undefined;
   mockFocusEffects = [];
+  mockChat.messages = [];
+  mockSessions.error = null;
   mockLeave = undefined;
   jest.clearAllMocks();
 });
@@ -171,5 +187,116 @@ describe("Chat history drawer", () => {
     });
     expect(isDrawerVisible(renderer)).toBe(false);
     expect(mockNavigate).toHaveBeenCalledTimes(1);
+  });
+});
+
+// A promise the test settles by hand, to hold createNewSession in flight.
+const deferred = <T,>() => {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((r) => (resolve = r));
+  return { promise, resolve };
+};
+
+describe("Chat history drawer's new chat button", () => {
+  const { default: ChatSessionDrawer } = jest.requireActual(
+    "@/components/chat/ChatSessionDrawer",
+  );
+  const { getChatTheme } = jest.requireActual("@/constants/ChatTheme");
+  const onClose = jest.fn();
+
+  const renderDrawer = () => {
+    act(() => {
+      root = create(
+        <ChatSessionDrawer
+          visible
+          theme={getChatTheme(false)}
+          onClose={onClose}
+        />,
+      );
+    });
+    return root!;
+  };
+
+  const newChatButton = (renderer: ReactTestRenderer) =>
+    renderer.root.find((node) => (node.type as unknown) === "PrimaryButton");
+
+  const tapNewChat = (renderer: ReactTestRenderer) => {
+    act(() => {
+      newChatButton(renderer).props.onPress();
+    });
+  };
+
+  it("stays open until the new session is active, then closes", async () => {
+    const pending = deferred<{ id: string } | null>();
+    mockCreateNewSession.mockReturnValueOnce(pending.promise);
+    const renderer = renderDrawer();
+
+    tapNewChat(renderer);
+    expect(mockCreateNewSession).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(newChatButton(renderer).props.loading).toBe(true);
+
+    await act(async () => pending.resolve({ id: "session-2" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(newChatButton(renderer).props.loading).toBe(false);
+  });
+
+  it("stays open and shows the stored error when creation fails", async () => {
+    mockCreateNewSession.mockImplementationOnce(async () => {
+      mockSessions.error = "Failed to create chat";
+      return null;
+    });
+    const renderer = renderDrawer();
+
+    await act(async () => {
+      newChatButton(renderer).props.onPress();
+    });
+    expect(onClose).not.toHaveBeenCalled();
+    expect(newChatButton(renderer).props.loading).toBe(false);
+    expect(
+      renderer.root.findAll(
+        (node) =>
+          node.props.accessibilityRole === "alert" &&
+          node.props.children === "Failed to create chat",
+      ).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("ignores a second tap while the first session is still being created", async () => {
+    const pending = deferred<{ id: string } | null>();
+    mockCreateNewSession.mockReturnValueOnce(pending.promise);
+    const renderer = renderDrawer();
+
+    act(() => {
+      const { onPress } = newChatButton(renderer).props;
+      onPress();
+      onPress();
+    });
+    tapNewChat(renderer);
+    expect(mockCreateNewSession).toHaveBeenCalledTimes(1);
+
+    await act(async () => pending.resolve({ id: "session-2" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("Chat header's new chat button", () => {
+  it("ignores a second tap while the first session is still being created", async () => {
+    const pending = deferred<{ id: string } | null>();
+    mockCreateNewSession.mockReturnValueOnce(pending.promise);
+    mockChat.messages = [{ id: "message-1" }];
+    renderScreen();
+
+    act(() => {
+      capturedHeaderRight!().props.onPress();
+      capturedHeaderRight!().props.onPress();
+    });
+    expect(mockCreateNewSession).toHaveBeenCalledTimes(1);
+
+    await act(async () => pending.resolve({ id: "session-2" }));
+    act(() => {
+      capturedHeaderRight!().props.onPress();
+    });
+    expect(mockCreateNewSession).toHaveBeenCalledTimes(2);
   });
 });

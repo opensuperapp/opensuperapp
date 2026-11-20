@@ -279,6 +279,21 @@ export default function ChatScreen(): JSX.Element {
         : COMPOSER_GAP;
   const hasMessages = messages.length > 0;
 
+  // One new chat per tap: a second tap while the first is still being created would
+  // leave an extra empty session behind. A failure surfaces through the snackbar.
+  const creatingSessionRef = useRef(false);
+  const startNewSession = useCallback(async () => {
+    if (creatingSessionRef.current) {
+      return;
+    }
+    creatingSessionRef.current = true;
+    try {
+      await createNewSession();
+    } finally {
+      creatingSessionRef.current = false;
+    }
+  }, [createNewSession]);
+
   // Native bar buttons: history on the left, "new chat" once there is something to leave.
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -292,7 +307,7 @@ export default function ChatScreen(): JSX.Element {
       headerRight: hasMessages
         ? () => (
             <TouchableOpacity
-              onPress={createNewSession}
+              onPress={startNewSession}
               style={styles.headerAction}
               accessibilityLabel="New chat"
               accessibilityRole="button"
@@ -302,7 +317,7 @@ export default function ChatScreen(): JSX.Element {
           )
         : undefined,
     });
-  }, [navigation, theme, hasMessages, createNewSession]);
+  }, [navigation, theme, hasMessages, startNewSession]);
 
   const renderMessage = ({
     item,
