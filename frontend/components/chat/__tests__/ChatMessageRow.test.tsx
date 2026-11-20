@@ -87,6 +87,13 @@ describe("ChatMessageRow waiting state", () => {
     });
     expect(thinkingText(tree)).toHaveLength(0);
   });
+
+  it("leaves the spoken cue to the avatar alone", () => {
+    const tree = render(assistant());
+    const [thinking] = thinkingText(tree);
+    expect(thinking.props.accessibilityElementsHidden).toBe(true);
+    expect(thinking.props.importantForAccessibility).toBe("no");
+  });
 });
 
 describe("SuperAppAgentIcon", () => {
@@ -119,5 +126,13 @@ describe("SuperAppAgentIcon", () => {
       (n) => n.props.entering !== undefined && n.props.exiting !== undefined
     )[0];
     expect(mark).toBeDefined();
+  });
+
+  it("is focusable while waiting, so the typing cue is announced", () => {
+    const waiting = renderIcon(true).root.find(
+      (n) => n.props.accessibilityLabel === "Assistant is typing"
+    );
+    expect(waiting.props.accessible).toBe(true);
+    expect(waiting.props.accessibilityRole).toBe("progressbar");
   });
 });

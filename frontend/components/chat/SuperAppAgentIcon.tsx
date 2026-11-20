@@ -60,6 +60,9 @@ const SuperAppAgentIcon = ({
         { width: size, height: size, borderRadius: size / 2 },
         style,
       ]}
+      // While waiting this is the row's only spoken cue (the visible "Thinking…"
+      // is hidden from screen readers), so VoiceOver must be able to focus it.
+      accessible={animated || undefined}
       accessibilityLabel={
         animated ? "Assistant is typing" : "Choreo Labs AI assistant"
       }
