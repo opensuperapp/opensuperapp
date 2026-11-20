@@ -122,8 +122,6 @@ export const gradients = {
   tileDark: ["#1A2A66", "#0B1633", "#070D22"],
   /** In-app tile, light: linear top→bottom. */
   tileLight: ["#FFFFFF", "#EEF1F7"],
-  /** Business card front: radial. */
-  businessCardFront: ["#3D6BFF", "#1F4FFF", "#1640D9"],
 } as const;
 
 /** Tile surface details (Halo style). */
