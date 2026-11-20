@@ -15,7 +15,11 @@
 // under the License.
 import { isIos } from "@/constants/Constants";
 import { ChatSessionAction } from "@/constants/enums/Chat";
-import { ActionSheetIOS, Alert } from "react-native";
+import { ActionSheetIOS, Alert, type AlertButton } from "react-native";
+
+// Android's AlertDialog shows at most a neutral, a negative and a positive button.
+const ANDROID_ALERT_MAX_BUTTONS = 3;
+const MORE_ACTIONS_LABEL = "More…";
 
 /** One entry of a native action menu. */
 export interface ChatMenuAction {
@@ -27,8 +31,14 @@ export interface ChatMenuAction {
 /**
  * Native action menu: an action sheet on iOS, an alert with buttons on Android.
  *
+ * Android's alert has three button slots (neutral, negative, positive) and drops any
+ * extra button. A destructive action takes the neutral slot, apart from the others and
+ * never the primary one. Cancel takes the negative slot when there is room; with three
+ * actions it is left out and the dialog is dismissed with back or a tap outside. Past
+ * three, the last slot opens the rest as a second menu.
+ *
  * @param {string | undefined} title - Menu title (the item it acts on).
- * @param {ChatMenuAction[]} actions - Actions in display order; a Cancel is appended.
+ * @param {ChatMenuAction[]} actions - Actions in display order; a Cancel is added.
  * @param {string} [tintColor] - Brand tint for the iOS sheet's buttons.
  */
 export const showChatActionMenu = (
@@ -60,17 +70,42 @@ export const showChatActionMenu = (
     return;
   }
 
-  Alert.alert(
-    title ?? "",
-    undefined,
-    [
-      ...actions.map((action) => ({
-        text: action.label,
-        style: action.destructive ? ("destructive" as const) : undefined,
-        onPress: action.onPress,
-      })),
-      { text: ChatSessionAction.Cancel, style: "cancel" as const },
-    ],
-    { cancelable: true }
-  );
+  const ordered = [
+    ...actions.filter((action) => action.destructive),
+    ...actions.filter((action) => !action.destructive),
+  ];
+  const toButton = (action: ChatMenuAction): AlertButton => ({
+    text: action.label,
+    style: action.destructive ? "destructive" : undefined,
+    onPress: action.onPress,
+  });
+  const cancel: AlertButton = {
+    text: ChatSessionAction.Cancel,
+    style: "cancel",
+  };
+
+  // RN fills the slots from the end: the last button is positive, the one before it
+  // negative, and the first of three neutral.
+  let buttons: AlertButton[];
+  if (ordered.length <= 2) {
+    const last = ordered[ordered.length - 1];
+    buttons = [...ordered.slice(0, -1).map(toButton), cancel, toButton(last)];
+  } else if (ordered.length === ANDROID_ALERT_MAX_BUTTONS) {
+    buttons = ordered.map(toButton);
+  } else {
+    buttons = [
+      ...ordered.slice(0, ANDROID_ALERT_MAX_BUTTONS - 1).map(toButton),
+      {
+        text: MORE_ACTIONS_LABEL,
+        onPress: () =>
+          showChatActionMenu(
+            title,
+            ordered.slice(ANDROID_ALERT_MAX_BUTTONS - 1),
+            tintColor
+          ),
+      },
+    ];
+  }
+
+  Alert.alert(title ?? "", undefined, buttons, { cancelable: true });
 };
