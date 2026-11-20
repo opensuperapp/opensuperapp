@@ -150,6 +150,7 @@ afterEach(() => {
   mockFocusEffects = [];
   mockChat.messages = [];
   mockSessions.error = null;
+  mockSessions.sessions = [];
   mockLeave = undefined;
   jest.clearAllMocks();
 });
@@ -260,6 +261,43 @@ describe("Chat history drawer's new chat button", () => {
           node.props.children === "Failed to create chat",
       ).length,
     ).toBeGreaterThan(0);
+  });
+
+  it("ignores chat picks and closes while the new session is being created", async () => {
+    mockSessions.sessions = [
+      { id: "session-1", title: "Older chat", isPinned: false },
+    ];
+    const pending = deferred<{ id: string } | null>();
+    mockCreateNewSession.mockReturnValueOnce(pending.promise);
+    const renderer = renderDrawer();
+
+    tapNewChat(renderer);
+    const pressables = renderer.root.findAll(
+      (node) =>
+        typeof node.props.onPress === "function" &&
+        (node.props.accessibilityLabel === "Older chat" ||
+          node.props.accessibilityLabel === "Close chat history"),
+    );
+    expect(pressables.length).toBeGreaterThan(1);
+    act(() => {
+      pressables.forEach((node) => node.props.onPress());
+    });
+    expect(mockSessions.selectSession).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+
+    await act(async () => pending.resolve({ id: "session-2" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      renderer.root
+        .findAll(
+          (node) =>
+            typeof node.props.onPress === "function" &&
+            node.props.accessibilityLabel === "Older chat",
+        )[0]
+        .props.onPress();
+    });
+    expect(mockSessions.selectSession).toHaveBeenCalledWith("session-1");
   });
 
   it("ignores a second tap while the first session is still being created", async () => {

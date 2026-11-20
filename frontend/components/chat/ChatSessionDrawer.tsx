@@ -136,6 +136,14 @@ const ChatSessionDrawer = ({
     );
   }, [sessions, searchQuery]);
 
+  // While a new chat is being created the drawer holds still: a chat picked or a close
+  // in the meantime would be overridden when the new session activates and closes it.
+  const closeDrawer = () => {
+    if (!creatingRef.current) {
+      onClose();
+    }
+  };
+
   // Close only once the new session is active: until then the previous conversation is
   // still the one a sent message would land in. On failure stay open and show why.
   const startNewSession = async () => {
@@ -158,7 +166,10 @@ const ChatSessionDrawer = ({
     }
   };
 
-  const showSessionOptions = (session: ChatSession) =>
+  const showSessionOptions = (session: ChatSession) => {
+    if (creatingRef.current) {
+      return;
+    }
     showChatActionMenu(
       session.title,
       [
@@ -180,6 +191,7 @@ const ChatSessionDrawer = ({
       ],
       theme.accent,
     );
+  };
 
   if (!mounted) {
     return null;
@@ -197,7 +209,7 @@ const ChatSessionDrawer = ({
       animationType="none"
       statusBarTranslucent
       navigationBarTranslucent
-      onRequestClose={onClose}
+      onRequestClose={closeDrawer}
     >
       <View style={styles.root} pointerEvents={visible ? "auto" : "none"}>
         <Animated.View
@@ -208,7 +220,7 @@ const ChatSessionDrawer = ({
         >
           <Pressable
             style={styles.flex}
-            onPress={onClose}
+            onPress={closeDrawer}
             accessibilityLabel="Close chat history"
           />
         </Animated.View>
@@ -229,7 +241,7 @@ const ChatSessionDrawer = ({
           <View style={styles.header}>
             <ChatMenuButton
               theme={theme}
-              onPress={onClose}
+              onPress={closeDrawer}
               accessibilityLabel="Close chat history"
             />
 
@@ -309,6 +321,9 @@ const ChatSessionDrawer = ({
                     isActive && { backgroundColor: theme.drawerActive },
                   ]}
                   onPress={() => {
+                    if (creatingRef.current) {
+                      return;
+                    }
                     selectSession(item.id);
                     onClose();
                   }}
