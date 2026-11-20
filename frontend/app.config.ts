@@ -29,6 +29,7 @@ import withUpdatesChannel from "./plugins/withUpdatesChannel";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import {
+  assertDomainRewriteComplete,
   EmailDisplayRules,
   parseEmailAliases,
   parseEnabledFlag,
@@ -60,22 +61,61 @@ const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID ?? ""; // Comment this if EAS 
 const UPDATES_CHANNEL = process.env.EXPO_PUBLIC_UPDATES_CHANNEL ?? ""; // Comment this if EAS is not used
 
 // TEMPORARY display-only email rules; see utils/emailDisplayRules.ts. Same
-// variables as the wallet service. A bad alias file fails the build rather
-// than shipping an app that shows the wrong addresses.
+// variables as the wallet service. Misconfiguration fails the build (and any
+// `eas update`, which re-evaluates `extra`) rather than shipping an app that
+// shows the wrong addresses: a swap switched on without FROM/TO, or an alias
+// file that is set but unreadable or malformed. Errors never print addresses.
+//
+// The alias list holds people's addresses. EMAIL_ALIASES_FILE must point to a
+// git-ignored path (frontend/email-aliases*.json) or a file outside the repo;
+// copy email-aliases.example.json for the expected shape.
+const EMAIL_DOMAIN_REPLACE_ENABLED_RAW =
+  process.env.EMAIL_DOMAIN_REPLACE_ENABLED?.trim() ?? "";
 const EMAIL_ALIASES_FILE = process.env.EMAIL_ALIASES_FILE?.trim() ?? "";
+
+const readEmailAliasesFile = (path: string): string => {
+  try {
+    return readFileSync(resolve(path), "utf8");
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code ?? "unknown error";
+    throw new Error(
+      `EMAIL_ALIASES_FILE is set but could not be read (${code}). ` +
+        "Point it to an existing JSON file, or unset it for no aliases."
+    );
+  }
+};
+
 const EMAIL_DISPLAY: EmailDisplayRules = {
   domain: {
-    enabled: parseEnabledFlag(process.env.EMAIL_DOMAIN_REPLACE_ENABLED),
+    enabled: parseEnabledFlag(EMAIL_DOMAIN_REPLACE_ENABLED_RAW),
     from: process.env.EMAIL_DOMAIN_REPLACE_FROM ?? "",
     to: process.env.EMAIL_DOMAIN_REPLACE_TO ?? "",
   },
   aliases: EMAIL_ALIASES_FILE
     ? parseEmailAliases(
-        readFileSync(resolve(EMAIL_ALIASES_FILE), "utf8"),
+        readEmailAliasesFile(EMAIL_ALIASES_FILE),
         "EMAIL_ALIASES_FILE"
       )
     : {},
 };
+assertDomainRewriteComplete(EMAIL_DISPLAY.domain);
+
+// A fresh clone or CI job with nothing set must still build, so leaving the
+// toggle unset is not an error. For production it is worth a loud warning,
+// though: an update published without these variables reverts installed apps
+// to the IdP addresses while the wallet pass keeps the swapped ones. Setting
+// EMAIL_DOMAIN_REPLACE_ENABLED=false silences it.
+if (
+  (profile === PRODUCTION || UPDATES_CHANNEL === PRODUCTION) &&
+  EMAIL_DOMAIN_REPLACE_ENABLED_RAW === ""
+) {
+  console.warn(
+    "WARNING: production build/update with EMAIL_DOMAIN_REPLACE_ENABLED " +
+      "unset, so the display-email domain swap is OFF. If installed apps " +
+      "currently show swapped addresses, this reverts them. Set it to true " +
+      "(with FROM/TO) or explicitly to false."
+  );
+}
 
 /* =============== Firebase Configuration ===============
  *

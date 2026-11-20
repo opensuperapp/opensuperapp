@@ -15,6 +15,7 @@
 // under the License.
 import {
   applyEmailDisplayRules,
+  assertDomainRewriteComplete,
   EmailDisplayRules,
   NO_EMAIL_DISPLAY_RULES,
   parseEmailAliases,
@@ -129,6 +130,35 @@ describe("parseEnabledFlag", () => {
 
   it("rejects anything that is not a boolean", () => {
     expect(() => parseEnabledFlag("yes")).toThrow(/true or false/);
+  });
+});
+
+describe("assertDomainRewriteComplete", () => {
+  it("accepts a complete swap", () => {
+    expect(() => assertDomainRewriteComplete(swap)).not.toThrow();
+  });
+
+  it("ignores blank fields while the swap is off", () => {
+    expect(() =>
+      assertDomainRewriteComplete({ enabled: false, from: "", to: "" })
+    ).not.toThrow();
+  });
+
+  it.each([
+    [{ ...swap, from: "" }, /EMAIL_DOMAIN_REPLACE_FROM is empty/],
+    [{ ...swap, to: " @ " }, /EMAIL_DOMAIN_REPLACE_TO is empty/],
+    [
+      { ...swap, from: "", to: "" },
+      /EMAIL_DOMAIN_REPLACE_FROM and EMAIL_DOMAIN_REPLACE_TO are empty/,
+    ],
+  ])("rejects %p", (rewrite, message) => {
+    expect(() => assertDomainRewriteComplete(rewrite)).toThrow(message);
+  });
+
+  it("does not print the configured domain", () => {
+    expect(() =>
+      assertDomainRewriteComplete({ ...swap, to: "" })
+    ).not.toThrow(/example\.org/);
   });
 });
 

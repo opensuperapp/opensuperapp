@@ -103,6 +103,30 @@ export const parseEnabledFlag = (value: string | undefined): boolean => {
 };
 
 /**
+ * Fails when the swap is switched on but FROM or TO is blank. Left alone, the
+ * rewrite would quietly do nothing, and an EAS Update built that way would
+ * take the swapped addresses away from installed apps while the wallet pass
+ * kept them. Names the variables only, never their values.
+ * @param rewrite - The rewrite as read from the environment
+ */
+export const assertDomainRewriteComplete = (
+  rewrite: EmailDomainRewrite
+): void => {
+  if (!rewrite.enabled) return;
+  const missing = [
+    normalizeDomain(rewrite.from) === "" && "EMAIL_DOMAIN_REPLACE_FROM",
+    normalizeDomain(rewrite.to) === "" && "EMAIL_DOMAIN_REPLACE_TO",
+  ].filter(Boolean);
+  if (missing.length > 0) {
+    throw new Error(
+      `EMAIL_DOMAIN_REPLACE_ENABLED is true but ${missing.join(" and ")} ` +
+        `${missing.length > 1 ? "are" : "is"} empty. Set both, or set ` +
+        "EMAIL_DOMAIN_REPLACE_ENABLED=false to turn the swap off."
+    );
+  }
+};
+
+/**
  * Parses the alias file's contents. Errors name the entry by position, never
  * by address, because the addresses are personal data and build logs are not
  * private.
