@@ -15,6 +15,7 @@
 // under the License.
 import OfflineToast from "@/components/OfflineToast";
 import { largeTitleHeaderOptions } from "@/components/headers/navigationTheme";
+import { useAndroidTabBarClearance } from "@/hooks/useAndroidTabBarClearance";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { Stack } from "expo-router";
 import type { ReactNode } from "react";
@@ -40,6 +41,7 @@ function TabOfflineToast() {
  */
 export default function TabStack({ children }: { children?: ReactNode }) {
   const { colors } = useBrandTheme();
+  const androidTabBarClearance = useAndroidTabBarClearance();
   return (
     <>
       <Stack screenOptions={largeTitleHeaderOptions(colors)}>
@@ -50,10 +52,11 @@ export default function TabStack({ children }: { children?: ReactNode }) {
           <TabOfflineToast />
         </SafeAreaProvider>
       ) : (
-        // Android lays the tab's content out above the bar, so no inset is needed. A
-        // full-screen SafeAreaProvider here swallows scroll gestures on Android even
-        // with box-none, freezing every list in the tab.
-        <OfflineToast bottom={0} bottomInset={0} />
+        // Android also lays the tab's content out under the bar (see
+        // useAndroidTabBarClearance), but its inset is only the system nav bar, so the
+        // toast adds the bar's height itself. A full-screen SafeAreaProvider here swallows
+        // scroll gestures on Android even with box-none, freezing every list in the tab.
+        <OfflineToast bottom={0} bottomInset={androidTabBarClearance} />
       )}
     </>
   );

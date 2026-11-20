@@ -29,6 +29,7 @@ import { Directory, Paths } from "expo-file-system";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { MicroApp } from "@/context/slices/appSlice";
 import { selectIsSignedIn } from "@/context/slices/authSlice";
+import { useAndroidTabBarClearance } from "@/hooks/useAndroidTabBarClearance";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { getUserConfigurations } from "@/context/slices/userConfigSlice";
 import { AppDispatch, RootState } from "@/context/store";
@@ -83,6 +84,7 @@ export default function HomeScreen() {
   );
   const [syncing, setSyncing] = useState(false);
   const { colors } = useBrandTheme();
+  const androidTabBarClearance = useAndroidTabBarClearance();
   const styles = createStyles(colors);
   const version = Constants.expoConfig?.version;
   const { width: windowWidth } = useWindowDimensions();
@@ -366,7 +368,8 @@ export default function HomeScreen() {
           flexGrow: filteredApps.length === 0 ? 1 : 0,
           paddingHorizontal: spacing.screen,
           paddingTop: 6,
-          paddingBottom: spacing.screen,
+          // "automatic" is iOS-only; on Android the grid clears the tab bar itself.
+          paddingBottom: spacing.screen + androidTabBarClearance,
         }}
         showsVerticalScrollIndicator={false}
         onScrollBeginDrag={Keyboard.dismiss}
