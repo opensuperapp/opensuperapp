@@ -14,7 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 import BrandIcon from "@/components/brand/BrandIcon";
-import WheelLoader from "@/components/brand/WheelLoader";
 import ContentEmptyView from "@/components/ContentEmptyView";
 import AuthorAvatar from "@/components/feed/AuthorAvatar";
 import { CardMeta, cardText, PressableCard } from "@/components/feed/Card";
@@ -34,6 +33,7 @@ import { capitalizeName } from "@/utils/capitalizeName";
 import { Stack } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
   FlatList,
   Linking,
@@ -64,20 +64,32 @@ const Library = () => {
   // Bumped by every first-page load (search or refresh). A response from an
   // older generation is dropped, so a pending page can't move the new cursor.
   const requestGeneration = useRef(0);
+  // The query whose first page is on screen. Refresh and paging reuse it, so a
+  // short edit the search ignores doesn't swap in unfiltered articles.
+  const appliedQuery = useRef("");
+  // Held by the next-page request in flight. onEndReached can fire again before
+  // it settles; a second request would fetch and append the same page.
+  const pageRequest = useRef<object | null>(null);
 
   const fetchArticles = async (
     isInitial: boolean = false,
     debouncedQuery: string = ""
   ) => {
     if (!hasMore && !isInitial) return;
+    if (!isInitial && pageRequest.current) return;
 
     const generation = isInitial
       ? ++requestGeneration.current
       : requestGeneration.current;
+    const pageToken = isInitial ? null : {};
 
     if (isInitial) {
+      // The pending page belongs to the old generation and will be dropped.
+      pageRequest.current = null;
+      setFetchingMore(false);
       setLoading(true);
     } else {
+      pageRequest.current = pageToken;
       setFetchingMore(true);
     }
 
@@ -87,6 +99,7 @@ const Library = () => {
 
       const newArticles: LibraryArticle[] = data;
       if (isInitial) {
+        appliedQuery.current = debouncedQuery;
         setArticles(newArticles);
       } else {
         setArticles((prev) => [...prev, ...newArticles]);
@@ -104,7 +117,10 @@ const Library = () => {
       console.error(err);
     } finally {
       if (!isInitial) {
-        setFetchingMore(false);
+        if (pageRequest.current === pageToken) {
+          pageRequest.current = null;
+          setFetchingMore(false);
+        }
       } else if (generation === requestGeneration.current) {
         setLoading(false);
       }
@@ -131,8 +147,14 @@ const Library = () => {
   /** Pull to refresh: reload the first page for the query currently applied. */
   const handleRefresh = async () => {
     const trimmedQuery = debouncedQuery.trim();
+    const query =
+      trimmedQuery.length === 0
+        ? ""
+        : trimmedQuery.length >= 3
+          ? trimmedQuery
+          : appliedQuery.current;
     setRefreshing(true);
-    await fetchArticles(true, trimmedQuery.length >= 3 ? trimmedQuery : "");
+    await fetchArticles(true, query);
     setRefreshing(false);
   };
 
@@ -242,7 +264,7 @@ const Library = () => {
         keyExtractor={(_, index) => index.toString()}
         renderItem={({ item, index }) => renderArticle({ item, index })}
         onEndReached={() => {
-          if (!loading) fetchArticles(false);
+          if (!loading) fetchArticles(false, appliedQuery.current);
         }}
         onEndReachedThreshold={0.5}
         refreshControl={
@@ -257,7 +279,7 @@ const Library = () => {
         ListFooterComponent={
           fetchingMore ? (
             <View style={styles.footerLoader}>
-              <WheelLoader size={28} color={colors.text2} />
+              <ActivityIndicator size="small" color={colors.text2} />
             </View>
           ) : null
         }

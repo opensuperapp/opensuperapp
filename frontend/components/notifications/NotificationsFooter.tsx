@@ -13,10 +13,9 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import WheelLoader from "@/components/brand/WheelLoader";
 import { soraFamily, type ThemeColors } from "@/constants/brand";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
-import { StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 interface NotificationsFooterProps {
   isFetchingNextPage: boolean;
@@ -33,7 +32,7 @@ export function NotificationsFooter({
   return (
     <View style={styles.footerContainer}>
       {isFetchingNextPage ? (
-        <WheelLoader size={24} color={colors.text2} />
+        <ActivityIndicator size="small" color={colors.text2} />
       ) : hasMore ? null : (
         <Text style={styles.footerText}>You're all caught up</Text>
       )}

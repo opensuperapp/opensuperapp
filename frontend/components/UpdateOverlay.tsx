@@ -13,9 +13,8 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import WheelLoader from "@/components/brand/WheelLoader";
 import React, { useEffect, useRef } from "react";
-import { Animated, View } from "react-native";
+import { ActivityIndicator, Animated, View } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 
 interface UpdateOverlayProps {
@@ -79,9 +78,9 @@ const UpdateOverlay = ({
     } A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x} ${y} Z`;
   };
 
-  // No progress to show yet: the standard loader stands in for the pie.
+  // No progress to show yet: a spinner stands in for the pie.
   if (typeof progress !== "number") {
-    return <WheelLoader size={size} color={color} />;
+    return <ActivityIndicator size="small" color={color} />;
   }
 
   return (

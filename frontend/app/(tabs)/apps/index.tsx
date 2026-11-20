@@ -18,7 +18,7 @@ import EmptyState from "@/components/apps/EmptyState";
 import { useHeaderSearch } from "@/components/apps/useHeaderSearch";
 import SignInMessage from "@/components/SignInMessage";
 import SyncingModal from "@/components/SyncingModal";
-import { spacing, type ThemeColors } from "@/constants/brand";
+import { size, spacing, type ThemeColors } from "@/constants/brand";
 import {
   APP_LIST_CONFIG_KEY,
   APP_UPDATE_CHECK_TIMESTAMP_KEY,
@@ -55,6 +55,9 @@ import {
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 
+// How far an edge label may reach into the screen padding: it stays this far from the edge.
+const LABEL_OVERHANG = 8;
+
 export default function HomeScreen() {
   const dispatch = useDispatch<AppDispatch>();
   const apps = useSelector((state: RootState) => state.apps.apps);
@@ -83,9 +86,16 @@ export default function HomeScreen() {
   const styles = createStyles(colors);
   const version = Constants.expoConfig?.version;
   const { width: windowWidth } = useWindowDimensions();
-  const { columns, columnGap } = spacing.appGrid;
-  const cellWidth =
-    (windowWidth - spacing.screen * 2 - columnGap * (columns - 1)) / columns;
+  const { columns, columnGapRatio } = spacing.appGrid;
+  // The slots fill the row edge to edge with a gap that is a fixed share of a slot, so
+  // both scale with the screen; the tile inside a slot stops growing at the design size.
+  // A cell is its slot plus LABEL_OVERHANG a side, for the label, so an edge label
+  // overhangs the slot but stops LABEL_OVERHANG short of the screen edge.
+  const rowWidth = windowWidth - spacing.screen * 2;
+  const slot = rowWidth / (columns + columnGapRatio * (columns - 1));
+  const tile = Math.min(slot, size.tile.grid);
+  const cellWidth = slot + LABEL_OVERHANG * 2;
+  const cellGap = Math.max(slot * columnGapRatio - LABEL_OVERHANG * 2, 0);
   const [currentAction, setCurrentAction] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ done: number; total: number }>({
     done: 0,
@@ -326,16 +336,21 @@ export default function HomeScreen() {
         data={filteredApps}
         keyExtractor={(item) => item.appId}
         numColumns={columns}
-        columnWrapperStyle={styles.gridRow}
+        columnWrapperStyle={[
+          styles.gridRow,
+          { marginHorizontal: -LABEL_OVERHANG, gap: cellGap },
+        ]}
         renderItem={({ item }) => (
           <AppGridItem
             width={cellWidth}
+            tile={tile}
             name={item.name}
             webViewUri={item.webViewUri ?? ""}
             clientId={item.clientId ?? ""}
             exchangedToken={item.exchangedToken ?? ""}
             exchangedIdToken={item.exchangedIdToken ?? ""}
             appId={item.appId}
+            iconUrl={item.iconUrl}
             displayMode={item.displayMode}
             version={item.versions?.[0]?.version}
             isUpdating={updatingApps.includes(item.appId)}
@@ -345,7 +360,10 @@ export default function HomeScreen() {
         contentInsetAdjustmentBehavior="automatic"
         style={{ backgroundColor: colors.bg }}
         contentContainerStyle={{
-          flexGrow: 1,
+          // Only the empty state needs the full height (to centre). On a grid, flexGrow plus
+          // the automatic bar insets makes the content taller than the screen, so it scrolls
+          // even when every app fits.
+          flexGrow: filteredApps.length === 0 ? 1 : 0,
           paddingHorizontal: spacing.screen,
           paddingTop: 6,
           paddingBottom: spacing.screen,
@@ -402,7 +420,6 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: "center",
     },
     gridRow: {
-      gap: spacing.appGrid.columnGap,
       marginBottom: spacing.appGrid.rowGap,
     },
   });

@@ -13,11 +13,10 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import WheelLoader from "@/components/brand/WheelLoader";
 import { soraFamily, type ThemeColors } from "@/constants/brand";
 import { Colors } from "@/constants/Colors";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
-import { Modal, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Modal, StyleSheet, Text, View } from "react-native";
 import { ProgressBar } from "react-native-paper";
 
 const SyncingModal = ({
@@ -54,7 +53,7 @@ const SyncingModal = ({
 
         <Text style={styles.waitText}>Please wait while we sync your apps</Text>
 
-        <WheelLoader size={40} color={colors.text2} />
+        <ActivityIndicator size="large" color={colors.text2} />
       </View>
     </Modal>
   );

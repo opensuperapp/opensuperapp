@@ -13,7 +13,6 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import WheelLoader from "@/components/brand/WheelLoader";
 import NotFound from "@/components/NotFound";
 import OfflineToast, {
   OFFLINE_TOAST_ANIMATION_MS,
@@ -80,6 +79,7 @@ import { StatusBar } from "expo-status-bar";
 import * as WebBrowser from "expo-web-browser";
 import { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Animated,
   Keyboard,
@@ -1102,8 +1102,8 @@ const MicroApp = () => {
               accessibilityState={{ busy: isRetryingToken }}
             >
               {isRetryingToken ? (
-                <WheelLoader
-                  size={20}
+                <ActivityIndicator
+                  size="small"
                   color={themes[colorScheme ?? "light"].primaryText}
                 />
               ) : (

@@ -58,11 +58,10 @@ jest.mock("react-redux", () =>
   require("react-redux/alternate-renderers")
 );
 
-import WheelLoader from "@/components/brand/WheelLoader";
 import { loadMicroAppDetails } from "@/services/appStoreService";
 import { SessionStatus } from "@/types/auth.types";
 import React from "react";
-import { FlatList } from "react-native";
+import { ActivityIndicator, FlatList } from "react-native";
 import { Provider } from "react-redux";
 import { createStore } from "redux";
 import { act, create, ReactTestRenderer } from "react-test-renderer";
@@ -127,8 +126,10 @@ const renderStore = async (store: ReturnType<typeof buildStore>) => {
   return renderer!;
 };
 
+// The Store's only ActivityIndicator is its full-screen loading state
+// (ListItem, which shows its own while downloading, is mocked out above).
 const isSpinning = (renderer: ReactTestRenderer) =>
-  renderer.root.findAllByType(WheelLoader).length > 0;
+  renderer.root.findAllByType(ActivityIndicator).length > 0;
 
 describe("Store loading", () => {
   beforeEach(() => {
@@ -145,6 +146,17 @@ describe("Store loading", () => {
     expect(mockLoadMicroAppDetails).toHaveBeenCalledTimes(1);
     expect(isSpinning(renderer)).toBe(false);
     expect(renderer.root.findAllByType(FlatList).length).toBe(1);
+  });
+
+  it("spins while the list loads with nothing cached to show", async () => {
+    mockLoadMicroAppDetails.mockReturnValue(new Promise(() => {}));
+
+    const renderer = await renderStore(
+      buildStore("authenticated", "some-token")
+    );
+
+    expect(isSpinning(renderer)).toBe(true);
+    expect(renderer.root.findAllByType(FlatList).length).toBe(0);
   });
 
   it("keeps the cached apps on screen while the list is being refreshed", async () => {

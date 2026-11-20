@@ -21,7 +21,7 @@ export const spacing = {
   /** header padding: top = statusBar + 6, then right / bottom / left */
   headerPadding: { topExtra: 6, right: 12, bottom: 8, left: 20 },
   headerMinHeightExtra: 56, // header min height = statusBar + 56
-  appGrid: { columns: 4, rowGap: 22, columnGap: 8 },
+  appGrid: { columns: 4, rowGap: 12, columnGapRatio: 0.25 },
 } as const;
 
 export const radius = {

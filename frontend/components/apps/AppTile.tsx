@@ -23,7 +23,8 @@ import {
   tile,
 } from "@/constants/brand";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
-import React, { useMemo } from "react";
+import { Image } from "expo-image";
+import React, { useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Svg, {
   Circle,
@@ -41,6 +42,8 @@ interface AppTileProps {
   /** App display name; picks the glyph, or the initial when none fits. */
   name: string;
   appId?: string;
+  /** The micro app's own icon. Drawn in the tile when it loads; Halo otherwise. */
+  iconUrl?: string;
   /** 64 grid, 56 store row, 104 detail. */
   size?: number;
 }
@@ -85,12 +88,18 @@ function haloDotPaths(tileSize: number) {
   return [...buckets].map(([o, arcs]) => ({ o, d: arcs.join("") }));
 }
 
-/** Halo app tile: the brand glyph on a navy (dark) or white (light) tile. */
+/**
+ * App tile: the micro app's own icon when it has one, else the Halo tile (brand glyph,
+ * or the name's initial, on a navy (dark) or white (light) tile).
+ */
 const AppTile = React.memo(function AppTile({
   name,
   appId,
+  iconUrl,
   size = sizes.tile.grid,
 }: AppTileProps) {
+  // Remembers which URL failed, so a new URL gets its own try.
+  const [failedIconUrl, setFailedIconUrl] = useState<string>();
   const { colors, scheme, isDark } = useBrandTheme();
   const surface = tile[scheme];
   const glyphId = resolveAppGlyph(name, appId);
@@ -104,6 +113,31 @@ const AppTile = React.memo(function AppTile({
   const stroke = size > 80 ? 1.4 : 1.6;
   const glossEnd = isDark ? "38%" : "40%";
   const bg = isDark ? gradients.tileDark : gradients.tileLight;
+
+  if (iconUrl && iconUrl !== failedIconUrl) {
+    return (
+      <View
+        style={[
+          styles.iconTile,
+          {
+            width: size,
+            height: size,
+            borderRadius: r,
+            borderColor: surface.border,
+            backgroundColor: colors.card,
+          },
+        ]}
+      >
+        <Image
+          source={iconUrl}
+          style={styles.icon}
+          contentFit="contain"
+          transition={200}
+          onError={() => setFailedIconUrl(iconUrl)}
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={{ width: size, height: size }}>
@@ -213,6 +247,13 @@ const AppTile = React.memo(function AppTile({
 });
 
 const styles = StyleSheet.create({
+  iconTile: {
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  icon: {
+    flex: 1,
+  },
   initialWrap: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",

@@ -13,11 +13,10 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import WheelLoader from "@/components/brand/WheelLoader";
 import { radius, soraFamily } from "@/constants/brand";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity } from "react-native";
 
 interface ActionButtonProps {
   label: string;
@@ -28,7 +27,10 @@ interface ActionButtonProps {
   fixedSize?: boolean;
 }
 
-/** Store pill: card2 fill, radius 999; shows the Wheel while downloading. */
+// iOS "tinted" button: the label colour at low opacity. Labels are #RRGGBB tokens.
+const TINT_ALPHA = "26"; // ~15%
+
+/** Store pill, tinted, radius 999; shows a spinner while downloading. */
 const ActionButton: React.FC<ActionButtonProps> = ({
   label,
   onPress,
@@ -38,22 +40,23 @@ const ActionButton: React.FC<ActionButtonProps> = ({
   fixedSize = false,
 }) => {
   const { colors } = useBrandTheme();
+  const tint = textColor ?? colors.cobalt;
 
   return (
     <TouchableOpacity
       style={[
         styles.button,
         fixedSize && styles.fixedSize,
-        { backgroundColor: backgroundColor ?? colors.card2 },
+        { backgroundColor: backgroundColor ?? `${tint}${TINT_ALPHA}` },
       ]}
       onPress={onPress}
       activeOpacity={0.6}
     >
       {downloading ? (
-        <WheelLoader size={20} color={colors.text2} />
+        <ActivityIndicator size="small" color={tint} />
       ) : (
         <Text
-          style={[styles.buttonText, { color: textColor ?? colors.cobalt }]}
+          style={[styles.buttonText, { color: tint }]}
           allowFontScaling={false}
         >
           {label}
@@ -79,7 +82,7 @@ const styles = StyleSheet.create({
     fontFamily: soraFamily[600],
     fontSize: 14,
   },
-  // A Get pill keeps its width while the Wheel replaces the label.
+  // A Get pill keeps its width while the spinner replaces the label.
   fixedSize: {
     minWidth: 84,
   },
