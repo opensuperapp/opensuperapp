@@ -146,6 +146,12 @@ export default function ChatScreen(): JSX.Element {
       setScreenBottomGap(Math.max(windowHeight - (y + h), 0))
     );
   }, [windowHeight]);
+  // onLayout alone misses a rotation whose layout lands before the new window height:
+  // the gap would stay measured against the old one. Measuring again once the height
+  // arrives covers that order; onLayout covers the other.
+  useEffect(() => {
+    measureScreen();
+  }, [measureScreen]);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarText, setSnackbarText] = useState("");
   const [isDrawerOpen, setDrawerOpen] = useState(false);
