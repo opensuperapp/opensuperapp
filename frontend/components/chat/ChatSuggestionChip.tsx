@@ -61,9 +61,10 @@ export default ChatSuggestionChip;
 
 const styles = StyleSheet.create({
   chip: {
-    height: 42,
+    minHeight: 42,
     justifyContent: "center",
     paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: radius.pill,
     borderWidth: 1,
   },
