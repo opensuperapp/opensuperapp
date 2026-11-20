@@ -64,6 +64,9 @@ const Library = () => {
   // Bumped by every first-page load (search or refresh). A response from an
   // older generation is dropped, so a pending page can't move the new cursor.
   const requestGeneration = useRef(0);
+  // The query whose first page is on screen. Refresh and paging reuse it, so a
+  // short edit the search ignores doesn't swap in unfiltered articles.
+  const appliedQuery = useRef("");
 
   const fetchArticles = async (
     isInitial: boolean = false,
@@ -87,6 +90,7 @@ const Library = () => {
 
       const newArticles: LibraryArticle[] = data;
       if (isInitial) {
+        appliedQuery.current = debouncedQuery;
         setArticles(newArticles);
       } else {
         setArticles((prev) => [...prev, ...newArticles]);
@@ -131,8 +135,14 @@ const Library = () => {
   /** Pull to refresh: reload the first page for the query currently applied. */
   const handleRefresh = async () => {
     const trimmedQuery = debouncedQuery.trim();
+    const query =
+      trimmedQuery.length === 0
+        ? ""
+        : trimmedQuery.length >= 3
+          ? trimmedQuery
+          : appliedQuery.current;
     setRefreshing(true);
-    await fetchArticles(true, trimmedQuery.length >= 3 ? trimmedQuery : "");
+    await fetchArticles(true, query);
     setRefreshing(false);
   };
 
@@ -242,7 +252,7 @@ const Library = () => {
         keyExtractor={(_, index) => index.toString()}
         renderItem={({ item, index }) => renderArticle({ item, index })}
         onEndReached={() => {
-          if (!loading) fetchArticles(false);
+          if (!loading) fetchArticles(false, appliedQuery.current);
         }}
         onEndReachedThreshold={0.5}
         refreshControl={
