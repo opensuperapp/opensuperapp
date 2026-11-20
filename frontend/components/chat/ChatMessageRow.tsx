@@ -15,13 +15,13 @@
 // under the License.
 import BrandIcon from "@/components/brand/BrandIcon";
 import AssistantMessageContent from "@/components/chat/AssistantMessageContent";
-import ChatTypingIndicator from "@/components/chat/ChatTypingIndicator";
 import { ChatMenuAction, showChatActionMenu } from "@/components/chat/chatActions";
 import SuperAppAgentIcon from "@/components/chat/SuperAppAgentIcon";
 import { radius, size, textStyle, type } from "@/constants/brand";
 import {
   CHAT_ERROR_GENERIC,
   CHAT_ERROR_STOPPED,
+  CHAT_THINKING,
 } from "@/constants/Constants";
 import { ChatThemePalette } from "@/constants/ChatTheme";
 import { ChatRole, MessageStatus } from "@/constants/enums/Chat";
@@ -29,6 +29,7 @@ import { ChatMessage } from "@/types/chat.types";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 
 export interface ChatMessageRowProps {
   message: ChatMessage;
@@ -110,10 +111,20 @@ const ChatMessageRow = ({
 
   return (
     <View style={styles.assistantRow}>
-      <SuperAppAgentIcon size={size.avatar.chatBot} />
+      {/* The avatar is the waiting indicator: it plays the Wave until text arrives. */}
+      <SuperAppAgentIcon size={size.avatar.chatBot} animated={isStreaming} />
       <View style={styles.assistantBody}>
         {isStreaming ? (
-          <ChatTypingIndicator theme={theme} />
+          <Animated.Text
+            entering={FadeIn}
+            exiting={FadeOut}
+            style={[styles.thinking, { color: theme.muted }]}
+            // The avatar already announces "Assistant is typing".
+            importantForAccessibility="no"
+            accessibilityElementsHidden
+          >
+            {CHAT_THINKING}
+          </Animated.Text>
         ) : (
           <AssistantMessageContent
             content={message.content}
@@ -195,6 +206,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 18,
     marginTop: 12,
+  },
+  // Level with the avatar's centre (30px disc, body padded 4).
+  thinking: {
+    ...textStyle({ size: 14, weight: 400 }),
+    lineHeight: 22,
   },
   errorHint: {
     ...textStyle({ size: 13, weight: 400 }),

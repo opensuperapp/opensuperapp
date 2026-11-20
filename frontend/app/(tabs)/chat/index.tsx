@@ -20,19 +20,19 @@ import ChatComposer from "@/components/chat/ChatComposer";
 import ChatEmptyState from "@/components/chat/ChatEmptyState";
 import ChatMenuButton from "@/components/chat/ChatMenuButton";
 import ChatMessageRow from "@/components/chat/ChatMessageRow";
+import ChatSessionDrawer from "@/components/chat/ChatSessionDrawer";
 import { useChatSessionsContext } from "@/components/chat/ChatSessionsContext";
 import { textStyle } from "@/constants/brand";
 import { getChatTheme } from "@/constants/ChatTheme";
 import { ChatRole, MessageStatus } from "@/constants/enums/Chat";
 import { CHAT_MENU_BUTTON_SIZE, isIos } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
-import { RootState } from "@/context/store";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { useChat } from "@/hooks/useChat";
 import { useLeaveWhenSessionEnds } from "@/hooks/useLeaveWhenSessionEnds";
 import { useTrackActiveScreen } from "@/hooks/useTrackActiveScreen";
 import { ChatMessage } from "@/types/chat.types";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -40,14 +40,77 @@ import {
   Animated,
   FlatList,
   Keyboard,
-  KeyboardAvoidingView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useSelector } from "react-redux";
+import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
+import Reanimated, { useAnimatedStyle } from "react-native-reanimated";
+import {
+  SafeAreaInsetsContext,
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+
+// Composer padding over the tab bar, and the gap it keeps above the keyboard.
+const COMPOSER_GAP = 8;
+const KEYBOARD_GAP = 12;
+
+/**
+ * Lifts the chat by the keyboard, frame by frame with the keyboard's own animation.
+ * The lift starts once the keyboard passes the tab bar, and ends KEYBOARD_GAP above
+ * it, so the composer's padding never has to jump. iOS only: Android resizes the
+ * window for the keyboard itself.
+ */
+function KeyboardLift({
+  enabled,
+  screenBottomGap,
+  children,
+}: {
+  enabled: boolean;
+  screenBottomGap: number;
+  children: React.ReactNode;
+}) {
+  if (!enabled) {
+    return <View style={styles.flex}>{children}</View>;
+  }
+  return (
+    <AnimatedKeyboardLift screenBottomGap={screenBottomGap}>
+      {children}
+    </AnimatedKeyboardLift>
+  );
+}
+
+// Separate so Android never reads the keyboard-controller hook: its provider is iOS
+// only (see AppProviders).
+function AnimatedKeyboardLift({
+  screenBottomGap,
+  children,
+}: {
+  screenBottomGap: number;
+  children: React.ReactNode;
+}) {
+  // keyboard-controller rather than Reanimated's useAnimatedKeyboard, which jumped
+  // straight to the end height on real devices instead of following the keyboard.
+  // Its height is negative while the keyboard is up.
+  const { height: keyboardHeight } = useReanimatedKeyboardAnimation();
+  const { bottom: tabBottom } = useSafeAreaInsets();
+  const lift = useAnimatedStyle(() => ({
+    paddingBottom: Math.max(
+      -keyboardHeight.value -
+        screenBottomGap -
+        tabBottom -
+        COMPOSER_GAP +
+        KEYBOARD_GAP,
+      0
+    ),
+  }));
+  return (
+    <Reanimated.View style={[styles.flex, lift]}>{children}</Reanimated.View>
+  );
+}
 
 /**
  * AI Agent chat screen with Super App branding and SQLite-backed sessions.
@@ -57,9 +120,7 @@ import { useSelector } from "react-redux";
 export default function ChatScreen(): JSX.Element {
   const { isDark } = useBrandTheme();
   const theme = getChatTheme(isDark);
-  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
-  const { userInfo } = useSelector((state: RootState) => state.userInfo);
   const {
     activeSessionId,
     isLoading: sessionsLoading,
@@ -79,8 +140,21 @@ export default function ChatScreen(): JSX.Element {
 
   const [inputText, setInputText] = useState("");
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  // How far the screen's bottom edge sits above the window's, which the keyboard
+  // has to rise past before it covers anything.
+  const screenRef = useRef<View>(null);
+  const [screenBottomGap, setScreenBottomGap] = useState(0);
+  const { height: windowHeight } = useWindowDimensions();
+  const measureScreen = useCallback(
+    () =>
+      screenRef.current?.measureInWindow((_x, y, _w, h) =>
+        setScreenBottomGap(Math.max(windowHeight - (y + h), 0))
+      ),
+    [windowHeight]
+  );
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarText, setSnackbarText] = useState("");
+  const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<{
     id: string;
     content: string;
@@ -91,9 +165,16 @@ export default function ChatScreen(): JSX.Element {
 
   useTrackActiveScreen(ScreenPaths.CHAT);
 
-  // The tab is hidden once signed out, and there is no Sign In fallback here.
-  useLeaveWhenSessionEnds(() => router.navigate(ScreenPaths.FEED));
+  // The drawer is a Modal, drawn over the whole window rather than inside this tab, so
+  // it has to close whenever the screen loses focus (a notification tap, a tab
+  // redirect) or it stays over whatever tab comes next.
+  useFocusEffect(useCallback(() => () => setDrawerOpen(false), []));
 
+  // The tab is hidden once signed out, and there is no Sign In fallback here.
+  useLeaveWhenSessionEnds(() => {
+    setDrawerOpen(false);
+    router.navigate(ScreenPaths.FEED);
+  });
 
   const showSnackbar = useCallback(
     (text: string) => {
@@ -184,14 +265,34 @@ export default function ChatScreen(): JSX.Element {
     [isGenerating, sendMessage]
   );
 
-  // Inside a native tab the bottom inset already clears the tab bar on iOS; on Android
-  // the content ends above the bar, so only a small gap is needed.
-  const bottomInset = isKeyboardVisible
-    ? isIos
-      ? 12
-      : 16
-    : (isIos ? insets.bottom : 0) + 8;
+  // `tabBottomInset` comes from the screen's own SafeAreaProvider (below), so on iOS it
+  // includes the native tab bar the screen extends under; the root provider's inset is
+  // only the home indicator. On Android the content ends above the bar, so only a small
+  // gap is needed.
+  // On iOS the gap to the keyboard is KeyboardLift's job, so the composer keeps its
+  // tab-bar inset throughout.
+  const composerBottomInset = (tabBottomInset: number) =>
+    isIos
+      ? tabBottomInset + COMPOSER_GAP
+      : isKeyboardVisible
+        ? 16
+        : COMPOSER_GAP;
   const hasMessages = messages.length > 0;
+
+  // One new chat per tap: a second tap while the first is still being created would
+  // leave an extra empty session behind. A failure surfaces through the snackbar.
+  const creatingSessionRef = useRef(false);
+  const startNewSession = useCallback(async () => {
+    if (creatingSessionRef.current) {
+      return;
+    }
+    creatingSessionRef.current = true;
+    try {
+      await createNewSession();
+    } finally {
+      creatingSessionRef.current = false;
+    }
+  }, [createNewSession]);
 
   // Native bar buttons: history on the left, "new chat" once there is something to leave.
   useLayoutEffect(() => {
@@ -199,14 +300,14 @@ export default function ChatScreen(): JSX.Element {
       headerLeft: () => (
         <ChatMenuButton
           theme={theme}
-          onPress={() => router.push("/chat/history")}
+          onPress={() => setDrawerOpen(true)}
           accessibilityLabel="Open chat history"
         />
       ),
       headerRight: hasMessages
         ? () => (
             <TouchableOpacity
-              onPress={createNewSession}
+              onPress={startNewSession}
               style={styles.headerAction}
               accessibilityLabel="New chat"
               accessibilityRole="button"
@@ -216,7 +317,7 @@ export default function ChatScreen(): JSX.Element {
           )
         : undefined,
     });
-  }, [navigation, theme, hasMessages, createNewSession]);
+  }, [navigation, theme, hasMessages, startNewSession]);
 
   const renderMessage = ({
     item,
@@ -267,71 +368,80 @@ export default function ChatScreen(): JSX.Element {
 
   return (
     <>
-      <View style={[styles.screen, { backgroundColor: theme.background }]}>
-        <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={isIos ? "padding" : undefined}
-          keyboardVerticalOffset={0}
+      {/* Not around EditMessageModal or the drawer: neither has the tab bar under it. */}
+      <SafeAreaProvider>
+        <View
+          ref={screenRef}
+          onLayout={measureScreen}
+          style={[styles.screen, { backgroundColor: theme.background }]}
         >
-          <FlatList
-            ref={flatListRef}
-            // Scrolls under the translucent bar; iOS insets it for the header.
-            contentInsetAdjustmentBehavior="automatic"
-            keyboardDismissMode="interactive"
-            data={messages}
-            renderItem={renderMessage}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={[
-              styles.list,
-              !hasMessages && styles.listEmpty,
-            ]}
-            onContentSizeChange={() =>
-              flatListRef.current?.scrollToEnd({ animated: true })
-            }
-            ListEmptyComponent={
-              <ChatEmptyState
-                theme={theme}
-                firstName={userInfo?.firstName}
-                onSuggestionPress={handleSuggestionPress}
-                suggestionsDisabled={isGenerating}
-              />
-            }
-            showsVerticalScrollIndicator={false}
-          />
-
-          <ChatComposer
-            theme={theme}
-            value={inputText}
-            onChangeText={setInputText}
-            onSend={handleSend}
-            onStop={stopGeneration}
-            isGenerating={isGenerating}
-            bottomInset={bottomInset}
-          />
-        </KeyboardAvoidingView>
-
-        {snackbarVisible && (
-          <Animated.View
-            style={[
-              styles.snackbar,
-              {
-                opacity: snackbarOpacity,
-                backgroundColor: theme.assistantText,
-              },
-            ]}
+          <KeyboardLift
+            enabled={isIos}
+            screenBottomGap={screenBottomGap}
           >
-            <Text
+            <FlatList
+              ref={flatListRef}
+              // Scrolls under the translucent bar; iOS insets it for the header.
+              contentInsetAdjustmentBehavior="automatic"
+              keyboardDismissMode="interactive"
+              data={messages}
+              renderItem={renderMessage}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={[
+                styles.list,
+                !hasMessages && styles.listEmpty,
+              ]}
+              onContentSizeChange={() =>
+                flatListRef.current?.scrollToEnd({ animated: true })
+              }
+              ListEmptyComponent={
+                <ChatEmptyState
+                  theme={theme}
+                  onSuggestionPress={handleSuggestionPress}
+                  suggestionsDisabled={isGenerating}
+                />
+              }
+              showsVerticalScrollIndicator={false}
+            />
+
+            <SafeAreaInsetsContext.Consumer>
+              {(tabInsets) => (
+                <ChatComposer
+                  theme={theme}
+                  value={inputText}
+                  onChangeText={setInputText}
+                  onSend={handleSend}
+                  onStop={stopGeneration}
+                  isGenerating={isGenerating}
+                  bottomInset={composerBottomInset(tabInsets?.bottom ?? 0)}
+                />
+              )}
+            </SafeAreaInsetsContext.Consumer>
+          </KeyboardLift>
+
+          {snackbarVisible && (
+            <Animated.View
               style={[
-                styles.snackbarText,
-                { color: theme.background },
+                styles.snackbar,
+                {
+                  opacity: snackbarOpacity,
+                  backgroundColor: theme.assistantText,
+                },
               ]}
             >
-              {snackbarText}
-            </Text>
-          </Animated.View>
-        )}
+              <Text
+                style={[
+                  styles.snackbarText,
+                  { color: theme.background },
+                ]}
+              >
+                {snackbarText}
+              </Text>
+            </Animated.View>
+          )}
 
-      </View>
+        </View>
+      </SafeAreaProvider>
 
       <EditMessageModal
         visible={editTarget !== null}
@@ -343,6 +453,11 @@ export default function ChatScreen(): JSX.Element {
           }
         }}
         onClose={() => setEditTarget(null)}
+      />
+      <ChatSessionDrawer
+        visible={isDrawerOpen}
+        theme={theme}
+        onClose={() => setDrawerOpen(false)}
       />
     </>
   );
