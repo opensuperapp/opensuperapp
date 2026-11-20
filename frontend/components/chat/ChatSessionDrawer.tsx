@@ -56,6 +56,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const DRAWER_EASING = Easing.bezier(...easing.standard);
 
+// The hook's shared `error` can be stale or unset when a create fails, so the drawer
+// says what went wrong itself.
+export const NEW_CHAT_FAILED_MESSAGE = "Couldn't start a new chat. Try again.";
+
 export interface ChatSessionDrawerProps {
   visible: boolean;
   theme: ChatThemePalette;
@@ -84,7 +88,6 @@ const ChatSessionDrawer = ({
   const {
     sessions,
     activeSessionId,
-    error,
     selectSession,
     createNewSession,
     removeSession,
@@ -98,7 +101,7 @@ const ChatSessionDrawer = ({
   const [isCreating, setIsCreating] = useState(false);
   // The ref blocks a second tap that lands before the disabled button re-renders.
   const creatingRef = useRef(false);
-  const [createFailed, setCreateFailed] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const slide = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -121,7 +124,7 @@ const ChatSessionDrawer = ({
         setMounted(false);
         setSearchQuery("");
         setRenameTarget(null);
-        setCreateFailed(false);
+        setCreateError(null);
       }
     });
   }, [visible, mounted, slide]);
@@ -152,13 +155,13 @@ const ChatSessionDrawer = ({
     }
     creatingRef.current = true;
     setIsCreating(true);
-    setCreateFailed(false);
+    setCreateError(null);
     try {
       const session = await createNewSession();
       if (session) {
         onClose();
       } else {
-        setCreateFailed(true);
+        setCreateError(NEW_CHAT_FAILED_MESSAGE);
       }
     } finally {
       creatingRef.current = false;
@@ -282,12 +285,12 @@ const ChatSessionDrawer = ({
             loading={isCreating}
             onPress={startNewSession}
           />
-          {createFailed && error ? (
+          {createError ? (
             <Text
               style={[styles.createError, { color: theme.muted }]}
               accessibilityRole="alert"
             >
-              {error}
+              {createError}
             </Text>
           ) : null}
 

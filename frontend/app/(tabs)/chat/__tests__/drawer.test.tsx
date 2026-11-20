@@ -199,9 +199,10 @@ const deferred = <T,>() => {
 };
 
 describe("Chat history drawer's new chat button", () => {
-  const { default: ChatSessionDrawer } = jest.requireActual(
-    "@/components/chat/ChatSessionDrawer",
-  );
+  const {
+    default: ChatSessionDrawer,
+    NEW_CHAT_FAILED_MESSAGE,
+  } = jest.requireActual("@/components/chat/ChatSessionDrawer");
   const { getChatTheme } = jest.requireActual("@/constants/ChatTheme");
   const onClose = jest.fn();
 
@@ -242,11 +243,15 @@ describe("Chat history drawer's new chat button", () => {
     expect(newChatButton(renderer).props.loading).toBe(false);
   });
 
-  it("stays open and shows the stored error when creation fails", async () => {
-    mockCreateNewSession.mockImplementationOnce(async () => {
-      mockSessions.error = "Failed to create chat";
-      return null;
-    });
+  const failureAlerts = (renderer: ReactTestRenderer) =>
+    renderer.root.findAll(
+      (node) =>
+        node.props.accessibilityRole === "alert" &&
+        typeof node.props.children === "string",
+    );
+
+  it("stays open and says why when creation fails", async () => {
+    mockCreateNewSession.mockResolvedValueOnce(null);
     const renderer = renderDrawer();
 
     await act(async () => {
@@ -254,13 +259,24 @@ describe("Chat history drawer's new chat button", () => {
     });
     expect(onClose).not.toHaveBeenCalled();
     expect(newChatButton(renderer).props.loading).toBe(false);
-    expect(
-      renderer.root.findAll(
-        (node) =>
-          node.props.accessibilityRole === "alert" &&
-          node.props.children === "Failed to create chat",
-      ).length,
-    ).toBeGreaterThan(0);
+    expect(failureAlerts(renderer)[0]?.props.children).toBe(
+      NEW_CHAT_FAILED_MESSAGE,
+    );
+  });
+
+  it("shows its own failure text, not a stale shared error", async () => {
+    // e.g. no signed-in user: createNewSession returns null without setting `error`,
+    // which still holds an earlier, unrelated failure.
+    mockSessions.error = "Failed to rename chat";
+    mockCreateNewSession.mockResolvedValueOnce(null);
+    const renderer = renderDrawer();
+
+    await act(async () => {
+      newChatButton(renderer).props.onPress();
+    });
+    const texts = failureAlerts(renderer).map((node) => node.props.children);
+    expect(texts).toContain(NEW_CHAT_FAILED_MESSAGE);
+    expect(texts).not.toContain("Failed to rename chat");
   });
 
   it("ignores chat picks and closes while the new session is being created", async () => {
