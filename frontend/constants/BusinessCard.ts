@@ -17,13 +17,12 @@ import { brand, radius } from "@/constants/brand";
 
 // No office address: the wallet service never defaults one either, so
 // hardcoding it here would show a row the installed pass does not have.
-export const CARD_ORGANIZATION = "WSO2 LLC";
-export const CARD_WEBSITE = "https://wso2.com";
+export const CARD_ORGANIZATION = "Choreo Labs LLC";
+export const CARD_WEBSITE = "https://choreolabs.com";
 
 // Brand Cobalt. Neither wallet allows a background image on this pass, so the
 // in-app preview is flat Cobalt too, to show what gets installed. Must match the wallet
-// service's pass.go, which still ships the old orange (#F14E23) until it is
-// rebranded too.
+// service's pass.go.
 export const PASS_BACKGROUND_COLOR = brand.cobalt;
 export const PASS_FOREGROUND_COLOR = "#FFFFFF";
 export const PASS_LABEL_COLOR = "#FFFFFF";

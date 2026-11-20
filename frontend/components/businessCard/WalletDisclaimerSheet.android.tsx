@@ -50,7 +50,7 @@ type Props = {
  * it informs, it does not gate, so the only control it needs is a way out.
  *
  * The disclosure carries more weight here than on iOS. An Apple pass is signed
- * by WSO2 and stays on the device; a Google pass is an object stored and
+ * by Choreo Labs and stays on the device; a Google pass is an object stored and
  * rendered on Google's own servers, which also fetch the directory photo from
  * us. Saving really does hand those fields to a third party, so the Google copy
  * says so and the Apple copy does not. See WalletDisclaimer.ts.
