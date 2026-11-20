@@ -185,10 +185,37 @@ describe("WalletPassView — artwork", () => {
 });
 
 describe("WalletPassView — card geometry", () => {
-  it("keeps the card in portrait 2:3, so it is taller than it is wide", () => {
+  const layout = (root: ReturnType<typeof create>, width: number) => {
+    const pass = root.root.findByProps({ collapsable: false });
+    act(() => {
+      pass.props.onLayout({
+        nativeEvent: { layout: { x: 0, y: 0, width, height: 0 } },
+      });
+    });
+    return flatten(root.root.findByProps({ collapsable: false }).props.style);
+  };
+
+  it("draws the card in portrait 3:4 before its width is known", () => {
     const { root } = render(baseData);
     const pass = root.root.findByProps({ collapsable: false });
-    expect(flatten(pass.props.style).aspectRatio).toBeCloseTo(2 / 3);
+    const style = flatten(pass.props.style);
+    expect(style.aspectRatio).toBeCloseTo(3 / 4);
+    expect(style.height).toBeUndefined();
+  });
+
+  it("makes 3:4 a minimum once measured, so taller content grows the card instead of clipping", () => {
+    const { root } = render(baseData);
+    // 288pt: the card on a 320pt-wide screen, where the content needs ~395pt.
+    const style = layout(root, 288);
+    expect(style.minHeight).toBeCloseTo(384);
+    expect(style.aspectRatio).toBeUndefined();
+    expect(style.height).toBeUndefined();
+  });
+
+  it("follows a width change, such as a rotation or a resized window", () => {
+    const { root } = render(baseData);
+    layout(root, 288);
+    expect(layout(root, 343).minHeight).toBeCloseTo((343 * 4) / 3);
   });
 
   it("draws the brand logo pinned to the top-left", () => {

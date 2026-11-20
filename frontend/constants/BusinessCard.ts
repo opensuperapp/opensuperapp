@@ -20,16 +20,19 @@ import { brand, radius } from "@/constants/brand";
 export const CARD_ORGANIZATION = "WSO2 LLC";
 export const CARD_WEBSITE = "https://wso2.com";
 
-// Brand Cobalt, the flat colour a signed pass can carry; the in-app preview
-// lays the business-card radial and dot texture over it. Must match the wallet
+// Brand Cobalt. Neither wallet allows a background image on this pass, so the
+// in-app preview is flat Cobalt too, to show what gets installed. Must match the wallet
 // service's pass.go, which still ships the old orange (#F14E23) until it is
 // rebranded too.
 export const PASS_BACKGROUND_COLOR = brand.cobalt;
 export const PASS_FOREGROUND_COLOR = "#FFFFFF";
 export const PASS_LABEL_COLOR = "#FFFFFF";
 
-// The card fills the width it is given, so this alone sets its height.
-export const CARD_ASPECT_RATIO = 2 / 3;
+// The card fills the width it is given and is at least this tall for it. Shorter than an
+// installed pass (about 2:3) by choice, so the sheet has less to scroll. A minimum, not a
+// fixed height: on a 320pt-wide screen, or at large text sizes, the content needs
+// more, and the card grows to fit it instead of clipping the barcode.
+export const CARD_ASPECT_RATIO = 3 / 4;
 
 // Pass geometry in points, reproduced from the wallet service rather than
 // chosen: the thumbnail ring is 4% of the diameter, as internal/photo draws it.

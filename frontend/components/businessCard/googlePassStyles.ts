@@ -13,7 +13,6 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { soraFamily } from "@/constants/brand";
 import {
   PASS_BACKGROUND_COLOR,
   PASS_FOREGROUND_COLOR,
@@ -50,22 +49,21 @@ export const googlePassStyles = StyleSheet.create({
   },
   cardTitle: {
     flex: 1,
-    fontFamily: soraFamily[500],
+    fontWeight: "500",
     fontSize: 14,
     color: PASS_FOREGROUND_COLOR,
   },
   subheader: {
     marginTop: GOOGLE_PASS.rowGap,
-    fontFamily: soraFamily[400],
+    fontWeight: "400",
     fontSize: 13,
     color: LABEL_COLOR,
   },
   header: {
     marginTop: 2,
-    fontFamily: soraFamily[700],
+    fontWeight: "700",
     fontSize: 26,
     lineHeight: 30,
-    letterSpacing: -0.05 * 26,
     color: PASS_FOREGROUND_COLOR,
   },
   fieldRow: {
@@ -77,13 +75,13 @@ export const googlePassStyles = StyleSheet.create({
     paddingRight: 8,
   },
   fieldLabel: {
-    fontFamily: soraFamily[400],
+    fontWeight: "400",
     fontSize: 12,
     color: LABEL_COLOR,
   },
   fieldValue: {
     marginTop: 2,
-    fontFamily: soraFamily[600],
+    fontWeight: "600",
     fontSize: 15,
     color: PASS_FOREGROUND_COLOR,
   },
@@ -97,7 +95,7 @@ export const googlePassStyles = StyleSheet.create({
   barcodeAlternateText: {
     marginTop: 8,
     alignSelf: "center",
-    fontFamily: soraFamily[400],
+    fontWeight: "400",
     fontSize: 12,
     color: LABEL_COLOR,
   },

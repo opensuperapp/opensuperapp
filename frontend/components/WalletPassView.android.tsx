@@ -14,7 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 import ChoreoMark from "@/components/brand/ChoreoMark";
-import CardFrontArtwork from "@/components/businessCard/CardFrontArtwork";
 import GooglePassField from "@/components/businessCard/GooglePassField";
 import { googlePassStyles as styles } from "@/components/businessCard/googlePassStyles";
 import { PASS_FOREGROUND_COLOR } from "@/constants/BusinessCard";
@@ -46,7 +45,6 @@ const WalletPassView = forwardRef<View, Props>(
 
     return (
       <View ref={ref} style={styles.pass} collapsable={false}>
-        <CardFrontArtwork />
         <View style={styles.titleRow}>
           <View style={styles.logo}>
             <ChoreoMark width={LOGO_MARK_WIDTH} color={PASS_FOREGROUND_COLOR} />

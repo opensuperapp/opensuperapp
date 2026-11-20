@@ -13,7 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { radius, soraFamily, themes } from "@/constants/brand";
+import { radius, themes } from "@/constants/brand";
 import { BusinessCardData } from "@/types/businessCard.types";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
@@ -130,15 +130,15 @@ const createStyles = (colorScheme: "light" | "dark") =>
     rowText: {
       flex: 1,
     },
+    // System font, like the pass front above it and Wallet's own expanded view.
     label: {
-      fontFamily: soraFamily[400],
+      fontWeight: "400",
       fontSize: 12,
-      letterSpacing: 0.24,
       color: themes[colorScheme].text3,
     },
     value: {
       marginTop: 2,
-      fontFamily: soraFamily[500],
+      fontWeight: "500",
       fontSize: 16,
       color: themes[colorScheme].text,
     },

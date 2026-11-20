@@ -56,7 +56,6 @@ export const type = {
   metaLabel: { size: 11, weight: 500, tracking: 0.14, uppercase: true }, // NEWS, BLOG…
   heroDate: { size: 10, weight: 600, tracking: 0.16, uppercase: true },
   gridAppLabel: { size: 12, weight: 500 }, // single line, ellipsis
-  cardFieldLabel: { size: 10, weight: 600, tracking: 0.16, uppercase: true }, // business card
   authorName: { size: 14, weight: 600 },
   authorRole: { size: 12, weight: 400 },
   profileFieldLabel: { size: 12, weight: 400 },

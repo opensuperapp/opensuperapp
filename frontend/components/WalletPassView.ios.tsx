@@ -16,12 +16,21 @@
 import ChoreoLabsLogo from "@/components/brand/ChoreoLabsLogo";
 import ApplePassField from "@/components/businessCard/ApplePassField";
 import { applePassStyles as styles } from "@/components/businessCard/applePassStyles";
-import CardFrontArtwork from "@/components/businessCard/CardFrontArtwork";
-import { PASS, PASS_FOREGROUND_COLOR } from "@/constants/BusinessCard";
+import {
+  CARD_ASPECT_RATIO,
+  PASS,
+  PASS_FOREGROUND_COLOR,
+} from "@/constants/BusinessCard";
 import { BusinessCardData } from "@/types/businessCard.types";
 import { buildVCard } from "@/utils/vcard";
-import React, { forwardRef } from "react";
-import { Image, Pressable, Text, View } from "react-native";
+import React, { forwardRef, useState } from "react";
+import {
+  Image,
+  LayoutChangeEvent,
+  Pressable,
+  Text,
+  View,
+} from "react-native";
 import QRCode from "react-native-qrcode-svg";
 
 // The compact Choreo Labs lockup, 26pt tall as on the brand card. The pass
@@ -39,9 +48,27 @@ const WalletPassView = forwardRef<View, Props>(
     // Same precedence as pass.go's frontPhone: work number, then mobile.
     const frontPhone = data.workPhone ?? data.mobile;
 
+    // 3:4 is a floor, not a fixed height: on a narrow screen or at a large text
+    // size the content is taller than that, and the card grows rather than
+    // clipping the barcode. Until the width is known the ratio sets the height,
+    // so a card whose content fits never changes size once it is measured.
+    const [width, setWidth] = useState<number | null>(null);
+    const onLayout = (event: LayoutChangeEvent) => {
+      const next = event.nativeEvent.layout.width;
+      if (next !== width) setWidth(next);
+    };
+    const height =
+      width === null
+        ? { aspectRatio: CARD_ASPECT_RATIO }
+        : { minHeight: width / CARD_ASPECT_RATIO };
+
     return (
-      <View ref={ref} style={styles.pass} collapsable={false}>
-        <CardFrontArtwork />
+      <View
+        ref={ref}
+        style={[styles.pass, height]}
+        onLayout={onLayout}
+        collapsable={false}
+      >
         <View style={styles.logo}>
           <ChoreoLabsLogo width={LOGO_WIDTH} color={PASS_FOREGROUND_COLOR} />
         </View>
