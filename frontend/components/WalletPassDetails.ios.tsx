@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 import ChoreoLabsLogo from "@/components/brand/ChoreoLabsLogo";
-import { brand, soraFamily, textStyle, themes, type } from "@/constants/brand";
+import { brand, themes } from "@/constants/brand";
 import { PASS } from "@/constants/BusinessCard";
 import { BusinessCardData } from "@/types/businessCard.types";
 import React from "react";
@@ -97,15 +97,16 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "rgba(255,255,255,0.14)",
   },
+  // System font, as on the front and as Wallet draws a pass back.
   label: {
-    ...textStyle({ ...type.cardFieldLabel, uppercase: false }),
+    fontSize: 10,
+    fontWeight: "600",
     color: themes.dark.text2,
   },
   value: {
     marginTop: 2,
-    fontFamily: soraFamily[600],
+    fontWeight: "600",
     fontSize: 15,
-    letterSpacing: -0.15,
     color: "#FFFFFF",
   },
 });
