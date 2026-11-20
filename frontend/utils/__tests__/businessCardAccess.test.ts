@@ -46,71 +46,74 @@ describe("hasBusinessCardAccess", () => {
     process.env.EXPO_PUBLIC_BUSINESS_CARD_ALLOWED_GROUPS = originalGroups;
   });
 
-  describe("with the default allow-lists (wso2.com / wso2-employees)", () => {
-    const hasBusinessCardAccess = loadHelper();
+  describe("with a single-value allow-list (example.com / test-org-employees)", () => {
+    const hasBusinessCardAccess = loadHelper({
+      domains: "example.com",
+      groups: "test-org-employees",
+    });
 
     it("grants access for a matching domain and group", () => {
       expect(
-        hasBusinessCardAccess("alice@wso2.com", ["wso2-employees"]),
+        hasBusinessCardAccess("alice@example.com", ["test-org-employees"]),
       ).toBe(true);
     });
 
     it("is case-insensitive on both domain and group", () => {
       expect(
-        hasBusinessCardAccess("Alice@WSO2.COM", ["WSO2-Employees"]),
+        hasBusinessCardAccess("Alice@EXAMPLE.COM", ["Test-Org-Employees"]),
       ).toBe(true);
     });
 
     it("matches when the allowed group is one of several", () => {
       expect(
-        hasBusinessCardAccess("alice@wso2.com", [
+        hasBusinessCardAccess("alice@example.com", [
           "some-other-group",
-          "wso2-employees",
+          "test-org-employees",
         ]),
       ).toBe(true);
     });
 
     it("denies a non-allowed domain even with an allowed group", () => {
       expect(
-        hasBusinessCardAccess("alice@example.com", ["wso2-employees"]),
+        hasBusinessCardAccess("alice@example.org", ["test-org-employees"]),
       ).toBe(false);
     });
 
     it("denies an allowed domain with no matching group", () => {
       expect(
-        hasBusinessCardAccess("alice@wso2.com", ["some-other-group"]),
+        hasBusinessCardAccess("alice@example.com", ["some-other-group"]),
       ).toBe(false);
     });
 
     it("denies when groups is undefined", () => {
-      expect(hasBusinessCardAccess("alice@wso2.com", undefined)).toBe(false);
+      expect(hasBusinessCardAccess("alice@example.com", undefined)).toBe(false);
     });
 
     it("denies when groups is empty", () => {
-      expect(hasBusinessCardAccess("alice@wso2.com", [])).toBe(false);
+      expect(hasBusinessCardAccess("alice@example.com", [])).toBe(false);
     });
 
     it("denies when email is undefined", () => {
-      expect(hasBusinessCardAccess(undefined, ["wso2-employees"])).toBe(
+      expect(hasBusinessCardAccess(undefined, ["test-org-employees"])).toBe(
         false,
       );
     });
 
     it("denies a malformed email with no domain", () => {
-      expect(hasBusinessCardAccess("not-an-email", ["wso2-employees"])).toBe(
+      expect(hasBusinessCardAccess("not-an-email", ["test-org-employees"])).toBe(
         false,
       );
     });
 
     it("denies a bare domain string carrying no @", () => {
-      expect(hasBusinessCardAccess("wso2.com", ["wso2-employees"])).toBe(
+      expect(hasBusinessCardAccess("example.com", ["test-org-employees"])).toBe(
         false,
       );
     });
 
     it("uses the domain after the last @ when the local part contains one", () => {
       expect(
-        hasBusinessCardAccess('"a@b"@wso2.com', ["wso2-employees"]),
+        hasBusinessCardAccess('"a@b"@example.com', ["test-org-employees"]),
       ).toBe(true);
     });
   });
@@ -118,27 +121,40 @@ describe("hasBusinessCardAccess", () => {
   describe("with env-configured allow-lists", () => {
     it("honors a custom, multi-value domain and group list", () => {
       const hasBusinessCardAccess = loadHelper({
-        domains: "example.com, partner.io",
+        domains: "example.com, partner.example",
         groups: "contractors , partners",
       });
 
       expect(
-        hasBusinessCardAccess("bob@partner.io", ["partners"]),
+        hasBusinessCardAccess("bob@partner.example", ["partners"]),
       ).toBe(true);
       expect(
-        hasBusinessCardAccess("bob@wso2.com", ["partners"]),
+        hasBusinessCardAccess("bob@example.org", ["partners"]),
       ).toBe(false);
       expect(
-        hasBusinessCardAccess("bob@partner.io", ["wso2-employees"]),
+        hasBusinessCardAccess("bob@partner.example", ["test-org-employees"]),
       ).toBe(false);
     });
 
     it("falls back to the default when the env var is blank", () => {
+      // Built from the shipped default rather than spelling it out, so the
+      // test carries no real domain or group.
+      loadHelper();
+      /* eslint-disable-next-line @typescript-eslint/no-require-imports */
+      const defaults = require("@/constants/Constants");
+      const [defaultDomain] = defaults.BUSINESS_CARD_ALLOWED_DOMAINS;
+      const [defaultGroup] = defaults.BUSINESS_CARD_ALLOWED_GROUPS;
+      expect(defaultDomain).toBeTruthy();
+      expect(defaultGroup).toBeTruthy();
+
       const hasBusinessCardAccess = loadHelper({ domains: "  ", groups: "" });
 
       expect(
-        hasBusinessCardAccess("alice@wso2.com", ["wso2-employees"]),
+        hasBusinessCardAccess(`alice@${defaultDomain}`, [defaultGroup]),
       ).toBe(true);
+      expect(
+        hasBusinessCardAccess("alice@example.org", [defaultGroup]),
+      ).toBe(false);
     });
   });
 });

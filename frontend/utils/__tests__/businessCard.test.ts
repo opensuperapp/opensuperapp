@@ -1,6 +1,6 @@
 // Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
 //
-// WSO2 LLC. licenses this file to you under the Apache License,
+// Example LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
 // in compliance with the License.
 // You may obtain a copy of the License at
@@ -38,7 +38,7 @@ const baseClaims: DecodedAccessToken = {
   jobtitle: "Software Engineer",
   phone_number: "+94771234567",
   profile:
-    "https://lh3.googleusercontent.com/a-/AAcHTtexampleavatartoken=s100",
+    "https://photos.example.com/a-/AAcHTtexampleavatartoken=s100",
 };
 
 describe("toBusinessCardData — nothing worth putting on a card", () => {
@@ -192,14 +192,14 @@ describe("fullResolutionPhotoUri", () => {
   // image.
   it("strips a Google =s<size> suffix", () => {
     expect(
-      fullResolutionPhotoUri("https://lh3.googleusercontent.com/a-/abc=s100")
-    ).toBe("https://lh3.googleusercontent.com/a-/abc");
+      fullResolutionPhotoUri("https://photos.example.com/a-/abc=s100")
+    ).toBe("https://photos.example.com/a-/abc");
   });
 
   it("strips a =s<size>-c centre-cropped suffix", () => {
     expect(
-      fullResolutionPhotoUri("https://lh3.googleusercontent.com/a-/abc=s64-c")
-    ).toBe("https://lh3.googleusercontent.com/a-/abc");
+      fullResolutionPhotoUri("https://photos.example.com/a-/abc=s64-c")
+    ).toBe("https://photos.example.com/a-/abc");
   });
 
   it("leaves a URL with no size suffix alone", () => {

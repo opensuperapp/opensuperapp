@@ -1,6 +1,6 @@
 // Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
 //
-// WSO2 LLC. licenses this file to you under the Apache License,
+// Example LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
 // in compliance with the License.
 // You may obtain a copy of the License at
@@ -32,10 +32,10 @@ const jwt = (payload: object): string =>
 const FULL_PAYLOAD = {
   given_name: "Jane",
   family_name: "Doe",
-  email: "jane.doe@wso2.com",
+  email: "jane.doe@example.com",
   jobtitle: "Software Engineer",
   phone_number: "+94771234567",
-  profile: "https://lh3.googleusercontent.com/a-/AAcHTtexampleavatartoken=s100",
+  profile: "https://photos.example.com/a-/AAcHTtexampleavatartoken=s100",
 };
 
 // A token with the identity claims but WITHOUT jobtitle/phone_number — the
@@ -43,7 +43,7 @@ const FULL_PAYLOAD = {
 const THIN_PAYLOAD = {
   given_name: "Jane",
   family_name: "Doe",
-  email: "jane.doe@wso2.com",
+  email: "jane.doe@example.com",
 };
 
 let mockAuthState: { accessToken: string | null; idToken: string | null } = {

@@ -1,6 +1,6 @@
 // Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
 //
-// WSO2 LLC. licenses this file to you under the Apache License,
+// Example LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
 // in compliance with the License.
 // You may obtain a copy of the License at
@@ -43,9 +43,9 @@ const baseData: BusinessCardData = {
   jobTitle: "Software Engineer",
   workEmail: "jane.doe@example.com",
   mobile: "+94771234567",
-  organization: "WSO2 LLC",
+  organization: "Example LLC",
   website: "https://example.com",
-  address: "20 Palm Grove, Colombo 03, Sri Lanka",
+  address: "123 Example Street, Colombo 03, Sri Lanka",
   photoUri: "https://photos.example.com/a-/abc",
 };
 
@@ -77,7 +77,7 @@ describe("WalletPassView (Android) — Generic pass zones", () => {
   it("puts the organization in the card title row and the name in the header", () => {
     const { root } = render(baseData);
     const text = allText(root);
-    expect(text).toContain("WSO2 LLC");
+    expect(text).toContain("Example LLC");
     expect(text).toContain("Jane Doe");
   });
 
