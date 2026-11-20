@@ -115,15 +115,28 @@ export const useChatSessions = (userId: string | null) => {
       return null;
     }
 
+    let session: ChatSession;
     try {
-      const session = await chatDatabase.createSession();
-      await refreshSessions();
-      setActiveSessionId(session.id);
-      return session;
+      session = await chatDatabase.createSession();
     } catch (err) {
       console.warn("[chat] could not create a session", err);
       return null;
     }
+
+    // The row exists from here on, so this is a success whatever the reload does:
+    // reporting failure would invite a retry that leaves a second empty chat. If the
+    // reload fails, refreshSessions has already set the (non-blocking) load error;
+    // show the new session in the list by hand until the next reload.
+    try {
+      await refreshSessions();
+    } catch {
+      setSessions((current) => [
+        session,
+        ...current.filter((s) => s.id !== session.id),
+      ]);
+    }
+    setActiveSessionId(session.id);
+    return session;
   }, [refreshSessions, userId]);
 
   const removeSession = useCallback(

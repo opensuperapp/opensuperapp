@@ -91,6 +91,24 @@ describe("useChatSessions createNewSession", () => {
     expect(hook.error).toBeNull();
   });
 
+  it("still activates and returns the new session when the reload fails", async () => {
+    await mount();
+    mockDb.createSession.mockResolvedValueOnce(session("new"));
+    mockDb.listSessions.mockRejectedValueOnce(new Error("Failed to load chat sessions"));
+
+    let created: ChatSession | null = null;
+    await act(async () => {
+      created = await hook.createNewSession();
+    });
+
+    expect(created).toEqual(session("new"));
+    expect(hook.activeSessionId).toBe("new");
+    expect(hook.sessions.map((s) => s.id)).toEqual(["new", "older"]);
+    // The reload failure is still reported, without failing the create.
+    expect(hook.error).toBe("Failed to load chat sessions");
+    expect(mockDb.createSession).toHaveBeenCalledTimes(1);
+  });
+
   it("returns null with no signed-in user", async () => {
     await mount(null);
 
