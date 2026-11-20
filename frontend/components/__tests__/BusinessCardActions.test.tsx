@@ -25,7 +25,6 @@ import AppleActions from "@/components/businessCard/BusinessCardActions.ios";
 import AndroidActions from "@/components/businessCard/BusinessCardActions.android";
 import AddToAppleWalletButton from "@/components/wallet/AddToAppleWalletButton";
 import AddToGoogleWalletButton from "@/components/wallet/AddToGoogleWalletButton";
-import WheelLoader from "@/components/brand/WheelLoader";
 import {
   APPLE_ADD_PASS_BUTTON,
   GOOGLE_WALLET_BUTTON,
@@ -33,6 +32,7 @@ import {
 } from "@/constants/WalletButton";
 import { AppleWalletButtonView } from "@/modules/apple-wallet-button";
 import React from "react";
+import { ActivityIndicator } from "react-native";
 import Svg, { Path, Rect } from "react-native-svg";
 import { act, create } from "react-test-renderer";
 
@@ -120,7 +120,7 @@ describe.each([
 
   it("swaps the vendor artwork for a spinner while saving, never dimming it", () => {
     const { root } = render(Actions, true);
-    expect(root.root.findAllByType(WheelLoader)).toHaveLength(1);
+    expect(root.root.findAllByType(ActivityIndicator)).toHaveLength(1);
     // A dimmed or tinted vendor button is a guideline violation on both
     // platforms, so the pending state must not set opacity on the tap target.
     expect(flatten(button(root).props.style).opacity).toBeUndefined();

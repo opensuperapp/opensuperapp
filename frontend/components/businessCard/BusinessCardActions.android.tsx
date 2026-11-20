@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 import BusinessCardActionsFooter from "@/components/businessCard/BusinessCardActionsFooter";
-import PendingWheel from "@/components/businessCard/PendingWheel";
+import PendingSpinner from "@/components/businessCard/PendingSpinner";
 import AddToGoogleWalletButton from "@/components/wallet/AddToGoogleWalletButton";
 import {
   GOOGLE_WALLET_BUTTON,
@@ -77,10 +77,10 @@ const BusinessCardActions = ({
       >
         {saving ? (
           // Dimming or tinting the button is not allowed, so the pending state
-          // replaces it with the Wheel in a box of exactly the same footprint
+          // replaces it with a spinner in a box of exactly the same footprint
           // instead of drawing over it.
           <View style={styles.pending}>
-            <PendingWheel />
+            <PendingSpinner />
           </View>
         ) : (
           // Google's unmodified official primary button, as vector artwork.

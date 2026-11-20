@@ -15,7 +15,7 @@
 // under the License.
 import BusinessCardActionsFooter from "@/components/businessCard/BusinessCardActionsFooter";
 import OpenInWalletButton from "@/components/businessCard/OpenInWalletButton";
-import PendingWheel from "@/components/businessCard/PendingWheel";
+import PendingSpinner from "@/components/businessCard/PendingSpinner";
 import AddToAppleWalletButton from "@/components/wallet/AddToAppleWalletButton";
 import { APPLE_ADD_PASS_BUTTON } from "@/constants/WalletButton";
 import { isAppleWalletButtonAvailable } from "@/modules/apple-wallet-button";
@@ -64,7 +64,7 @@ const BusinessCardActions = ({
       ) : saving ? (
         // "Do not display a dimmed version of the badge" — and PKAddPassButton
         // is a system control we may not restyle at all, so the pending state
-        // takes it off screen and puts the Wheel in a box of the same footprint in its
+        // takes it off screen and puts a spinner of the same footprint in its
         // place rather than fading or overlaying it. There is nothing to tap
         // while it is gone, hence no onPress here.
         <View
@@ -73,7 +73,7 @@ const BusinessCardActions = ({
           accessibilityLabel="save_business_card"
           accessibilityState={{ disabled: true }}
         >
-          <PendingWheel />
+          <PendingSpinner />
         </View>
       ) : isAppleWalletButtonAvailable ? (
         // No Pressable around it: the control handles its own touches and

@@ -13,14 +13,17 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import WheelLoader from "@/components/brand/WheelLoader";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
 import React from "react";
+import { ActivityIndicator } from "react-native";
 
-/** The Wheel shown in place of a wallet button while a pass is being fetched. */
-const PendingWheel = () => {
+/**
+ * The native spinner shown in place of a wallet button while a pass is being
+ * fetched. The Choreo Wheel is kept for chat loading and the launch screen.
+ */
+const PendingSpinner = () => {
   const { colors } = useBrandTheme();
-  return <WheelLoader size={28} color={colors.text2} />;
+  return <ActivityIndicator color={colors.text2} />;
 };
 
-export default PendingWheel;
+export default PendingSpinner;
