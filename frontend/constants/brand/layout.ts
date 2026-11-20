@@ -46,8 +46,6 @@ export const size = {
   searchHeight: 48,
   chatComposerHeight: 54,
   tabBarItemMinHeight: 52,
-  tabIcon: 26, // stroke 1.5, selected 1.9
-  tabIndicator: { width: 24, height: 2, gapAboveIcon: 7 },
   tagHeight: 32,
   tile: { grid: 64, storeRow: 56, appDetail: 104 },
   avatar: { author: 44, businessCard: 76, profile: 136, chatBot: 30, chatEmpty: 80 },

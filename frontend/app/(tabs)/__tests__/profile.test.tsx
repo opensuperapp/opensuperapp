@@ -23,10 +23,6 @@ import React from "react";
 import { act, create } from "react-test-renderer";
 
 jest.mock("@expo/vector-icons", () => ({ Ionicons: () => null }));
-jest.mock("@react-navigation/bottom-tabs", () => ({
-  ...jest.requireActual("@react-navigation/bottom-tabs"),
-  useBottomTabBarHeight: () => 0,
-}));
 
 jest.mock("@/hooks/useTrackActiveScreen", () => ({
   useTrackActiveScreen: () => {},
