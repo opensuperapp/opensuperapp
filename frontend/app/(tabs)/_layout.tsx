@@ -21,9 +21,11 @@ import {
   MY_APPS_TAB_NAME,
   PROFILE_TAB_NAME,
 } from "@/constants/Constants";
+import { ScreenPaths } from "@/constants/ScreenPaths";
 import { selectIsSignedIn } from "@/context/slices/authSlice";
 import { RootState } from "@/context/store";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
+import { useLeaveHiddenTab } from "@/hooks/useLeaveHiddenTab";
 import { useTabVisibilityRules } from "@/hooks/useRemoteConfig";
 import { useRestoreLastTab } from "@/hooks/useRestoreLastTab";
 import { shouldShowTab } from "@/utils/tabVisibility";
@@ -41,6 +43,8 @@ interface TabDef {
   rule: string;
   /** Route folder under app/(tabs). */
   route: string;
+  /** Where navigating to the tab lands. */
+  path: ScreenPaths;
   title: string;
   sf: { default: SFSymbol; selected: SFSymbol };
   android: { default: ImageSourcePropType; selected: ImageSourcePropType };
@@ -51,6 +55,7 @@ const TABS: TabDef[] = [
   {
     rule: "index",
     route: "(feed)",
+    path: ScreenPaths.FEED,
     title: FEED_TAB_NAME,
     sf: { default: "newspaper", selected: "newspaper.fill" },
     android: {
@@ -61,6 +66,7 @@ const TABS: TabDef[] = [
   {
     rule: "library",
     route: "library",
+    path: ScreenPaths.LIBRARY,
     title: LIBRARY_TAB_NAME,
     sf: { default: "books.vertical", selected: "books.vertical.fill" },
     android: {
@@ -71,6 +77,7 @@ const TABS: TabDef[] = [
   {
     rule: "apps",
     route: "apps",
+    path: ScreenPaths.MY_APPS,
     title: MY_APPS_TAB_NAME,
     sf: { default: "square.grid.3x3", selected: "square.grid.3x3.fill" },
     android: {
@@ -81,6 +88,7 @@ const TABS: TabDef[] = [
   {
     rule: "chat",
     route: "chat",
+    path: ScreenPaths.CHAT,
     title: CHAT_TAB_NAME,
     sf: {
       default: "bubble.left.and.bubble.right",
@@ -94,6 +102,7 @@ const TABS: TabDef[] = [
   {
     rule: "profile",
     route: "profile",
+    path: ScreenPaths.PROFILE,
     title: PROFILE_TAB_NAME,
     sf: { default: "person.crop.circle", selected: "person.crop.circle.fill" },
     android: {
@@ -121,6 +130,14 @@ export default function TabLayout() {
 
   useRestoreLastTab(isVisible, !loading);
 
+  // A tab that loses its rule while focused stays shown until focus has moved off it:
+  // NativeTabs cannot display a focused tab that is hidden.
+  const isRouteHidden = (route: string) =>
+    TABS.some((tab) => tab.route === route && !isVisible(tab.rule));
+  const fallbackPath =
+    TABS.find((tab) => isVisible(tab.rule))?.path ?? ScreenPaths.FEED;
+  const leavingRoute = useLeaveHiddenTab(isRouteHidden, fallbackPath);
+
   return (
     <NativeTabs
       tintColor={colors.accent}
@@ -133,7 +150,7 @@ export default function TabLayout() {
         <NativeTabs.Trigger
           key={tab.route}
           name={tab.route}
-          hidden={!isVisible(tab.rule)}
+          hidden={!isVisible(tab.rule) && tab.route !== leavingRoute}
         >
           <Icon sf={tab.sf} androidSrc={tab.android} />
           <Label>{tab.title}</Label>
