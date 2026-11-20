@@ -1,6 +1,6 @@
 // Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
 //
-// WSO2 LLC. licenses this file to you under the Apache License,
+// Example LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
 // in compliance with the License.
 // You may obtain a copy of the License at
@@ -21,7 +21,7 @@ const baseData: BusinessCardData = {
   lastName: "Doe",
   jobTitle: "Software Engineer",
   workEmail: "jane.doe@example.com",
-  organization: "WSO2 LLC",
+  organization: "Example LLC",
   website: "https://example.com",
 };
 
@@ -38,7 +38,7 @@ describe("backFields", () => {
   it("orders WEBSITE, OFFICE, PHONE, MOBILE when all are present", () => {
     const fields = backFields({
       ...baseData,
-      address: "20 Palm Grove, Colombo 03, Sri Lanka",
+      address: "123 Example Street, Colombo 03, Sri Lanka",
       workPhone: "+94112345678",
       mobile: "+94771234567",
     });

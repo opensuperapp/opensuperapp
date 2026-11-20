@@ -1,6 +1,6 @@
 // Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
 //
-// WSO2 LLC. licenses this file to you under the Apache License,
+// Example LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
 // in compliance with the License.
 // You may obtain a copy of the License at
@@ -36,11 +36,16 @@ const base64Url = (value: object): string =>
 const jwt = (payload: object): string =>
   `${base64Url({ alg: "RS256" })}.${base64Url(payload)}.sig`;
 
-// Satisfies the default business-card allow-lists (wso2.com / wso2-employees)
-// so every pre-existing remote-config test below keeps exercising only the
-// remote-config gate, same as before this AND was added.
-const AUTHORIZED_PAYLOAD = { email: "alice@wso2.com", groups: ["wso2-employees"] };
-const UNAUTHORIZED_PAYLOAD = { email: "alice@example.com", groups: ["some-other-group"] };
+// Placeholder business-card allow-lists, set through env in setup() so the
+// tests never depend on (or spell out) the shipped defaults.
+const ALLOWED_DOMAIN = "example.com";
+const ALLOWED_GROUP = "test-org-employees";
+
+// Satisfies the allow-lists above so every pre-existing remote-config test
+// below keeps exercising only the remote-config gate, same as before this AND
+// was added.
+const AUTHORIZED_PAYLOAD = { email: `alice@${ALLOWED_DOMAIN}`, groups: [ALLOWED_GROUP] };
+const UNAUTHORIZED_PAYLOAD = { email: "alice@example.org", groups: ["some-other-group"] };
 
 const renderHook = (): WalletPassGates => {
   // Unlike the plain-function predecessor, this hook calls useMemo, so
@@ -91,8 +96,8 @@ const setup = ({
 }) => {
   jest.resetModules();
   process.env.EXPO_PUBLIC_ENABLE_WALLET_PASS = envEnabled ? "true" : "false";
-  delete process.env.EXPO_PUBLIC_BUSINESS_CARD_ALLOWED_DOMAINS;
-  delete process.env.EXPO_PUBLIC_BUSINESS_CARD_ALLOWED_GROUPS;
+  process.env.EXPO_PUBLIC_BUSINESS_CARD_ALLOWED_DOMAINS = ALLOWED_DOMAIN;
+  process.env.EXPO_PUBLIC_BUSINESS_CARD_ALLOWED_GROUPS = ALLOWED_GROUP;
 
   // The hook only pulls Platform.OS from react-native; useMemo comes from
   // react and is left un-mocked.
@@ -282,7 +287,7 @@ describe("useWalletPassConfig", () => {
         envEnabled: true,
         platform: "ios",
         config: wideOpenConfig,
-        tokenPayload: { email: "alice@wso2.com", groups: ["some-other-group"] },
+        tokenPayload: { email: "alice@example.com", groups: ["some-other-group"] },
       });
 
       expect(renderHook()).toEqual({
@@ -296,7 +301,7 @@ describe("useWalletPassConfig", () => {
         envEnabled: true,
         platform: "ios",
         config: wideOpenConfig,
-        tokenPayload: { email: "alice@example.com", groups: ["wso2-employees"] },
+        tokenPayload: { email: "alice@example.org", groups: [ALLOWED_GROUP] },
       });
 
       expect(renderHook()).toEqual({

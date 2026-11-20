@@ -16,19 +16,37 @@
 import { shouldShowTab } from "@/utils/tabVisibility";
 import { DEFAULT_TAB_CONFIG } from "@/types/remoteConfig.types";
 
-describe("shouldShowTab — chat (domain_specific, gated to wso2.com)", () => {
+// The shipped default gates chat to the deployment's real domain. Swap in a
+// placeholder so the tests (including the null-rules fallback, which reads
+// DEFAULT_TAB_CONFIG directly) never carry a real domain.
+jest.mock("@/types/remoteConfig.types", () => {
+  const actual = jest.requireActual("@/types/remoteConfig.types");
+  const defaults = actual.DEFAULT_TAB_CONFIG;
+  return {
+    ...actual,
+    DEFAULT_TAB_CONFIG: {
+      ...defaults,
+      tabs: {
+        ...defaults.tabs,
+        chat: { ...defaults.tabs.chat, domains: ["example.com"] },
+      },
+    },
+  };
+});
+
+describe("shouldShowTab — chat (domain_specific, gated to example.com)", () => {
   const rules = DEFAULT_TAB_CONFIG;
 
-  it("shows chat for an authenticated wso2.com email", () => {
-    expect(shouldShowTab("chat", "alice@wso2.com", true, rules)).toBe(true);
+  it("shows chat for an authenticated example.com email", () => {
+    expect(shouldShowTab("chat", "alice@example.com", true, rules)).toBe(true);
   });
 
   it("is case-insensitive on the email domain", () => {
-    expect(shouldShowTab("chat", "Alice@WSO2.COM", true, rules)).toBe(true);
+    expect(shouldShowTab("chat", "Alice@EXAMPLE.COM", true, rules)).toBe(true);
   });
 
-  it("hides chat for an authenticated non-wso2.com email", () => {
-    expect(shouldShowTab("chat", "bob@example.com", true, rules)).toBe(false);
+  it("hides chat for an authenticated non-example.com email", () => {
+    expect(shouldShowTab("chat", "bob@example.org", true, rules)).toBe(false);
   });
 
   it("hides chat (defaultVisible: false) when the email is null but authenticated", () => {
@@ -39,8 +57,8 @@ describe("shouldShowTab — chat (domain_specific, gated to wso2.com)", () => {
     expect(shouldShowTab("chat", undefined, true, rules)).toBe(false);
   });
 
-  it("hides chat for an unauthenticated user even with a wso2.com email", () => {
-    expect(shouldShowTab("chat", "alice@wso2.com", false, rules)).toBe(false);
+  it("hides chat for an unauthenticated user even with an example.com email", () => {
+    expect(shouldShowTab("chat", "alice@example.com", false, rules)).toBe(false);
   });
 
   it("hides chat for an unauthenticated guest with no email", () => {
@@ -48,15 +66,15 @@ describe("shouldShowTab — chat (domain_specific, gated to wso2.com)", () => {
   });
 
   it("falls back to DEFAULT_TAB_CONFIG when no rules are provided", () => {
-    expect(shouldShowTab("chat", "alice@wso2.com", true, null)).toBe(true);
-    expect(shouldShowTab("chat", "bob@example.com", true, undefined)).toBe(false);
+    expect(shouldShowTab("chat", "alice@example.com", true, null)).toBe(true);
+    expect(shouldShowTab("chat", "bob@example.org", true, undefined)).toBe(false);
   });
 });
 
 describe("shouldShowTab — public tabs are unaffected by email", () => {
   it("shows a public tab regardless of email or auth", () => {
     expect(shouldShowTab("index", null, false, DEFAULT_TAB_CONFIG)).toBe(true);
-    expect(shouldShowTab("profile", "bob@example.com", true, DEFAULT_TAB_CONFIG)).toBe(
+    expect(shouldShowTab("profile", "bob@example.org", true, DEFAULT_TAB_CONFIG)).toBe(
       true
     );
   });

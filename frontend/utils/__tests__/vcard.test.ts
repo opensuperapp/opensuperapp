@@ -1,6 +1,6 @@
 // Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
 //
-// WSO2 LLC. licenses this file to you under the Apache License,
+// Example LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
 // in compliance with the License.
 // You may obtain a copy of the License at
@@ -21,21 +21,21 @@ const fullData: BusinessCardData = {
   lastName: "Doe",
   jobTitle: "Software Engineer",
   department: "Platform",
-  workEmail: "jane.doe@wso2.com",
+  workEmail: "jane.doe@example.com",
   workPhone: "+94112345678",
   mobile: "+94771234567",
-  organization: "WSO2 LLC",
-  website: "https://wso2.com",
-  address: "20 Palm Grove, Colombo 03, Sri Lanka",
+  organization: "Example LLC",
+  website: "https://example.com",
+  address: "123 Example Street, Colombo 03, Sri Lanka",
   photoUri: "data:image/png;base64,AAAA",
 };
 
 const minimalData: BusinessCardData = {
   firstName: "Jane",
   lastName: "Doe",
-  workEmail: "jane.doe@wso2.com",
-  organization: "WSO2 LLC",
-  website: "https://wso2.com",
+  workEmail: "jane.doe@example.com",
+  organization: "Example LLC",
+  website: "https://example.com",
 };
 
 describe("buildVCard — document structure", () => {
@@ -46,13 +46,13 @@ describe("buildVCard — document structure", () => {
       "VERSION:3.0",
       "N:Doe;Jane;;;",
       "FN:Jane Doe",
-      "ORG:WSO2 LLC;Platform",
+      "ORG:Example LLC;Platform",
       "TITLE:Software Engineer",
-      "EMAIL;TYPE=INTERNET,WORK:jane.doe@wso2.com",
+      "EMAIL;TYPE=INTERNET,WORK:jane.doe@example.com",
       "TEL;TYPE=WORK,VOICE:+94112345678",
       "TEL;TYPE=CELL,VOICE:+94771234567",
-      "URL:https://wso2.com",
-      "ADR;TYPE=WORK:;;20 Palm Grove\\, Colombo 03\\, Sri Lanka;;;;",
+      "URL:https://example.com",
+      "ADR;TYPE=WORK:;;123 Example Street\\, Colombo 03\\, Sri Lanka;;;;",
       "END:VCARD",
     ];
     expect(vcard).toBe(expectedLines.join("\r\n") + "\r\n");
@@ -99,17 +99,17 @@ describe("buildVCard — N and FN", () => {
 describe("buildVCard — ORG", () => {
   it("emits ORG:Organization;Department when department is present", () => {
     const vcard = buildVCard({ ...minimalData, department: "Platform" });
-    expect(vcard).toContain("ORG:WSO2 LLC;Platform\r\n");
+    expect(vcard).toContain("ORG:Example LLC;Platform\r\n");
   });
 
   it("emits ORG:Organization only when department is absent", () => {
     const vcard = buildVCard(minimalData);
-    expect(vcard).toContain("ORG:WSO2 LLC\r\n");
+    expect(vcard).toContain("ORG:Example LLC\r\n");
   });
 
   it("emits ORG:Organization only when department is whitespace-only", () => {
     const vcard = buildVCard({ ...minimalData, department: "   " });
-    expect(vcard).toContain("ORG:WSO2 LLC\r\n");
+    expect(vcard).toContain("ORG:Example LLC\r\n");
   });
 });
 
@@ -133,12 +133,12 @@ describe("buildVCard — TITLE", () => {
 describe("buildVCard — EMAIL and URL", () => {
   it("emits EMAIL;TYPE=INTERNET,WORK: for workEmail", () => {
     const vcard = buildVCard(minimalData);
-    expect(vcard).toContain("EMAIL;TYPE=INTERNET,WORK:jane.doe@wso2.com\r\n");
+    expect(vcard).toContain("EMAIL;TYPE=INTERNET,WORK:jane.doe@example.com\r\n");
   });
 
   it("emits URL: for website", () => {
     const vcard = buildVCard(minimalData);
-    expect(vcard).toContain("URL:https://wso2.com\r\n");
+    expect(vcard).toContain("URL:https://example.com\r\n");
   });
 });
 
@@ -181,8 +181,8 @@ describe("buildVCard — TEL", () => {
 
 describe("buildVCard — ADR", () => {
   it("emits ADR;TYPE=WORK:;;<address>;;;; when address is present", () => {
-    const vcard = buildVCard({ ...minimalData, address: "20 Palm Grove" });
-    expect(vcard).toContain("ADR;TYPE=WORK:;;20 Palm Grove;;;;\r\n");
+    const vcard = buildVCard({ ...minimalData, address: "123 Example Street" });
+    expect(vcard).toContain("ADR;TYPE=WORK:;;123 Example Street;;;;\r\n");
   });
 
   it("omits ADR when address is absent", () => {
@@ -214,38 +214,38 @@ describe("buildVCard — PHOTO must never appear", () => {
 });
 
 describe("buildVCard — escaping (RFC 2426)", () => {
-  it("escapes commas in ORG, e.g. WSO2, LLC", () => {
-    const vcard = buildVCard({ ...minimalData, organization: "WSO2, LLC" });
-    expect(vcard).toContain("ORG:WSO2\\, LLC\r\n");
+  it("escapes commas in ORG, e.g. Example, LLC", () => {
+    const vcard = buildVCard({ ...minimalData, organization: "Example, LLC" });
+    expect(vcard).toContain("ORG:Example\\, LLC\r\n");
   });
 
   it("escapes semicolons in a text value", () => {
     const vcard = buildVCard({ ...minimalData, department: "R&D; Platform" });
-    expect(vcard).toContain("ORG:WSO2 LLC;R&D\\; Platform\r\n");
+    expect(vcard).toContain("ORG:Example LLC;R&D\\; Platform\r\n");
   });
 
   it("escapes backslashes in a text value", () => {
     const vcard = buildVCard({ ...minimalData, department: "Team\\Alpha" });
-    expect(vcard).toContain("ORG:WSO2 LLC;Team\\\\Alpha\r\n");
+    expect(vcard).toContain("ORG:Example LLC;Team\\\\Alpha\r\n");
   });
 
   it("escapes newlines in a multi-line address as literal \\n", () => {
     const vcard = buildVCard({
       ...minimalData,
-      address: "20 Palm Grove\nColombo 03\nSri Lanka",
+      address: "123 Example Street\nColombo 03\nSri Lanka",
     });
     expect(vcard).toContain(
-      "ADR;TYPE=WORK:;;20 Palm Grove\\nColombo 03\\nSri Lanka;;;;\r\n"
+      "ADR;TYPE=WORK:;;123 Example Street\\nColombo 03\\nSri Lanka;;;;\r\n"
     );
   });
 
   it("escapes commas and semicolons together in the address", () => {
     const vcard = buildVCard({
       ...minimalData,
-      address: "20 Palm Grove, Colombo 03; Sri Lanka",
+      address: "123 Example Street, Colombo 03; Sri Lanka",
     });
     expect(vcard).toContain(
-      "ADR;TYPE=WORK:;;20 Palm Grove\\, Colombo 03\\; Sri Lanka;;;;\r\n"
+      "ADR;TYPE=WORK:;;123 Example Street\\, Colombo 03\\; Sri Lanka;;;;\r\n"
     );
   });
 });

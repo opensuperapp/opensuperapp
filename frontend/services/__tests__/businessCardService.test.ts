@@ -1,6 +1,6 @@
 // Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
 //
-// WSO2 LLC. licenses this file to you under the Apache License,
+// Example LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
 // in compliance with the License.
 // You may obtain a copy of the License at
@@ -67,9 +67,9 @@ jest.mock("expo-file-system", () => {
 const minimalData: BusinessCardData = {
   firstName: "Jane",
   lastName: "Doe",
-  workEmail: "jane.doe@wso2.com",
-  organization: "WSO2 LLC",
-  website: "https://wso2.com",
+  workEmail: "jane.doe@example.com",
+  organization: "Example LLC",
+  website: "https://example.com",
 };
 
 describe("shareVCard", () => {

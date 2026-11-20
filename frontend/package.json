@@ -22,7 +22,7 @@
     "build:ios:development": "EAS_LOCAL_BUILD_PLUGIN_PATH=$PWD/scripts/eas-local-build-plugin.sh npx --yes @dotenvx/dotenvx run -f .env -- eas build --platform ios --profile development --local",
     "build:ios:production": "EAS_LOCAL_BUILD_PLUGIN_PATH=$PWD/scripts/eas-local-build-plugin.sh npx --yes @dotenvx/dotenvx run -f .env -- eas build --platform ios --profile production --local",
     "update:development": "npx --yes @dotenvx/dotenvx run -f .env -- eas update --platform android --channel development --message $MESSAGE && npx --yes @dotenvx/dotenvx run -f .env -- eas update --platform ios --channel development --message $MESSAGE",
-    "update:production": "npx --yes @dotenvx/dotenvx run -f .env -- eas update --platform android --channel production --message $MESSAGE && npx --yes @dotenvx/dotenvx run -f .env -- eas update --platform ios --channel production --message $MESSAGE"
+    "update:production": "EAS_UPDATE_CHANNEL=production npx --yes @dotenvx/dotenvx run -f .env -- eas update --platform android --channel production --message $MESSAGE && EAS_UPDATE_CHANNEL=production npx --yes @dotenvx/dotenvx run -f .env -- eas update --platform ios --channel production --message $MESSAGE"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": "eslint --fix --max-warnings=0"
