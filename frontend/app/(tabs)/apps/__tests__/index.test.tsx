@@ -49,6 +49,9 @@ jest.mock("@/context/slices/userConfigSlice", () => ({
 jest.mock("@/hooks/useTrackActiveScreen", () => ({
   useTrackActiveScreen: jest.fn(),
 }));
+jest.mock("@/hooks/useAndroidTabBarClearance", () => ({
+  useAndroidTabBarClearance: () => 0,
+}));
 jest.mock("@react-navigation/native", () => ({
   ...jest.requireActual("@react-navigation/native"),
   useFocusEffect: jest.fn(),

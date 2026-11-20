@@ -29,7 +29,7 @@ import { ChatMessage } from "@/types/chat.types";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
+import Animated, { FadeIn } from "react-native-reanimated";
 
 export interface ChatMessageRowProps {
   message: ChatMessage;
@@ -115,9 +115,10 @@ const ChatMessageRow = ({
       <SuperAppAgentIcon size={size.avatar.chatBot} animated={isStreaming} />
       <View style={styles.assistantBody}>
         {isStreaming ? (
+          // No exit fade: the reply's first line takes this spot at once, so a
+          // fading "Thinking…" would sit on top of it (and linger past its row).
           <Animated.Text
             entering={FadeIn}
-            exiting={FadeOut}
             style={[styles.thinking, { color: theme.muted }]}
             // The avatar already announces "Assistant is typing".
             importantForAccessibility="no"

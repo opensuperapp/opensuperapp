@@ -56,6 +56,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const DRAWER_EASING = Easing.bezier(...easing.standard);
 
+// The hook's shared `error` can be stale or unset when a create fails, so the drawer
+// says what went wrong itself.
+export const NEW_CHAT_FAILED_MESSAGE = "Couldn't start a new chat. Try again.";
+
 export interface ChatSessionDrawerProps {
   visible: boolean;
   theme: ChatThemePalette;
@@ -84,7 +88,6 @@ const ChatSessionDrawer = ({
   const {
     sessions,
     activeSessionId,
-    error,
     selectSession,
     createNewSession,
     removeSession,
@@ -98,7 +101,7 @@ const ChatSessionDrawer = ({
   const [isCreating, setIsCreating] = useState(false);
   // The ref blocks a second tap that lands before the disabled button re-renders.
   const creatingRef = useRef(false);
-  const [createFailed, setCreateFailed] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const slide = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -121,7 +124,7 @@ const ChatSessionDrawer = ({
         setMounted(false);
         setSearchQuery("");
         setRenameTarget(null);
-        setCreateFailed(false);
+        setCreateError(null);
       }
     });
   }, [visible, mounted, slide]);
@@ -136,6 +139,14 @@ const ChatSessionDrawer = ({
     );
   }, [sessions, searchQuery]);
 
+  // While a new chat is being created the drawer holds still: a chat picked or a close
+  // in the meantime would be overridden when the new session activates and closes it.
+  const closeDrawer = () => {
+    if (!creatingRef.current) {
+      onClose();
+    }
+  };
+
   // Close only once the new session is active: until then the previous conversation is
   // still the one a sent message would land in. On failure stay open and show why.
   const startNewSession = async () => {
@@ -144,13 +155,13 @@ const ChatSessionDrawer = ({
     }
     creatingRef.current = true;
     setIsCreating(true);
-    setCreateFailed(false);
+    setCreateError(null);
     try {
       const session = await createNewSession();
       if (session) {
         onClose();
       } else {
-        setCreateFailed(true);
+        setCreateError(NEW_CHAT_FAILED_MESSAGE);
       }
     } finally {
       creatingRef.current = false;
@@ -158,7 +169,10 @@ const ChatSessionDrawer = ({
     }
   };
 
-  const showSessionOptions = (session: ChatSession) =>
+  const showSessionOptions = (session: ChatSession) => {
+    if (creatingRef.current) {
+      return;
+    }
     showChatActionMenu(
       session.title,
       [
@@ -180,6 +194,7 @@ const ChatSessionDrawer = ({
       ],
       theme.accent,
     );
+  };
 
   if (!mounted) {
     return null;
@@ -197,7 +212,7 @@ const ChatSessionDrawer = ({
       animationType="none"
       statusBarTranslucent
       navigationBarTranslucent
-      onRequestClose={onClose}
+      onRequestClose={closeDrawer}
     >
       <View style={styles.root} pointerEvents={visible ? "auto" : "none"}>
         <Animated.View
@@ -208,7 +223,7 @@ const ChatSessionDrawer = ({
         >
           <Pressable
             style={styles.flex}
-            onPress={onClose}
+            onPress={closeDrawer}
             accessibilityLabel="Close chat history"
           />
         </Animated.View>
@@ -229,7 +244,7 @@ const ChatSessionDrawer = ({
           <View style={styles.header}>
             <ChatMenuButton
               theme={theme}
-              onPress={onClose}
+              onPress={closeDrawer}
               accessibilityLabel="Close chat history"
             />
 
@@ -270,12 +285,12 @@ const ChatSessionDrawer = ({
             loading={isCreating}
             onPress={startNewSession}
           />
-          {createFailed && error ? (
+          {createError ? (
             <Text
               style={[styles.createError, { color: theme.muted }]}
               accessibilityRole="alert"
             >
-              {error}
+              {createError}
             </Text>
           ) : null}
 
@@ -309,6 +324,9 @@ const ChatSessionDrawer = ({
                     isActive && { backgroundColor: theme.drawerActive },
                   ]}
                   onPress={() => {
+                    if (creatingRef.current) {
+                      return;
+                    }
                     selectSession(item.id);
                     onClose();
                   }}

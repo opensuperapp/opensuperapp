@@ -19,6 +19,7 @@ import FeedHero from "@/components/feed/FeedHero";
 import News from "@/components/News";
 import { textStyle, type } from "@/constants/brand";
 import { ScreenPaths } from "@/constants/ScreenPaths";
+import { useAndroidTabBarClearance } from "@/hooks/useAndroidTabBarClearance";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
 import useEventsFeed from "@/hooks/useEventsFeed";
 import useNewsFeed from "@/hooks/useNewsFeed";
@@ -28,6 +29,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 const Discovery = () => {
   const { colors } = useBrandTheme();
+  const androidTabBarClearance = useAndroidTabBarClearance();
   const [isMinTimeElapsed, setIsMinTimeElapsed] = useState(false);
 
   useTrackActiveScreen(ScreenPaths.FEED);
@@ -49,11 +51,15 @@ const Discovery = () => {
   }, []);
 
   // The scroll view is the screen's root so the native large title collapses as it scrolls,
-  // and "automatic" insets it under the transparent bar and above the native tab bar.
+  // and "automatic" insets it under the transparent bar and above the native tab bar on iOS.
+  // "automatic" is iOS-only, so on Android the content clears the tab bar itself.
   return (
     <ScrollView
       style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[
+        styles.content,
+        { paddingBottom: styles.content.paddingBottom + androidTabBarClearance },
+      ]}
       contentInsetAdjustmentBehavior="automatic"
       scrollEnabled={isMinTimeElapsed && !loading}
     >

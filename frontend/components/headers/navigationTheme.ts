@@ -101,6 +101,7 @@ export const largeTitleHeaderOptions = (
       headerLargeStyle: { backgroundColor: colors.barSolid },
       headerLargeTitleStyle: {
         fontFamily: soraFamily[700],
+        fontSize: 30,
         color: colors.text,
       },
     },

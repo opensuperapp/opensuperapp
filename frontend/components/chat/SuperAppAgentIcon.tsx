@@ -60,14 +60,20 @@ const SuperAppAgentIcon = ({
         { width: size, height: size, borderRadius: size / 2 },
         style,
       ]}
+      // While waiting this is the row's only spoken cue (the visible "Thinking…"
+      // is hidden from screen readers), so VoiceOver must be able to focus it.
+      accessible={animated || undefined}
       accessibilityLabel={
         animated ? "Assistant is typing" : "Choreo Labs AI assistant"
       }
       accessibilityRole={animated ? "progressbar" : undefined}
     >
       {/* skipEntering: a row that mounts already answered (history, scrolling back)
-          shows its mark at once; only a reply arriving fades it in. */}
-      <LayoutAnimationConfig skipEntering>
+          shows its mark at once; only a reply arriving fades it in.
+          skipExiting: when the whole avatar goes (its row removed, the chat switched
+          or deleted) the mark goes with it; the fade-out only plays for the
+          in-place swap between the Wave and the mark. */}
+      <LayoutAnimationConfig skipEntering skipExiting>
         {animated ? (
           <Animated.View key="wave" style={styles.layer} exiting={markOut}>
             <WaveMark size={markWidth} color={brand.ink} />

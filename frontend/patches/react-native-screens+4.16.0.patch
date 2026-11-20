@@ -1,0 +1,15 @@
+diff --git a/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/TabScreenViewManager.kt b/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/TabScreenViewManager.kt
+index 62edb40..7700f1a 100644
+--- a/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/TabScreenViewManager.kt
++++ b/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/TabScreenViewManager.kt
+@@ -237,7 +237,9 @@ class TabScreenViewManager :
+         // In debug, metro is responsible for handling assets via http.
+         // At the moment, we're supporting images (drawable) and SVG icons (raw).
+         // For any other type, we may consider adding a support in the future if needed.
+-        if (uri.startsWith("_")) {
++        // Release builds hand over a bare drawable name (e.g. "assets_images_tabs_feed");
++        // only a scheme-prefixed uri (http in debug, file for updates) is a real url.
++        if (!uri.contains("://")) {
+             val drawableResId = context.resources.getIdentifier(uri, "drawable", context.packageName)
+             if (drawableResId != 0) {
+                 return RNSImageSource.DrawableRes(drawableResId)

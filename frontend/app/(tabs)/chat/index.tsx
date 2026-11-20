@@ -25,7 +25,11 @@ import { useChatSessionsContext } from "@/components/chat/ChatSessionsContext";
 import { textStyle } from "@/constants/brand";
 import { getChatTheme } from "@/constants/ChatTheme";
 import { ChatRole, MessageStatus } from "@/constants/enums/Chat";
-import { CHAT_MENU_BUTTON_SIZE, isIos } from "@/constants/Constants";
+import {
+  CHAT_MENU_BUTTON_SIZE,
+  isIos,
+  TAB_BAR_EXTRA_INSET,
+} from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { useChat } from "@/hooks/useChat";
@@ -46,7 +50,12 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
+import {
+  AndroidSoftInputModes,
+  KeyboardController,
+  useKeyboardController,
+  useReanimatedKeyboardAnimation,
+} from "react-native-keyboard-controller";
 import Reanimated, { useAnimatedStyle } from "react-native-reanimated";
 import {
   SafeAreaInsetsContext,
@@ -61,31 +70,11 @@ const KEYBOARD_GAP = 12;
 /**
  * Lifts the chat by the keyboard, frame by frame with the keyboard's own animation.
  * The lift starts once the keyboard passes the tab bar, and ends KEYBOARD_GAP above
- * it, so the composer's padding never has to jump. iOS only: Android resizes the
- * window for the keyboard itself.
+ * it, so the composer's padding never has to jump. The tab bar itself stays put: on
+ * Android that needs keyboard-controller enabled, which stops the window resizing
+ * (see ChatScreen), so the lift is zero while it is off.
  */
 function KeyboardLift({
-  enabled,
-  screenBottomGap,
-  children,
-}: {
-  enabled: boolean;
-  screenBottomGap: number;
-  children: React.ReactNode;
-}) {
-  if (!enabled) {
-    return <View style={styles.flex}>{children}</View>;
-  }
-  return (
-    <AnimatedKeyboardLift screenBottomGap={screenBottomGap}>
-      {children}
-    </AnimatedKeyboardLift>
-  );
-}
-
-// Separate so Android never reads the keyboard-controller hook: its provider is iOS
-// only (see AppProviders).
-function AnimatedKeyboardLift({
   screenBottomGap,
   children,
 }: {
@@ -96,16 +85,20 @@ function AnimatedKeyboardLift({
   // straight to the end height on real devices instead of following the keyboard.
   // Its height is negative while the keyboard is up.
   const { height: keyboardHeight } = useReanimatedKeyboardAnimation();
+  const { enabled } = useKeyboardController();
   const { bottom: tabBottom } = useSafeAreaInsets();
   const lift = useAnimatedStyle(() => ({
-    paddingBottom: Math.max(
-      -keyboardHeight.value -
-        screenBottomGap -
-        tabBottom -
-        COMPOSER_GAP +
-        KEYBOARD_GAP,
-      0
-    ),
+    paddingBottom: enabled
+      ? Math.max(
+          -keyboardHeight.value -
+            screenBottomGap -
+            tabBottom -
+            TAB_BAR_EXTRA_INSET -
+            COMPOSER_GAP +
+            KEYBOARD_GAP,
+          0
+        )
+      : 0,
   }));
   return (
     <Reanimated.View style={[styles.flex, lift]}>{children}</Reanimated.View>
@@ -139,19 +132,27 @@ export default function ChatScreen(): JSX.Element {
   } = useChat(activeSessionId);
 
   const [inputText, setInputText] = useState("");
-  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   // How far the screen's bottom edge sits above the window's, which the keyboard
-  // has to rise past before it covers anything.
+  // has to rise past before it covers anything. iOS only: on Android the screen runs
+  // to the window's bottom edge, and measureInWindow there comes back short by the
+  // status bar height, which would put the composer under the keyboard.
   const screenRef = useRef<View>(null);
   const [screenBottomGap, setScreenBottomGap] = useState(0);
   const { height: windowHeight } = useWindowDimensions();
-  const measureScreen = useCallback(
-    () =>
-      screenRef.current?.measureInWindow((_x, y, _w, h) =>
-        setScreenBottomGap(Math.max(windowHeight - (y + h), 0))
-      ),
-    [windowHeight]
-  );
+  const measureScreen = useCallback(() => {
+    if (!isIos) {
+      return;
+    }
+    screenRef.current?.measureInWindow((_x, y, _w, h) =>
+      setScreenBottomGap(Math.max(windowHeight - (y + h), 0))
+    );
+  }, [windowHeight]);
+  // onLayout alone misses a rotation whose layout lands before the new window height:
+  // the gap would stay measured against the old one. Measuring again once the height
+  // arrives covers that order; onLayout covers the other.
+  useEffect(() => {
+    measureScreen();
+  }, [measureScreen]);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarText, setSnackbarText] = useState("");
   const [isDrawerOpen, setDrawerOpen] = useState(false);
@@ -165,14 +166,46 @@ export default function ChatScreen(): JSX.Element {
 
   useTrackActiveScreen(ScreenPaths.CHAT);
 
+  // Android: adjustResize shrinks the whole window for the keyboard, tab bar included.
+  // While this screen is focused the window is set to adjustNothing instead, and
+  // keyboard-controller is switched on so KeyboardLift can follow the keyboard with the
+  // composer alone. Every other screen relies on the resize, and so do this screen's
+  // modals (the controller pins their windows to adjustNothing too), so both are
+  // restored on blur and while a modal is open.
+  const { setEnabled: setKeyboardControllerEnabled } = useKeyboardController();
+  const modalOpen = isDrawerOpen || editTarget !== null;
+  useFocusEffect(
+    useCallback(() => {
+      if (isIos || modalOpen) {
+        return;
+      }
+      setKeyboardControllerEnabled(true);
+      KeyboardController.setInputMode(
+        AndroidSoftInputModes.SOFT_INPUT_ADJUST_NOTHING
+      );
+      return () => {
+        KeyboardController.setDefaultMode();
+        setKeyboardControllerEnabled(false);
+      };
+    }, [modalOpen, setKeyboardControllerEnabled])
+  );
+
   // The drawer is a Modal, drawn over the whole window rather than inside this tab, so
   // it has to close whenever the screen loses focus (a notification tap, a tab
-  // redirect) or it stays over whatever tab comes next.
-  useFocusEffect(useCallback(() => () => setDrawerOpen(false), []));
+  // redirect) or it stays over whatever tab comes next. It goes at once, without its
+  // closing slide: a new key remounts it closed, which drops its Modal in this commit.
+  // Kept up through the slide, the Modal would still be presented when the sign-in
+  // sheet is pushed after an expiry, and iOS refuses to present the sheet over it.
+  const [drawerKey, setDrawerKey] = useState(0);
+  const dismissDrawerNow = useCallback(() => {
+    setDrawerOpen(false);
+    setDrawerKey((key) => key + 1);
+  }, []);
+  useFocusEffect(useCallback(() => dismissDrawerNow, [dismissDrawerNow]));
 
   // The tab is hidden once signed out, and there is no Sign In fallback here.
   useLeaveWhenSessionEnds(() => {
-    setDrawerOpen(false);
+    dismissDrawerNow();
     router.navigate(ScreenPaths.FEED);
   });
 
@@ -218,21 +251,6 @@ export default function ChatScreen(): JSX.Element {
   );
 
   useEffect(() => {
-    const show = Keyboard.addListener(
-      isIos ? "keyboardWillShow" : "keyboardDidShow",
-      () => setKeyboardVisible(true)
-    );
-    const hide = Keyboard.addListener(
-      isIos ? "keyboardWillHide" : "keyboardDidHide",
-      () => setKeyboardVisible(false)
-    );
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, []);
-
-  useEffect(() => {
     if (messages.length > 0) {
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 80);
     }
@@ -267,20 +285,20 @@ export default function ChatScreen(): JSX.Element {
 
   // `tabBottomInset` comes from the screen's own SafeAreaProvider (below), so on iOS it
   // includes the native tab bar the screen extends under; the root provider's inset is
-  // only the home indicator. On Android the content ends above the bar, so only a small
-  // gap is needed.
-  // On iOS the gap to the keyboard is KeyboardLift's job, so the composer keeps its
-  // tab-bar inset throughout.
+  // only the home indicator. On Android the screen also runs under the bar, but the
+  // inset is only the system nav bar, so the bar's own height is added.
+  // The gap to the keyboard is KeyboardLift's job, so the composer keeps its tab-bar
+  // inset throughout.
   const composerBottomInset = (tabBottomInset: number) =>
-    isIos
-      ? tabBottomInset + COMPOSER_GAP
-      : isKeyboardVisible
-        ? 16
-        : COMPOSER_GAP;
+    tabBottomInset +
+    TAB_BAR_EXTRA_INSET +
+    COMPOSER_GAP;
   const hasMessages = messages.length > 0;
 
   // One new chat per tap: a second tap while the first is still being created would
-  // leave an extra empty session behind. A failure surfaces through the snackbar.
+  // leave an extra empty session behind. A failure is reported here on every tap (the
+  // hook keeps create failures out of the shared `sessionsError`, so the error effect
+  // doesn't show it a second time).
   const creatingSessionRef = useRef(false);
   const startNewSession = useCallback(async () => {
     if (creatingSessionRef.current) {
@@ -288,11 +306,14 @@ export default function ChatScreen(): JSX.Element {
     }
     creatingSessionRef.current = true;
     try {
-      await createNewSession();
+      const session = await createNewSession();
+      if (!session) {
+        showSnackbar("Couldn't start a new chat. Try again.");
+      }
     } finally {
       creatingSessionRef.current = false;
     }
-  }, [createNewSession]);
+  }, [createNewSession, showSnackbar]);
 
   // Native bar buttons: history on the left, "new chat" once there is something to leave.
   useLayoutEffect(() => {
@@ -300,7 +321,11 @@ export default function ChatScreen(): JSX.Element {
       headerLeft: () => (
         <ChatMenuButton
           theme={theme}
-          onPress={() => setDrawerOpen(true)}
+          onPress={() => {
+            // The drawer's Modal goes over the composer, not the keyboard.
+            Keyboard.dismiss();
+            setDrawerOpen(true);
+          }}
           accessibilityLabel="Open chat history"
         />
       ),
@@ -375,10 +400,7 @@ export default function ChatScreen(): JSX.Element {
           onLayout={measureScreen}
           style={[styles.screen, { backgroundColor: theme.background }]}
         >
-          <KeyboardLift
-            enabled={isIos}
-            screenBottomGap={screenBottomGap}
-          >
+          <KeyboardLift screenBottomGap={screenBottomGap}>
             <FlatList
               ref={flatListRef}
               // Scrolls under the translucent bar; iOS insets it for the header.
@@ -455,6 +477,7 @@ export default function ChatScreen(): JSX.Element {
         onClose={() => setEditTarget(null)}
       />
       <ChatSessionDrawer
+        key={drawerKey}
         visible={isDrawerOpen}
         theme={theme}
         onClose={() => setDrawerOpen(false)}

@@ -19,6 +19,7 @@
 // otherwise a redirect away from chat leaves it covering the next tab.
 import ChatScreen from "@/app/(tabs)/chat";
 import React from "react";
+import { Keyboard, Modal } from "react-native";
 import { act, create, ReactTestRenderer } from "react-test-renderer";
 
 type HeaderButton = () => React.ReactElement<{ onPress: () => void }>;
@@ -90,7 +91,18 @@ const mockChat = {
 };
 jest.mock("@/hooks/useChat", () => ({ useChat: () => mockChat }));
 
-jest.mock("@/components/chat/ChatSessionDrawer", () => "ChatSessionDrawer");
+// A stand-in by default; the suite that checks the drawer's Modal swaps the real one in.
+let mockRealDrawer = false;
+jest.mock("@/components/chat/ChatSessionDrawer", () => {
+  const { createElement } = jest.requireActual("react");
+  const { default: RealDrawer } = jest.requireActual(
+    "@/components/chat/ChatSessionDrawer",
+  );
+  return (props: object) =>
+    mockRealDrawer
+      ? createElement(RealDrawer, props)
+      : createElement("ChatSessionDrawer", props);
+});
 jest.mock("@/components/chat/ChatMenuButton", () => "ChatMenuButton");
 jest.mock("@/components/chat/EditMessageModal", () => "EditMessageModal");
 jest.mock("@/components/chat/ChatComposer", () => "ChatComposer");
@@ -150,7 +162,9 @@ afterEach(() => {
   mockFocusEffects = [];
   mockChat.messages = [];
   mockSessions.error = null;
+  mockSessions.sessions = [];
   mockLeave = undefined;
+  mockRealDrawer = false;
   jest.clearAllMocks();
 });
 
@@ -160,6 +174,14 @@ describe("Chat history drawer", () => {
     expect(isDrawerVisible(renderer)).toBe(false);
     openDrawer();
     expect(isDrawerVisible(renderer)).toBe(true);
+  });
+
+  it("puts the keyboard away as it opens", () => {
+    const dismiss = jest.spyOn(Keyboard, "dismiss");
+    renderScreen();
+    openDrawer();
+    expect(dismiss).toHaveBeenCalledTimes(1);
+    dismiss.mockRestore();
   });
 
   it("closes when the chat screen loses focus", () => {
@@ -190,6 +212,54 @@ describe("Chat history drawer", () => {
   });
 });
 
+// The drawer slides shut before its Modal goes. Once the session has ended, the
+// sign-in sheet is on its way, and iOS will not present it over a Modal that is still
+// up, so the Modal has to go in the same commit as the close.
+describe("Chat history drawer's Modal", () => {
+  const modalCount = (renderer: ReactTestRenderer) =>
+    renderer.root.findAll((node) => node.type === Modal).length;
+
+  beforeEach(() => {
+    mockRealDrawer = true;
+  });
+
+  it("is dropped at once, without the closing slide, when the session ends", () => {
+    const renderer = renderScreen();
+    openDrawer();
+    expect(modalCount(renderer)).toBe(1);
+
+    act(() => {
+      mockLeave?.();
+    });
+    expect(modalCount(renderer)).toBe(0);
+  });
+
+  it("is dropped at once when the chat screen loses focus", () => {
+    const renderer = renderScreen();
+    let blurs: (void | (() => void))[] = [];
+    act(() => {
+      blurs = mockFocusEffects.map((focus) => focus());
+    });
+    openDrawer();
+    expect(modalCount(renderer)).toBe(1);
+
+    act(() => {
+      blurs.forEach((blur) => typeof blur === "function" && blur());
+    });
+    expect(modalCount(renderer)).toBe(0);
+  });
+
+  it("opens again after being dropped", () => {
+    const renderer = renderScreen();
+    openDrawer();
+    act(() => {
+      mockLeave?.();
+    });
+    openDrawer();
+    expect(modalCount(renderer)).toBe(1);
+  });
+});
+
 // A promise the test settles by hand, to hold createNewSession in flight.
 const deferred = <T,>() => {
   let resolve!: (value: T) => void;
@@ -198,9 +268,10 @@ const deferred = <T,>() => {
 };
 
 describe("Chat history drawer's new chat button", () => {
-  const { default: ChatSessionDrawer } = jest.requireActual(
-    "@/components/chat/ChatSessionDrawer",
-  );
+  const {
+    default: ChatSessionDrawer,
+    NEW_CHAT_FAILED_MESSAGE,
+  } = jest.requireActual("@/components/chat/ChatSessionDrawer");
   const { getChatTheme } = jest.requireActual("@/constants/ChatTheme");
   const onClose = jest.fn();
 
@@ -241,11 +312,15 @@ describe("Chat history drawer's new chat button", () => {
     expect(newChatButton(renderer).props.loading).toBe(false);
   });
 
-  it("stays open and shows the stored error when creation fails", async () => {
-    mockCreateNewSession.mockImplementationOnce(async () => {
-      mockSessions.error = "Failed to create chat";
-      return null;
-    });
+  const failureAlerts = (renderer: ReactTestRenderer) =>
+    renderer.root.findAll(
+      (node) =>
+        node.props.accessibilityRole === "alert" &&
+        typeof node.props.children === "string",
+    );
+
+  it("stays open and says why when creation fails", async () => {
+    mockCreateNewSession.mockResolvedValueOnce(null);
     const renderer = renderDrawer();
 
     await act(async () => {
@@ -253,13 +328,61 @@ describe("Chat history drawer's new chat button", () => {
     });
     expect(onClose).not.toHaveBeenCalled();
     expect(newChatButton(renderer).props.loading).toBe(false);
-    expect(
-      renderer.root.findAll(
-        (node) =>
-          node.props.accessibilityRole === "alert" &&
-          node.props.children === "Failed to create chat",
-      ).length,
-    ).toBeGreaterThan(0);
+    expect(failureAlerts(renderer)[0]?.props.children).toBe(
+      NEW_CHAT_FAILED_MESSAGE,
+    );
+  });
+
+  it("shows its own failure text, not a stale shared error", async () => {
+    // e.g. no signed-in user: createNewSession returns null without setting `error`,
+    // which still holds an earlier, unrelated failure.
+    mockSessions.error = "Failed to rename chat";
+    mockCreateNewSession.mockResolvedValueOnce(null);
+    const renderer = renderDrawer();
+
+    await act(async () => {
+      newChatButton(renderer).props.onPress();
+    });
+    const texts = failureAlerts(renderer).map((node) => node.props.children);
+    expect(texts).toContain(NEW_CHAT_FAILED_MESSAGE);
+    expect(texts).not.toContain("Failed to rename chat");
+  });
+
+  it("ignores chat picks and closes while the new session is being created", async () => {
+    mockSessions.sessions = [
+      { id: "session-1", title: "Older chat", isPinned: false },
+    ];
+    const pending = deferred<{ id: string } | null>();
+    mockCreateNewSession.mockReturnValueOnce(pending.promise);
+    const renderer = renderDrawer();
+
+    tapNewChat(renderer);
+    const pressables = renderer.root.findAll(
+      (node) =>
+        typeof node.props.onPress === "function" &&
+        (node.props.accessibilityLabel === "Older chat" ||
+          node.props.accessibilityLabel === "Close chat history"),
+    );
+    expect(pressables.length).toBeGreaterThan(1);
+    act(() => {
+      pressables.forEach((node) => node.props.onPress());
+    });
+    expect(mockSessions.selectSession).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+
+    await act(async () => pending.resolve({ id: "session-2" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      renderer.root
+        .findAll(
+          (node) =>
+            typeof node.props.onPress === "function" &&
+            node.props.accessibilityLabel === "Older chat",
+        )[0]
+        .props.onPress();
+    });
+    expect(mockSessions.selectSession).toHaveBeenCalledWith("session-1");
   });
 
   it("ignores a second tap while the first session is still being created", async () => {
@@ -281,6 +404,43 @@ describe("Chat history drawer's new chat button", () => {
 });
 
 describe("Chat header's new chat button", () => {
+  const snackbarShows = (renderer: ReactTestRenderer, text: string) =>
+    renderer.root.findAll(
+      (node) => (node.type as unknown) === "Text" && node.props.children === text,
+    ).length > 0;
+
+  const tapHeaderNewChat = async () => {
+    await act(async () => {
+      capturedHeaderRight!().props.onPress();
+    });
+  };
+
+  it("shows a snackbar on every failed new chat, even without a stored error", async () => {
+    jest.useFakeTimers();
+    try {
+      mockCreateNewSession.mockResolvedValue(null);
+      mockChat.messages = [{ id: "message-1" }];
+      const renderer = renderScreen();
+      const failure = "Couldn't start a new chat. Try again.";
+
+      await tapHeaderNewChat();
+      expect(snackbarShows(renderer, failure)).toBe(true);
+
+      // Let it fade, then fail the same way again: it shows a second time.
+      act(() => {
+        jest.runAllTimers();
+      });
+      expect(snackbarShows(renderer, failure)).toBe(false);
+
+      await tapHeaderNewChat();
+      expect(mockCreateNewSession).toHaveBeenCalledTimes(2);
+      expect(snackbarShows(renderer, failure)).toBe(true);
+    } finally {
+      mockCreateNewSession.mockReset();
+      jest.useRealTimers();
+    }
+  });
+
   it("ignores a second tap while the first session is still being created", async () => {
     const pending = deferred<{ id: string } | null>();
     mockCreateNewSession.mockReturnValueOnce(pending.promise);
