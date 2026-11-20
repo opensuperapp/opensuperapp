@@ -19,21 +19,18 @@ import { NotificationItem } from "@/components/notifications/NotificationItem";
 import { NotificationsFooter } from "@/components/notifications/NotificationsFooter";
 import { spacing } from "@/constants/brand";
 import { ScreenPaths } from "@/constants/ScreenPaths";
-import { Styles } from "@/constants/Styles";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { useLeaveWhenSessionEnds } from "@/hooks/useLeaveWhenSessionEnds";
 import { useLocalNotifications } from "@/hooks/useLocalNotifications";
 import { Notification, useNotifications } from "@/hooks/useNotifications";
 import { convertToUtc } from "@/utils/date";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useIsFocused } from "@react-navigation/native";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FlatList, RefreshControl, SafeAreaView, View } from "react-native";
+import { FlatList, RefreshControl, View } from "react-native";
 
 export default function Notifications() {
   const { colors } = useBrandTheme();
-  const tabbarHeight = useBottomTabBarHeight();
 
   // Notifications are fetched only with a session; My Apps has the Sign In for it.
   useLeaveWhenSessionEnds(() => router.navigate(ScreenPaths.MY_APPS));
@@ -97,58 +94,56 @@ export default function Notifications() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-      {allNotifications.length > 0 ? (
-        <FlatList
-          data={allNotifications}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id.toString()}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefetching || isLoading}
-              onRefresh={refresh}
-              tintColor={colors.text2}
-              colors={[colors.text2]}
-              progressBackgroundColor={colors.card}
-            />
-          }
-          onEndReached={() => hasMore && loadMore()}
-          ListFooterComponent={
-            <NotificationsFooter
-              isFetchingNextPage={isFetchingNextPage}
-              hasMore={hasMore}
-            />
-          }
-          ListFooterComponentStyle={{ backgroundColor: colors.bg }}
-          contentContainerStyle={{
-            paddingHorizontal: spacing.screen,
-            paddingTop: spacing.screen,
-            gap: 10,
-            paddingBottom: tabbarHeight - Styles.Padding.default * 2,
-          }}
-          scrollIndicatorInsets={{
-            bottom: tabbarHeight - Styles.Padding.default * 2,
-          }}
-        />
-      ) : (
-        <View
-          style={{
-            flex: 1,
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          {isLoading ? (
-            <WheelLoader size={44} color={colors.text2} />
-          ) : (
-            <EmptyState
-              icon="bell"
-              title="You're all caught up"
-              description="New notifications from your apps will appear here."
-            />
-          )}
-        </View>
-      )}
-    </SafeAreaView>
+    // The list is the screen root so the native bar insets and blurs over it
+    allNotifications.length > 0 ? (
+      <FlatList
+        data={allNotifications}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id.toString()}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching || isLoading}
+            onRefresh={refresh}
+            tintColor={colors.text2}
+            colors={[colors.text2]}
+            progressBackgroundColor={colors.card}
+          />
+        }
+        onEndReached={() => hasMore && loadMore()}
+        ListFooterComponent={
+          <NotificationsFooter
+            isFetchingNextPage={isFetchingNextPage}
+            hasMore={hasMore}
+          />
+        }
+        ListFooterComponentStyle={{ backgroundColor: colors.bg }}
+        contentInsetAdjustmentBehavior="automatic"
+        style={{ backgroundColor: colors.bg }}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.screen,
+          paddingTop: spacing.screen,
+          gap: 10,
+          paddingBottom: spacing.screen,
+        }}
+      />
+    ) : (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        {isLoading ? (
+          <WheelLoader size={44} color={colors.text2} />
+        ) : (
+          <EmptyState
+            icon="bell"
+            title="You're all caught up"
+            description="New notifications from your apps will appear here."
+          />
+        )}
+      </View>
+    )
   );
 }

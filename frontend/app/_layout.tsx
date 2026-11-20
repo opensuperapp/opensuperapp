@@ -228,9 +228,15 @@ export default function RootLayout() {
                       name="(tabs)"
                       options={{ headerShown: false }}
                     />
+                    {/* A forced-update gate reached by replace: a native bar
+                        for the title, but no way back past it. */}
                     <Stack.Screen
                       name="update"
-                      options={{ headerShown: false }}
+                      options={{
+                        title: "Update",
+                        headerBackVisible: false,
+                        gestureEnabled: false,
+                      }}
                     />
                     <Stack.Screen
                       name="qr-scanner"

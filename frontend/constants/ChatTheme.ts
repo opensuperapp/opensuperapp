@@ -49,13 +49,7 @@ export interface ChatThemePalette {
   highlight: string;
 }
 
-/**
- * Resolves chat UI colors for light or dark mode from the Choreo Labs tokens.
- *
- * @param {boolean} isDark - Whether dark mode is active.
- * @returns {ChatThemePalette} Theme palette for chat screens.
- */
-export const getChatTheme = (isDark: boolean): ChatThemePalette => {
+const buildChatTheme = (isDark: boolean): ChatThemePalette => {
   const c = themes[isDark ? "dark" : "light"];
   return {
     background: c.bg,
@@ -84,3 +78,17 @@ export const getChatTheme = (isDark: boolean): ChatThemePalette => {
     highlight: c.cobalt,
   };
 };
+
+// Built once per scheme, so a screen that depends on the palette (an effect calling
+// navigation.setOptions, a memoised row) sees the same object on every render.
+const CHAT_THEMES = { light: buildChatTheme(false), dark: buildChatTheme(true) };
+
+/**
+ * Resolves chat UI colors for light or dark mode from the Choreo Labs tokens.
+ *
+ * @param {boolean} isDark - Whether dark mode is active.
+ * @returns {ChatThemePalette} Theme palette for chat screens; the same object for
+ *   the same scheme on every call.
+ */
+export const getChatTheme = (isDark: boolean): ChatThemePalette =>
+  CHAT_THEMES[isDark ? "dark" : "light"];

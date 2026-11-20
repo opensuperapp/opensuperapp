@@ -14,26 +14,24 @@
 // specific language governing permissions and limitations
 // under the License.
 import WheelLoader from "@/components/brand/WheelLoader";
-import ChatSessionDrawer from "@/components/chat/ChatSessionDrawer";
+import BrandIcon from "@/components/brand/BrandIcon";
 import EditMessageModal from "@/components/chat/EditMessageModal";
 import ChatComposer from "@/components/chat/ChatComposer";
 import ChatEmptyState from "@/components/chat/ChatEmptyState";
-import ChatHeader from "@/components/chat/ChatHeader";
+import ChatMenuButton from "@/components/chat/ChatMenuButton";
 import ChatMessageRow from "@/components/chat/ChatMessageRow";
+import { useChatSessionsContext } from "@/components/chat/ChatSessionsContext";
 import { textStyle } from "@/constants/brand";
 import { getChatTheme } from "@/constants/ChatTheme";
 import { ChatRole, MessageStatus } from "@/constants/enums/Chat";
-import { isIos } from "@/constants/Constants";
+import { CHAT_MENU_BUTTON_SIZE, isIos } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { RootState } from "@/context/store";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { useChat } from "@/hooks/useChat";
-import { useChatSessions } from "@/hooks/useChatSessions";
 import { useLeaveWhenSessionEnds } from "@/hooks/useLeaveWhenSessionEnds";
 import { useTrackActiveScreen } from "@/hooks/useTrackActiveScreen";
-import { resolveChatUserId } from "@/utils/resolveChatUserId";
 import { ChatMessage } from "@/types/chat.types";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { router } from "expo-router";
@@ -45,8 +43,10 @@ import {
   KeyboardAvoidingView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 
 /**
@@ -57,28 +57,15 @@ import { useSelector } from "react-redux";
 export default function ChatScreen(): JSX.Element {
   const { isDark } = useBrandTheme();
   const theme = getChatTheme(isDark);
-  const tabBarHeight = useBottomTabBarHeight();
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { userInfo } = useSelector((state: RootState) => state.userInfo);
-  const { userId: authUserId, accessToken } = useSelector(
-    (state: RootState) => state.auth
-  );
-  const chatUserId = resolveChatUserId({
-    userId: authUserId,
-    accessToken,
-  });
-
   const {
-    sessions,
     activeSessionId,
     isLoading: sessionsLoading,
     error: sessionsError,
-    selectSession,
     createNewSession,
-    removeSession,
-    togglePinSession,
-    renameSession,
-  } = useChatSessions(chatUserId);
+  } = useChatSessionsContext();
 
   const {
     messages,
@@ -94,7 +81,6 @@ export default function ChatScreen(): JSX.Element {
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarText, setSnackbarText] = useState("");
-  const [drawerVisible, setDrawerVisible] = useState(false);
   const [editTarget, setEditTarget] = useState<{
     id: string;
     content: string;
@@ -108,9 +94,6 @@ export default function ChatScreen(): JSX.Element {
   // The tab is hidden once signed out, and there is no Sign In fallback here.
   useLeaveWhenSessionEnds(() => router.navigate(ScreenPaths.FEED));
 
-  useLayoutEffect(() => {
-    navigation.setOptions({ headerShown: false });
-  }, [navigation]);
 
   const showSnackbar = useCallback(
     (text: string) => {
@@ -201,8 +184,39 @@ export default function ChatScreen(): JSX.Element {
     [isGenerating, sendMessage]
   );
 
-  const bottomInset = isKeyboardVisible ? (isIos ? 12 : 16) : tabBarHeight + 8;
+  // Inside a native tab the bottom inset already clears the tab bar on iOS; on Android
+  // the content ends above the bar, so only a small gap is needed.
+  const bottomInset = isKeyboardVisible
+    ? isIos
+      ? 12
+      : 16
+    : (isIos ? insets.bottom : 0) + 8;
   const hasMessages = messages.length > 0;
+
+  // Native bar buttons: history on the left, "new chat" once there is something to leave.
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <ChatMenuButton
+          theme={theme}
+          onPress={() => router.push("/chat/history")}
+          accessibilityLabel="Open chat history"
+        />
+      ),
+      headerRight: hasMessages
+        ? () => (
+            <TouchableOpacity
+              onPress={createNewSession}
+              style={styles.headerAction}
+              accessibilityLabel="New chat"
+              accessibilityRole="button"
+            >
+              <BrandIcon name="edit" size={22} color={theme.accent} />
+            </TouchableOpacity>
+          )
+        : undefined,
+    });
+  }, [navigation, theme, hasMessages, createNewSession]);
 
   const renderMessage = ({
     item,
@@ -254,12 +268,6 @@ export default function ChatScreen(): JSX.Element {
   return (
     <>
       <View style={[styles.screen, { backgroundColor: theme.background }]}>
-        <ChatHeader
-          theme={theme}
-          onOpenHistory={() => setDrawerVisible(true)}
-          onNewChat={hasMessages ? createNewSession : undefined}
-        />
-
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={isIos ? "padding" : undefined}
@@ -267,6 +275,9 @@ export default function ChatScreen(): JSX.Element {
         >
           <FlatList
             ref={flatListRef}
+            // Scrolls under the translucent bar; iOS insets it for the header.
+            contentInsetAdjustmentBehavior="automatic"
+            keyboardDismissMode="interactive"
             data={messages}
             renderItem={renderMessage}
             keyExtractor={(item) => item.id}
@@ -320,18 +331,6 @@ export default function ChatScreen(): JSX.Element {
           </Animated.View>
         )}
 
-        <ChatSessionDrawer
-          visible={drawerVisible}
-          sessions={sessions}
-          activeSessionId={activeSessionId}
-          theme={theme}
-          onClose={() => setDrawerVisible(false)}
-          onSelect={selectSession}
-          onCreate={createNewSession}
-          onDelete={removeSession}
-          onTogglePin={togglePinSession}
-          onRename={renameSession}
-        />
       </View>
 
       <EditMessageModal
@@ -376,6 +375,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 20,
+  },
+  headerAction: {
+    width: CHAT_MENU_BUTTON_SIZE,
+    height: CHAT_MENU_BUTTON_SIZE,
+    alignItems: "center",
+    justifyContent: "center",
   },
   snackbarText: {
     ...textStyle({ size: 14, weight: 500 }),

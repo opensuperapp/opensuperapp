@@ -45,7 +45,6 @@ import { DecodedAccessToken } from "@/types/decodeAccessToken.types";
 import { authEmitter } from "@/utils/eventEmitter";
 import { signOut } from "@/utils/signOut";
 import Constants from "expo-constants";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "expo-router";
 import { jwtDecode } from "jwt-decode";
 import React, {
@@ -59,12 +58,13 @@ import {
   Alert,
   Image,
   Pressable,
-  SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 
 const AVATAR_SIZE = size.avatar.profile;
@@ -81,9 +81,7 @@ const SettingsScreen = () => {
   const isSignedIn = useSelector(selectIsSignedIn);
   const { userInfo } = useSelector((state: RootState) => state.userInfo);
   const { colors } = useBrandTheme();
-  // The tab bar floats over the screen, so its height (which grows with the
-  // bottom safe-area inset) is cleared explicitly rather than guessed.
-  const tabBarHeight = useBottomTabBarHeight();
+  const insets = useSafeAreaInsets();
   const version = Constants.expoConfig?.version;
   const [basicUserInfo, setBasicUserInfo] = useState<BasicUserInfo>({
     firstName: "",
@@ -96,8 +94,11 @@ const SettingsScreen = () => {
 
   useTrackActiveScreen(ScreenPaths.PROFILE);
 
+  // One setOptions call: the signed-out artwork is full bleed and drawn in the dark
+  // tokens, so the native bar (and its large title) only shows once signed in.
   useLayoutEffect(() => {
     navigation.setOptions({
+      headerShown: isSignedIn,
       headerRight: () =>
         isSignedIn && cardEnabled ? (
           <BusinessCardHeaderButton onPress={() => setCardVisible(true)} />
@@ -180,7 +181,7 @@ const SettingsScreen = () => {
   if (!isSignedIn) {
     return (
       <SignInArtwork
-        style={[styles.signIn, { paddingBottom: tabBarHeight + 24 }]}
+        style={[styles.signIn, { paddingBottom: insets.bottom + 24 }]}
       >
         <View style={styles.signInLogo}>
           <ChoreoLabsLogo width={200} color="#FFFFFF" />
@@ -196,12 +197,11 @@ const SettingsScreen = () => {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
-      <View
-        style={[
-          styles.content,
-          { paddingBottom: tabBarHeight + spacing.screen },
-        ]}
+    <>
+      <ScrollView
+        style={{ backgroundColor: colors.bg }}
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={styles.content}
       >
         {/* User info */}
         <View
@@ -279,26 +279,26 @@ const SettingsScreen = () => {
             </TouchableOpacity>
           )}
         </View>
-      </View>
+      </ScrollView>
 
       <BusinessCardSheet
         visible={cardVisible}
         onClose={() => setCardVisible(false)}
       />
-    </SafeAreaView>
+    </>
   );
 };
 
 export default SettingsScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  // flexGrow so the foot's marginTop: "auto" still pins Sign Out to the bottom
+  // when the content is shorter than the screen.
   content: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: spacing.screen,
     paddingTop: 16,
+    paddingBottom: 24,
   },
   signIn: {
     flex: 1,

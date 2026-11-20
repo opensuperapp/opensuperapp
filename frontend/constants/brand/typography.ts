@@ -44,7 +44,6 @@ export interface TypeToken {
 }
 
 export const type = {
-  tabRootTitle: { size: 24, weight: 600, tracking: -0.035, lineHeight: 1.2 }, // left aligned
   pushedTitle: { size: 17, weight: 600, tracking: -0.02 }, // centred
   articleTitle: { size: 26, weight: 600, tracking: -0.04, lineHeight: 1.2 }, // also App detail
   sectionHeading: { size: 20, weight: 600, tracking: -0.03 }, // "News"
@@ -56,8 +55,6 @@ export const type = {
   excerpt: { size: 14, weight: 400, lineHeight: 1.55 }, // 2-line clamp
   metaLabel: { size: 11, weight: 500, tracking: 0.14, uppercase: true }, // NEWS, BLOG…
   heroDate: { size: 10, weight: 600, tracking: 0.16, uppercase: true },
-  tabLabel: { size: 11, weight: 500 }, // 600 when selected
-  tabLabelSelected: { size: 11, weight: 600 },
   gridAppLabel: { size: 12, weight: 500 }, // single line, ellipsis
   cardFieldLabel: { size: 10, weight: 600, tracking: 0.16, uppercase: true }, // business card
   authorName: { size: 14, weight: 600 },

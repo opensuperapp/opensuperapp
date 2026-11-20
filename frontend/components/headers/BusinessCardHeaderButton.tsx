@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 import BrandIcon from "@/components/brand/BrandIcon";
+import { size } from "@/constants/brand";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { StyleSheet, TouchableOpacity } from "react-native";
 
@@ -30,7 +31,6 @@ const BusinessCardHeaderButton = ({
     <TouchableOpacity
       activeOpacity={0.5}
       onPress={onPress}
-      hitSlop={12}
       style={styles.button}
       accessibilityRole="button"
       accessibilityLabel="open_business_card"
@@ -43,7 +43,11 @@ const BusinessCardHeaderButton = ({
 export default BusinessCardHeaderButton;
 
 const styles = StyleSheet.create({
+  // A plain native-bar icon button; the bar supplies the edge margin.
   button: {
-    marginRight: 16,
+    width: size.minHitTarget,
+    height: size.minHitTarget,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

@@ -17,10 +17,6 @@ jest.mock("@react-native-async-storage/async-storage", () =>
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require("@react-native-async-storage/async-storage/jest/async-storage-mock")
 );
-jest.mock("@react-navigation/bottom-tabs", () => ({
-  ...jest.requireActual("@react-navigation/bottom-tabs"),
-  useBottomTabBarHeight: () => 0,
-}));
 jest.mock("@/services/appStoreService", () => ({
   loadMicroAppDetails: jest.fn(),
   downloadMicroApp: jest.fn(),

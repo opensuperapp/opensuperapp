@@ -14,9 +14,9 @@
 // specific language governing permissions and limitations
 // under the License.
 import EmptyState from "@/components/apps/EmptyState";
+import { useHeaderSearch } from "@/components/apps/useHeaderSearch";
 import WheelLoader from "@/components/brand/WheelLoader";
 import ListItem from "@/components/ListItem";
-import SearchBar from "@/components/SearchBar";
 import SignInMessage from "@/components/SignInMessage";
 import { spacing, type ThemeColors } from "@/constants/brand";
 import { NOT_DOWNLOADED } from "@/constants/Constants";
@@ -34,7 +34,6 @@ import {
   loadMicroAppDetails,
   removeMicroApp,
 } from "@/services/appStoreService";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -73,8 +72,14 @@ const Store = () => {
   const activeDownloadsRef = useRef(new Set<string>());
 
   const { colors } = useBrandTheme();
-  const tabBarHeight = useBottomTabBarHeight();
-  const styles = createStyles(colors, tabBarHeight);
+  const styles = createStyles(colors);
+
+  // Search is what the Store is for, so the bar stays put while the list scrolls
+  useHeaderSearch({
+    onChangeQuery: setSearchQuery,
+    enabled: isSignedIn,
+    pinned: true,
+  });
 
   // Cleanup on unmount
   useEffect(() => {
@@ -221,66 +226,60 @@ const Store = () => {
   }
 
   return (
-    <SafeAreaView style={{ backgroundColor: colors.bg, flex: 1 }}>
-      {/* Search Bar */}
-      <SearchBar
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        placeholder="Search apps..."
+    // The list is the screen root so the native bar insets and blurs over it
+    isLoading && apps.length === 0 ? (
+      <View
+        style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+      >
+        <WheelLoader size={44} color={colors.text2} />
+      </View>
+    ) : (
+      <FlatList
+        data={filteredApps}
+        keyExtractor={(item) => item.appId}
+        renderItem={({ item, index }) => (
+          <>
+            <ListItem
+              key={item.appId}
+              appId={item.appId}
+              name={item.name}
+              webViewUri={item.webViewUri}
+              clientId={item.clientId}
+              exchangedToken={item.exchangedToken}
+              exchangedIdToken={item.exchangedIdToken}
+              versions={item.versions}
+              description={item.description}
+              status={item.status || NOT_DOWNLOADED}
+              displayMode={item.displayMode}
+              downloading={
+                downloading.includes(item.appId) ||
+                installationQueue.some((i) => i.appId === item.appId)
+              }
+              downloadProgress={downloadProgress[item.appId]}
+              onDownload={() =>
+                handleDownload(item.appId, item.versions[0].downloadUrl)
+              }
+              onRemove={() => handleRemoveMicroApp(dispatch, item.appId)}
+              isDefaultApp={defaultMicroAppIds?.includes(item.appId)}
+            />
+            {/* Horizontal Line */}
+            {index !== filteredApps.length - 1 && (
+              <View style={styles.horizontalLine}></View>
+            )}
+          </>
+        )}
+        ListEmptyComponent={<EmptyState icon="store" title="No apps found" />}
+        contentInsetAdjustmentBehavior="automatic"
+        style={{ backgroundColor: colors.bg }}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        onScrollBeginDrag={Keyboard.dismiss}
       />
-
-      {isLoading && apps.length === 0 ? (
-        <View
-          style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
-        >
-          <WheelLoader size={44} color={colors.text2} />
-        </View>
-      ) : (
-        <FlatList
-          data={filteredApps}
-          keyExtractor={(item) => item.appId}
-          renderItem={({ item, index }) => (
-            <>
-              <ListItem
-                key={item.appId}
-                appId={item.appId}
-                name={item.name}
-                webViewUri={item.webViewUri}
-                clientId={item.clientId}
-                exchangedToken={item.exchangedToken}
-                exchangedIdToken={item.exchangedIdToken}
-                versions={item.versions}
-                description={item.description}
-                status={item.status || NOT_DOWNLOADED}
-                displayMode={item.displayMode}
-                downloading={
-                  downloading.includes(item.appId) ||
-                  installationQueue.some((i) => i.appId === item.appId)
-                }
-                downloadProgress={downloadProgress[item.appId]}
-                onDownload={() =>
-                  handleDownload(item.appId, item.versions[0].downloadUrl)
-                }
-                onRemove={() => handleRemoveMicroApp(dispatch, item.appId)}
-                isDefaultApp={defaultMicroAppIds?.includes(item.appId)}
-              />
-              {/* Horizontal Line */}
-              {index !== filteredApps.length - 1 && (
-                <View style={styles.horizontalLine}></View>
-              )}
-            </>
-          )}
-          ListEmptyComponent={<EmptyState icon="store" title="No apps found" />}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          onScrollBeginDrag={Keyboard.dismiss}
-        />
-      )}
-    </SafeAreaView>
+    )
   );
 };
 
-const createStyles = (colors: ThemeColors, tabBarHeight: number) =>
+const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     horizontalLine: {
       height: 1,
@@ -289,7 +288,7 @@ const createStyles = (colors: ThemeColors, tabBarHeight: number) =>
     listContent: {
       paddingHorizontal: spacing.screen,
       paddingTop: 8,
-      paddingBottom: tabBarHeight,
+      paddingBottom: spacing.screen,
     },
     container: {
       flex: 1,

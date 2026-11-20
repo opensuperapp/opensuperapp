@@ -14,7 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 import BrandIcon from "@/components/brand/BrandIcon";
-import { brand, soraFamily, textStyle, type } from "@/constants/brand";
+import TabStack from "@/components/headers/TabStack";
+import { brand } from "@/constants/brand";
 import { MY_APPS_TAB_NAME } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { selectIsSignedIn } from "@/context/slices/authSlice";
@@ -22,13 +23,7 @@ import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { useNotifications } from "@/hooks/useNotifications";
 import { router, Stack } from "expo-router";
 import { useEffect, useRef } from "react";
-import {
-  Animated,
-  Easing,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Animated, Easing, TouchableOpacity, View } from "react-native";
 import { useSelector } from "react-redux";
 
 export default function AppsStack() {
@@ -84,37 +79,11 @@ export default function AppsStack() {
   });
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: true,
-        headerStyle: { backgroundColor: colors.bg },
-        headerShadowVisible: false,
-        headerTintColor: colors.accent,
-        headerTitleAlign: "center",
-        headerTitleStyle: {
-          fontFamily: soraFamily[type.pushedTitle.weight],
-          fontSize: type.pushedTitle.size,
-          color: colors.text,
-        },
-        headerBackTitleStyle: { fontFamily: soraFamily[500], fontSize: 16 },
-        contentStyle: { backgroundColor: colors.bg },
-      }}
-    >
+    <TabStack>
       <Stack.Screen
         name="index"
         options={{
-          // Tab roots are left-aligned; native-stack centres titles on iOS, so
-          // the title rides in headerLeft.
-          headerTitle: "",
-          headerLeft: () => (
-            <Text
-              style={{ ...textStyle(type.tabRootTitle), color: colors.text }}
-              accessibilityRole="header"
-              allowFontScaling={false}
-            >
-              {MY_APPS_TAB_NAME}
-            </Text>
-          ),
+          title: MY_APPS_TAB_NAME,
           headerRight: () => (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
               <TouchableOpacity
@@ -162,20 +131,27 @@ export default function AppsStack() {
       <Stack.Screen
         name="store"
         options={{
-          headerTitle: "Store",
-          headerBackTitle: MY_APPS_TAB_NAME,
+          ...pushedOptions,
+          title: "Store",
         }}
       />
       <Stack.Screen
         name="notifications"
         options={{
-          headerTitle: "Notifications",
-          headerBackTitle: MY_APPS_TAB_NAME,
+          ...pushedOptions,
+          title: "Notifications",
         }}
       />
-    </Stack>
+    </TabStack>
   );
 }
+
+// Pushed from the large-title root: a standard bar, still translucent over the content,
+// with the native back button labelled after the tab.
+const pushedOptions = {
+  headerLargeTitle: false,
+  headerBackTitle: MY_APPS_TAB_NAME,
+} as const;
 
 const headerAction = {
   width: 44,

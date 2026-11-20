@@ -16,15 +16,13 @@
 import {
   brand,
   soraFamily,
-  spacing,
-  textStyle,
   themes,
   type,
   type ThemeColors,
   type ThemeName,
 } from "@/constants/brand";
-import type { BottomTabNavigationOptions } from "@react-navigation/bottom-tabs";
 import { DarkTheme, DefaultTheme, type Theme } from "@react-navigation/native";
+import { Platform } from "react-native";
 import type { NativeStackNavigationOptions } from "@react-navigation/native-stack";
 
 // The family carries the weight: Android doesn't synthesise weights for custom fonts.
@@ -75,29 +73,39 @@ export const pushedHeaderOptions = (
 });
 
 /**
- * Tab roots in a native stack (e.g. My Apps): left-aligned 24/600 title.
- * A native header can't take tracking; iOS also keeps its title centred.
+ * Tab roots: the native large title that collapses into the bar as the content scrolls.
+ * On iOS the bar is transparent with the system chrome blur, so the screen's scroll view
+ * must use `contentInsetAdjustmentBehavior="automatic"` for the collapse to track it.
+ * Android has no large title; it gets the native Material top app bar.
  */
-export const stackTabRootHeaderOptions = (
+export const largeTitleHeaderOptions = (
   colors: ThemeColors,
+  isDark: boolean,
 ): NativeStackNavigationOptions => ({
-  ...pushedHeaderOptions(colors),
-  headerTitleAlign: "left",
+  headerTintColor: colors.accent,
+  headerShadowVisible: false,
   headerTitleStyle: {
-    fontFamily: soraFamily[type.tabRootTitle.weight],
-    fontSize: type.tabRootTitle.size,
+    fontFamily: soraFamily[type.pushedTitle.weight],
     color: colors.text,
   },
-});
-
-/** Tab roots rendered by the tab navigator: left-aligned 24/600 title, accent actions. */
-export const tabRootHeaderOptions = (
-  colors: ThemeColors,
-): BottomTabNavigationOptions => ({
-  headerTitleAlign: "left",
-  headerTintColor: colors.accent,
-  headerStyle: { backgroundColor: colors.bar, borderBottomColor: colors.line },
-  headerTitleStyle: { ...textStyle(type.tabRootTitle), color: colors.text },
-  headerTitleContainerStyle: { marginLeft: spacing.headerPadding.left },
-  headerRightContainerStyle: { paddingRight: spacing.headerPadding.right },
+  headerBackTitleStyle: { fontFamily: soraFamily[500] },
+  contentStyle: { backgroundColor: colors.bg },
+  ...Platform.select<NativeStackNavigationOptions>({
+    ios: {
+      headerLargeTitle: true,
+      headerTransparent: true,
+      headerBlurEffect: isDark
+        ? "systemChromeMaterialDark"
+        : "systemChromeMaterialLight",
+      headerLargeTitleShadowVisible: false,
+      headerLargeStyle: { backgroundColor: "transparent" },
+      headerLargeTitleStyle: {
+        fontFamily: soraFamily[700],
+        color: colors.text,
+      },
+    },
+    default: {
+      headerStyle: { backgroundColor: colors.bg },
+    },
+  }),
 });

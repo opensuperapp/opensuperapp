@@ -13,14 +13,14 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import BrandIcon from "@/components/brand/BrandIcon";
-import { radius, textStyle, type } from "@/constants/brand";
+import { size, textStyle, type } from "@/constants/brand";
 import { ChatThemePalette } from "@/constants/ChatTheme";
 import { isIos } from "@/constants/Constants";
 import { MAX_MESSAGE_LENGTH } from "@/types/chat.types";
 import React, { useEffect, useState } from "react";
 import {
-  KeyboardAvoidingView,
+  Dimensions,
+  Keyboard,
   Modal,
   Platform,
   StyleSheet,
@@ -40,10 +40,11 @@ export interface EditMessageModalProps {
 }
 
 /**
- * Full-screen modal for editing a previously sent user message.
+ * Native page sheet for editing a previously sent user message, with the platform's
+ * Cancel / Send bar buttons. Multi-line editing can't live in an alert prompt.
  *
  * @param {EditMessageModalProps} props - Visibility, content, and handlers.
- * @returns {JSX.Element} Edit message modal.
+ * @returns {JSX.Element} Edit message sheet.
  */
 const EditMessageModal = ({
   visible,
@@ -53,6 +54,7 @@ const EditMessageModal = ({
   onClose,
 }: EditMessageModalProps): JSX.Element => {
   const [content, setContent] = useState(initialContent);
+  const [keyboardInset, setKeyboardInset] = useState(0);
   const insets = useSafeAreaInsets();
   const canSend = content.trim().length > 0;
 
@@ -61,6 +63,35 @@ const EditMessageModal = ({
       setContent(initialContent);
     }
   }, [visible, initialContent]);
+
+  // A page sheet's bottom edge is the screen's, so the keyboard overlap is simply the
+  // distance from its top to the bottom of the window. Android resizes for us.
+  useEffect(() => {
+    if (!isIos) {
+      return;
+    }
+    const frameSub = Keyboard.addListener("keyboardWillChangeFrame", (e) => {
+      const { screenY, height } = e.endCoordinates;
+      const windowHeight = Dimensions.get("window").height;
+      // "Prefer Cross-Fade Transitions" reports screenY 0, which would turn the whole
+      // window into padding; KeyboardAvoidingView treats that as no keyboard.
+      if (screenY === 0 || height === 0) {
+        setKeyboardInset(0);
+        return;
+      }
+      setKeyboardInset(
+        Math.min(Math.max(windowHeight - screenY, 0), windowHeight - 1)
+      );
+    });
+    // An undocked or floating keyboard hides after its last frame change.
+    const hideSub = Keyboard.addListener("keyboardWillHide", () =>
+      setKeyboardInset(0)
+    );
+    return () => {
+      frameSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const handleSend = () => {
     const trimmed = content.trim();
@@ -74,74 +105,72 @@ const EditMessageModal = ({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="fullScreen"
+      presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={[styles.screen, { backgroundColor: theme.sheet }]}>
-        <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+      <View
+        style={[
+          styles.screen,
+          {
+            backgroundColor: theme.sheet,
+            paddingTop: isIos ? 0 : insets.top,
+            paddingBottom: Math.max(keyboardInset, insets.bottom),
+          },
+        ]}
+      >
+        <View style={[styles.bar, { borderBottomColor: theme.border }]}>
           <TouchableOpacity
             onPress={onClose}
-            activeOpacity={0.7}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={[
-              styles.dismissBtn,
-              {
-                backgroundColor: theme.inputSurface,
-                borderColor: theme.inputBorder,
-              },
-            ]}
+            hitSlop={8}
+            style={styles.barButton}
             accessibilityLabel="Dismiss edit"
             accessibilityRole="button"
           >
-            <BrandIcon name="close" size={20} color={theme.accent} />
-            <Text style={[styles.dismissText, { color: theme.accent }]}>
-              Dismiss edit
+            <Text style={[styles.barButtonText, { color: theme.accent }]}>
+              Cancel
+            </Text>
+          </TouchableOpacity>
+
+          <Text
+            style={[styles.title, { color: theme.assistantText }]}
+            accessibilityRole="header"
+            numberOfLines={1}
+          >
+            Edit message
+          </Text>
+
+          <TouchableOpacity
+            onPress={handleSend}
+            disabled={!canSend}
+            hitSlop={8}
+            style={[styles.barButton, styles.barButtonRight]}
+            accessibilityLabel="Send message"
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !canSend }}
+          >
+            <Text
+              style={[
+                styles.barButtonText,
+                styles.barButtonDone,
+                { color: canSend ? theme.accent : theme.subtle },
+              ]}
+            >
+              Send
             </Text>
           </TouchableOpacity>
         </View>
 
-        <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={isIos ? "padding" : undefined}
-          keyboardVerticalOffset={insets.top}
-        >
-          <TextInput
-            style={[styles.input, { color: theme.assistantText }]}
-            value={content}
-            onChangeText={setContent}
-            multiline
-            maxLength={MAX_MESSAGE_LENGTH}
-            autoFocus
-            textAlignVertical="top"
-            placeholderTextColor={theme.subtle}
-            selectionColor={theme.highlight}
-          />
-        </KeyboardAvoidingView>
-
-        <View
-          style={[
-            styles.footer,
-            { paddingBottom: Math.max(insets.bottom, 16) },
-          ]}
-        >
-          <TouchableOpacity
-            onPress={handleSend}
-            disabled={!canSend}
-            style={[
-              styles.sendBtn,
-              { backgroundColor: canSend ? theme.signal : theme.surface },
-            ]}
-            accessibilityLabel="Send message"
-            accessibilityRole="button"
-          >
-            <BrandIcon
-              name="send"
-              size={22}
-              strokeWidth={1.8}
-              color={canSend ? theme.onSignal : theme.subtle}
-            />
-          </TouchableOpacity>
-        </View>
+        <TextInput
+          style={[styles.input, { color: theme.assistantText }]}
+          value={content}
+          onChangeText={setContent}
+          multiline
+          maxLength={MAX_MESSAGE_LENGTH}
+          autoFocus
+          textAlignVertical="top"
+          placeholderTextColor={theme.subtle}
+          selectionColor={theme.highlight}
+        />
       </View>
     </Modal>
   );
@@ -153,46 +182,41 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
   },
-  flex: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-  },
-  dismissBtn: {
+  // Mirrors a UINavigationBar inside a sheet: 56pt, text buttons either side.
+  bar: {
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-start",
-    gap: 6,
-    minHeight: 44,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderRadius: radius.pill,
+    height: 56,
+    paddingHorizontal: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  dismissText: {
-    ...textStyle({ size: 15, weight: 600 }),
+  barButton: {
+    minWidth: size.minHitTarget,
+    minHeight: size.minHitTarget,
+    paddingHorizontal: 8,
+    justifyContent: "center",
+  },
+  barButtonRight: {
+    alignItems: "flex-end",
+  },
+  barButtonText: {
+    ...textStyle({ size: 17, weight: 400 }),
+  },
+  barButtonDone: {
+    ...textStyle({ size: 17, weight: 600 }),
+  },
+  title: {
+    flex: 1,
+    textAlign: "center",
+    ...textStyle({ size: 17, weight: 600 }),
   },
   input: {
     flex: 1,
     ...textStyle({ ...type.body, lineHeight: 1.6 }),
     paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 16,
     ...Platform.select({
       android: { paddingBottom: 8 },
     }),
-  },
-  footer: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    alignItems: "flex-end",
-  },
-  sendBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
   },
 });
