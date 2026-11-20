@@ -15,11 +15,9 @@
 // under the License.
 import Avatar from "@/components/Avatar";
 import BrandIcon from "@/components/brand/BrandIcon";
-import ChoreoLabsLogo from "@/components/brand/ChoreoLabsLogo";
 import BusinessCardSheet from "@/components/BusinessCardSheet";
 import BusinessCardHeaderButton from "@/components/headers/BusinessCardHeaderButton";
 import ProfileListItem from "@/components/ProfileListItem";
-import SignInArtwork from "@/components/signIn/SignInArtwork";
 import SignInMessage from "@/components/SignInMessage";
 import {
   brand,
@@ -28,10 +26,9 @@ import {
   soraFamily,
   spacing,
   textStyle,
-  themes,
   type,
 } from "@/constants/brand";
-import { SUPER_APP_DEVELOPER_GROUP } from "@/constants/Constants";
+import { isIos, SUPER_APP_DEVELOPER_GROUP } from "@/constants/Constants";
 import { Event } from "@/constants/enums/Event";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { selectIsSignedIn } from "@/context/slices/authSlice";
@@ -64,11 +61,28 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaProvider,
+  useSafeAreaInsets,
+  type EdgeInsets,
+} from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 
 const AVATAR_SIZE = size.avatar.profile;
 const RING = size.profileAvatarRing;
+
+type VerticalInsets = Pick<EdgeInsets, "top" | "bottom">;
+
+/** Reports the top/bottom insets of the nearest SafeAreaProvider when they change. */
+function InsetsProbe({
+  onChange,
+}: {
+  onChange: (insets: VerticalInsets) => void;
+}) {
+  const { top, bottom } = useSafeAreaInsets();
+  useEffect(() => onChange({ top, bottom }), [top, bottom, onChange]);
+  return null;
+}
 
 /**
  * Settings screen displays user profile information when authenticated,
@@ -81,7 +95,6 @@ const SettingsScreen = () => {
   const isSignedIn = useSelector(selectIsSignedIn);
   const { userInfo } = useSelector((state: RootState) => state.userInfo);
   const { colors } = useBrandTheme();
-  const insets = useSafeAreaInsets();
   const version = Constants.expoConfig?.version;
   const [basicUserInfo, setBasicUserInfo] = useState<BasicUserInfo>({
     firstName: "",
@@ -90,15 +103,13 @@ const SettingsScreen = () => {
     avatarUri: "",
   });
   const [cardVisible, setCardVisible] = useState(false);
+  const [screenInsets, setScreenInsets] = useState<VerticalInsets | null>(null);
   const { cardEnabled } = useWalletPassConfig();
 
   useTrackActiveScreen(ScreenPaths.PROFILE);
 
-  // One setOptions call: the signed-out artwork is full bleed and drawn in the dark
-  // tokens, so the native bar (and its large title) only shows once signed in.
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerShown: isSignedIn,
       headerRight: () =>
         isSignedIn && cardEnabled ? (
           <BusinessCardHeaderButton onPress={() => setCardVisible(true)} />
@@ -162,7 +173,7 @@ const SettingsScreen = () => {
           style: "destructive",
           onPress: () => signOut(dispatch),
         },
-      ]
+      ],
     );
   }, [dispatch]);
 
@@ -178,68 +189,73 @@ const SettingsScreen = () => {
     });
   }, []);
 
-  if (!isSignedIn) {
-    return (
-      <SignInArtwork
-        style={[styles.signIn, { paddingBottom: insets.bottom + 24 }]}
-      >
-        <View style={styles.signInLogo}>
-          <ChoreoLabsLogo width={200} color="#FFFFFF" />
-        </View>
-        <View style={styles.signInFoot}>
-          <SignInMessage onArtwork />
-          <Text style={[styles.versionText, { color: themes.dark.text3 }]}>
-            version {version}
-          </Text>
-        </View>
-      </SignInArtwork>
-    );
-  }
-
   return (
-    <>
+    // A vertical stack: the profile section scrolls and takes the free height, and the
+    // Sign Out foot is the last item, pinned to the bottom outside the scroll view.
+    <View style={[styles.stack, { backgroundColor: colors.bg }]}>
       <ScrollView
-        style={{ backgroundColor: colors.bg }}
+        style={styles.profileSection}
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={styles.content}
+        // Bounce only when it overflows (small screens, large text).
+        alwaysBounceVertical={false}
+        overScrollMode="never"
+        contentContainerStyle={isSignedIn ? styles.content : styles.signIn}
       >
-        {/* User info */}
+        {!isSignedIn ? (
+          <View style={styles.signInCard}>
+            <SignInMessage message="To view your profile, please sign in" />
+          </View>
+        ) : (
+          <>
+            {/* User info */}
+            <View
+              style={[
+                styles.avatarRing,
+                { backgroundColor: colors.card, borderColor: colors.line },
+              ]}
+            >
+              {basicUserInfo.avatarUri ? (
+                <Image
+                  source={{ uri: basicUserInfo.avatarUri }}
+                  style={[styles.avatar, { backgroundColor: colors.card2 }]}
+                />
+              ) : (
+                <Avatar
+                  initials={`${basicUserInfo.firstName?.charAt(
+                    0,
+                  )}${basicUserInfo.lastName?.charAt(0)}`}
+                  size={AVATAR_SIZE}
+                />
+              )}
+            </View>
+
+            <View style={[styles.listCard, { backgroundColor: colors.card }]}>
+              <ProfileListItem
+                icon="user"
+                title="Name"
+                value={`${basicUserInfo.firstName} ${basicUserInfo.lastName}`}
+              />
+              <View
+                style={[styles.divider, { backgroundColor: colors.line }]}
+              />
+              <ProfileListItem
+                icon="mail"
+                title="Email"
+                value={basicUserInfo.workEmail}
+              />
+            </View>
+          </>
+        )}
+      </ScrollView>
+
+      {/* On iOS the screen runs under the tab bar, so the foot clears it itself. */}
+      {isSignedIn && (
         <View
           style={[
-            styles.avatarRing,
-            { backgroundColor: colors.card, borderColor: colors.line },
+            styles.foot,
+            { paddingBottom: 24 + (isIos ? (screenInsets?.bottom ?? 0) : 0) },
           ]}
         >
-          {basicUserInfo.avatarUri ? (
-            <Image
-              source={{ uri: basicUserInfo.avatarUri }}
-              style={[styles.avatar, { backgroundColor: colors.card2 }]}
-            />
-          ) : (
-            <Avatar
-              initials={`${basicUserInfo.firstName?.charAt(
-                0
-              )}${basicUserInfo.lastName?.charAt(0)}`}
-              size={AVATAR_SIZE}
-            />
-          )}
-        </View>
-
-        <View style={[styles.listCard, { backgroundColor: colors.card }]}>
-          <ProfileListItem
-            icon="user"
-            title="Name"
-            value={`${basicUserInfo.firstName} ${basicUserInfo.lastName}`}
-          />
-          <View style={[styles.divider, { backgroundColor: colors.line }]} />
-          <ProfileListItem
-            icon="mail"
-            title="Email"
-            value={basicUserInfo.workEmail}
-          />
-        </View>
-
-        <View style={styles.foot}>
           <Text style={[styles.versionText, { color: colors.text3 }]}>
             version {version}
           </Text>
@@ -279,39 +295,46 @@ const SettingsScreen = () => {
             </TouchableOpacity>
           )}
         </View>
-      </ScrollView>
+      )}
+
+      {/* This provider measures the screen's own safe area, which on
+          iOS includes the tab bar; the root provider only has the home indicator. */}
+      <SafeAreaProvider style={StyleSheet.absoluteFill} pointerEvents="none">
+        <InsetsProbe onChange={setScreenInsets} />
+      </SafeAreaProvider>
 
       <BusinessCardSheet
         visible={cardVisible}
         onClose={() => setCardVisible(false)}
       />
-    </>
+    </View>
   );
 };
 
 export default SettingsScreen;
 
 const styles = StyleSheet.create({
-  // flexGrow so the foot's marginTop: "auto" still pins Sign Out to the bottom
-  // when the content is shorter than the screen.
+  stack: {
+    flex: 1,
+    flexDirection: "column",
+  },
+  profileSection: {
+    flex: 1,
+  },
   content: {
-    flexGrow: 1,
     paddingHorizontal: spacing.screen,
     paddingTop: 16,
-    paddingBottom: 24,
   },
+  // Same layout as the signed-out My Apps and Store screens.
   signIn: {
-    flex: 1,
-    paddingHorizontal: 24,
-  },
-  signInLogo: {
-    flex: 1,
-    alignItems: "center",
+    flexGrow: 1,
     justifyContent: "center",
-  },
-  signInFoot: {
     alignItems: "center",
-    gap: 14,
+  },
+  signInCard: {
+    padding: 30,
+    width: "90%",
+    alignItems: "center",
   },
   avatarRing: {
     alignSelf: "center",
@@ -335,8 +358,8 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
   },
   foot: {
-    marginTop: "auto",
-    paddingTop: 32,
+    paddingHorizontal: spacing.screen,
+    paddingTop: 16,
     alignItems: "center",
     gap: 14,
   },

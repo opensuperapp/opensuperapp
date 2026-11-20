@@ -13,7 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { radius } from "@/constants/brand";
+import type { BrandTheme } from "@/hooks/useBrandTheme";
 import type { NativeStackNavigationOptions } from "@react-navigation/native-stack";
 
 /**
@@ -21,13 +21,13 @@ import type { NativeStackNavigationOptions } from "@react-navigation/native-stac
  * interruption the user can swipe or back away from rather than a page they navigated to.
  *
  * There is no contentStyle background here: the sheet clips its content to the rounded
- * shape, so the sheet component paints the sign-in artwork itself.
+ * shape, so the sheet component paints its own surface.
  */
-export const signInSheetOptions: NativeStackNavigationOptions = {
+// Takes the theme only to match the iOS signature; the Android sheet paints itself.
+export const signInSheetOptions = (
+  _theme: BrandTheme,
+): NativeStackNavigationOptions => ({
   presentation: "formSheet",
   headerShown: false,
   sheetAllowedDetents: "fitToContents",
-  // The brand sheet top radius. Documented as iOS-only, but react-native-screens
-  // applies it to the Android sheet too.
-  sheetCornerRadius: radius.sheetTop,
-};
+});

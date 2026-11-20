@@ -20,7 +20,10 @@ import { Stack } from "expo-router";
 export default function Layout() {
   return (
     <TabStack>
-      <Stack.Screen name="index" options={{ title: PROFILE_TAB_NAME }} />
+      <Stack.Screen
+        name="index"
+        options={{ title: PROFILE_TAB_NAME, headerLargeTitle: false }}
+      />
     </TabStack>
   );
 }
