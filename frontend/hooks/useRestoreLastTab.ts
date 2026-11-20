@@ -18,7 +18,7 @@ import { ScreenPaths } from "@/constants/ScreenPaths";
 import { selectSessionStatus } from "@/context/slices/authSlice";
 import { openTabTracking } from "@/hooks/useTrackActiveScreen";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
+import { usePathname, useRouter } from "expo-router";
 import { useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 
@@ -37,9 +37,17 @@ const isValidPath = (path: string): path is ScreenPaths => {
   return validPaths.includes(path as ScreenPaths);
 };
 
+// The app always opens on the root of the Feed tab.
+const LAUNCH_PATHNAME = "/";
+
 /**
  * Puts the user back on the tab they last had open, unless the tab bar would not show
  * it to them now: a signed-out user is not restored onto Chat.
+ *
+ * It only moves a user who is still where the app opened. By the time the saved tab is
+ * read, the sign-in sheet for an expired session or a micro-app may be on top of the
+ * tabs, and navigating to a tab then would push a second tab navigator over it rather
+ * than switch tabs. A user who has already moved on is left where they are too.
  *
  * @param isTabVisible - The tab bar's own rule for whether a tab is shown.
  * @param areRulesLoaded - Whether isTabVisible is applying the loaded visibility rules
@@ -50,6 +58,11 @@ export const useRestoreLastTab = (
   areRulesLoaded = true
 ) => {
   const router = useRouter();
+  // Read when the restore navigates, which is after the session, the rules and the saved
+  // tab have all been waited for; usePathname re-renders on every route change.
+  const pathname = usePathname();
+  const pathnameRef = useRef(pathname);
+  pathnameRef.current = pathname;
   // Which tabs a user may see depends on the session and the visibility rules, so nothing
   // is decided until both are known, and then only once.
   const isSessionKnown = useSelector(selectSessionStatus) !== "restoring";
@@ -66,19 +79,20 @@ export const useRestoreLastTab = (
       return tabName === undefined || isTabVisibleRef.current(tabName);
     };
 
+    const goTo = (path: ScreenPaths) => {
+      if (pathnameRef.current === LAUNCH_PATHNAME) router.navigate(path);
+      openTabTracking();
+    };
+
     const restoreTab = async () => {
       try {
         const lastRoute = await AsyncStorage.getItem(LAST_ACTIVE_PATH_KEY);
 
         if (lastRoute && isValidPath(lastRoute) && canRestore(lastRoute)) {
-          setTimeout(() => {
-            router.navigate(lastRoute as ScreenPaths);
-            openTabTracking();
-          }, 100);
+          setTimeout(() => goTo(lastRoute), 100);
         } else {
           // If no last tab is found, go to Discovery
-          router.navigate(ScreenPaths.FEED);
-          openTabTracking();
+          goTo(ScreenPaths.FEED);
         }
       } catch (error) {
         console.error("Failed to restore last tab:", error);

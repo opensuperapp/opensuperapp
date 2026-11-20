@@ -16,6 +16,7 @@
 import { LAST_ACTIVE_PATH_KEY } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { useRestoreLastTab } from "@/hooks/useRestoreLastTab";
+import { openTabTracking } from "@/hooks/useTrackActiveScreen";
 import { SessionStatus } from "@/types/auth.types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React from "react";
@@ -35,7 +36,15 @@ jest.mock("react-redux", () =>
   require("react-redux/alternate-renderers")
 );
 const mockRouter = { navigate: jest.fn() };
-jest.mock("expo-router", () => ({ useRouter: () => mockRouter }));
+// What usePathname reports: the app opens on the Feed root, "/".
+let mockPathname = "/";
+jest.mock("expo-router", () => ({
+  useRouter: () => mockRouter,
+  usePathname: () => mockPathname,
+}));
+jest.mock("@/hooks/useTrackActiveScreen", () => ({
+  openTabTracking: jest.fn(),
+}));
 
 type SetStatus = { type: "set"; sessionStatus: SessionStatus };
 
@@ -85,13 +94,32 @@ const mount = async (
     jest.runOnlyPendingTimers();
   });
 
-  const setStatus = async (status: SessionStatus) => {
+  const runTimers = async () => {
     await act(async () => {
+      jest.runOnlyPendingTimers();
+    });
+  };
+  // pathname is set in the same render as the status, as when SessionExpiredPrompt
+  // pushes the sign-in sheet the moment the session turns out to be expired.
+  const setStatus = async (
+    status: SessionStatus,
+    {
+      pathname,
+      waitForTimers = true,
+    }: { pathname?: string; waitForTimers?: boolean } = {}
+  ) => {
+    await act(async () => {
+      if (pathname !== undefined) mockPathname = pathname;
       store.dispatch({ type: "set", sessionStatus: status });
       rerender();
     });
+    if (waitForTimers) await runTimers();
+  };
+  // usePathname re-renders its caller on every route change.
+  const setPathname = async (pathname: string) => {
+    mockPathname = pathname;
     await act(async () => {
-      jest.runOnlyPendingTimers();
+      rerender();
     });
   };
   const setRules = async (next: Rules) => {
@@ -112,12 +140,14 @@ const mount = async (
         />
       </Provider>
     );
-  return { setStatus, setRules };
+  return { setStatus, setRules, setPathname, runTimers };
 };
 
 beforeEach(async () => {
   jest.useFakeTimers();
   mockRouter.navigate.mockClear();
+  jest.mocked(openTabTracking).mockClear();
+  mockPathname = "/";
   await AsyncStorage.clear();
 });
 
@@ -187,5 +217,48 @@ describe("useRestoreLastTab", () => {
 
     expect(mockRouter.navigate).toHaveBeenCalledTimes(1);
     expect(mockRouter.navigate).toHaveBeenCalledWith(ScreenPaths.FEED);
+  });
+
+  it("leaves the sign-in sheet alone when the session is found expired", async () => {
+    const { setStatus } = await mount("restoring", ScreenPaths.PROFILE);
+
+    await setStatus("expired", { pathname: ScreenPaths.SIGN_IN });
+
+    expect(mockRouter.navigate).not.toHaveBeenCalled();
+    expect(openTabTracking).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not navigate under a screen opened while the saved tab was read", async () => {
+    const { setStatus, setPathname, runTimers } = await mount(
+      "restoring",
+      ScreenPaths.PROFILE
+    );
+
+    await setStatus("authenticated", { waitForTimers: false });
+    await setPathname(ScreenPaths.MICRO_APP);
+    await runTimers();
+
+    expect(mockRouter.navigate).not.toHaveBeenCalled();
+    expect(openTabTracking).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves a user who already moved to another tab where they are", async () => {
+    const { setRules, setPathname } = await mount(
+      "authenticated",
+      ScreenPaths.CHAT,
+      { loaded: false, chatHidden: false }
+    );
+
+    await setPathname(ScreenPaths.LIBRARY);
+    await setRules(LOADED_RULES);
+
+    expect(mockRouter.navigate).not.toHaveBeenCalled();
+    expect(openTabTracking).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens tab tracking after restoring", async () => {
+    await mount("authenticated", ScreenPaths.CHAT);
+
+    expect(openTabTracking).toHaveBeenCalledTimes(1);
   });
 });
