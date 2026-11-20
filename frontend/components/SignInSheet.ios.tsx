@@ -13,22 +13,21 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
-import { useColorScheme } from "@/hooks/useColorScheme";
+import ChoreoLabsLogo from "@/components/brand/ChoreoLabsLogo";
+import PrimaryButton from "@/components/brand/PrimaryButton";
+import SignInArtwork from "@/components/signIn/SignInArtwork";
+import { size, textStyle, themes, type } from "@/constants/brand";
 import { useSignInSheet } from "@/hooks/useSignInSheet";
-import { Ionicons } from "@expo/vector-icons";
+import Constants from "expo-constants";
 import React from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+
+// The sheet sits on the always-dark sign-in artwork, so it reads the dark tokens.
+const colors = themes.dark;
 
 /**
- * The sign-in sheet laid out like a native iOS sheet: icon, title and message
- * over a prominent Sign In button with a plain "Not now" below it.
+ * The sign-in sheet laid out like a native iOS sheet: the Choreo Labs logo and
+ * the reason over a prominent Sign In button with a plain "Not now" below it.
  *
  * Each element is its own accessibility element; the old modal card merged them into
  * one, so VoiceOver could never reach the button.
@@ -36,40 +35,27 @@ import {
 const SignInSheet = () => {
   const { title, message, isSigningIn, signIn, dismiss } =
     useSignInSheet();
-  const colorScheme = useColorScheme() ?? "light";
-  const styles = createStyles(colorScheme);
+  const version = Constants.expoConfig?.version;
 
   return (
-    <View style={styles.container}>
-      <Ionicons
-        name="log-in-outline"
-        size={44}
-        color={Colors.companyOrange}
-        style={styles.icon}
+    <SignInArtwork style={styles.container}>
+      <View
+        style={styles.logo}
         accessibilityElementsHidden
-        importantForAccessibility="no"
-      />
+        importantForAccessibility="no-hide-descendants"
+      >
+        <ChoreoLabsLogo width={168} color="#FFFFFF" />
+      </View>
       <Text style={styles.title} accessibilityRole="header">
         {title}
       </Text>
       <Text style={styles.message}>{message}</Text>
-      <Pressable
+      <PrimaryButton
+        title="Sign In"
         onPress={signIn}
-        disabled={isSigningIn}
-        accessibilityRole="button"
-        accessibilityLabel="Sign in"
-        accessibilityState={{ busy: isSigningIn, disabled: isSigningIn }}
-        style={({ pressed }) => [
-          styles.signInButton,
-          pressed && styles.pressed,
-        ]}
-      >
-        {isSigningIn ? (
-          <ActivityIndicator color="#FFFFFF" />
-        ) : (
-          <Text style={styles.signInText}>Sign In</Text>
-        )}
-      </Pressable>
+        loading={isSigningIn}
+        style={styles.signInButton}
+      />
       <Pressable
         onPress={dismiss}
         accessibilityRole="button"
@@ -81,67 +67,57 @@ const SignInSheet = () => {
       >
         <Text style={styles.notNowText}>Not now</Text>
       </Pressable>
-    </View>
+      <Text style={styles.version}>version {version}</Text>
+    </SignInArtwork>
   );
 };
 
-const createStyles = (colorScheme: "light" | "dark") =>
-  StyleSheet.create({
-    // No background or bottom inset here: the sheet's contentStyle paints both, and
-    // fitToContents already adds the home indicator inset below this view.
-    container: {
-      alignItems: "center",
-      paddingTop: 36,
-      paddingHorizontal: 24,
-      paddingBottom: 8,
-    },
-    icon: {
-      marginBottom: 12,
-    },
-    // Sizes follow the iOS Title 2 and Body text styles.
-    title: {
-      fontSize: 22,
-      lineHeight: 28,
-      fontWeight: "700",
-      color: Colors[colorScheme].text,
-      textAlign: "center",
-      marginBottom: 8,
-    },
-    message: {
-      fontSize: 17,
-      lineHeight: 22,
-      color: Colors[colorScheme].primaryTextColor,
-      textAlign: "center",
-      marginBottom: 28,
-    },
-    signInButton: {
-      alignSelf: "stretch",
-      height: 50,
-      borderRadius: 14,
-      borderCurve: "continuous",
-      backgroundColor: Colors.companyOrange,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    signInText: {
-      fontSize: 17,
-      fontWeight: "600",
-      color: "#FFFFFF",
-    },
-    notNowButton: {
-      alignSelf: "stretch",
-      height: 44,
-      marginTop: 8,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    notNowText: {
-      fontSize: 17,
-      color: Colors.companyOrange,
-    },
-    pressed: {
-      opacity: 0.6,
-    },
-  });
+const styles = StyleSheet.create({
+  // No bottom inset here: fitToContents already adds the home indicator inset
+  // below this view, painted Midnight by the sheet's contentStyle.
+  container: {
+    alignItems: "center",
+    paddingTop: 44,
+    paddingHorizontal: 24,
+    paddingBottom: 8,
+  },
+  logo: {
+    marginBottom: 28,
+  },
+  title: {
+    ...textStyle(type.sectionHeading),
+    color: colors.text,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  message: {
+    ...textStyle({ ...type.excerpt, size: 15 }),
+    color: colors.text2,
+    textAlign: "center",
+    marginBottom: 28,
+  },
+  signInButton: {
+    alignSelf: "stretch",
+  },
+  notNowButton: {
+    alignSelf: "stretch",
+    height: size.minHitTarget,
+    marginTop: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  notNowText: {
+    ...textStyle(type.storeRowName),
+    color: colors.accent,
+  },
+  version: {
+    ...textStyle({ size: 13, weight: 400, tracking: 0.02 }),
+    color: colors.text3,
+    marginTop: 6,
+  },
+  pressed: {
+    opacity: 0.6,
+  },
+});
 
 export default SignInSheet;

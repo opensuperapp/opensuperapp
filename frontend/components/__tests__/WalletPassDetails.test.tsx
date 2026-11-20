@@ -20,9 +20,9 @@ const baseData: BusinessCardData = {
   firstName: "Jane",
   lastName: "Doe",
   jobTitle: "Software Engineer",
-  workEmail: "jane.doe@wso2.com",
+  workEmail: "jane.doe@example.com",
   organization: "WSO2 LLC",
-  website: "https://wso2.com",
+  website: "https://example.com",
 };
 
 // The order and labels are pinned against the wallet pass service's Apple
@@ -31,7 +31,7 @@ const baseData: BusinessCardData = {
 describe("backFields", () => {
   it("always carries WEBSITE first, even with nothing else set", () => {
     expect(backFields(baseData)).toEqual([
-      { key: "site", label: "WEBSITE", value: "https://wso2.com" },
+      { key: "site", label: "WEBSITE", value: "https://example.com" },
     ]);
   });
 

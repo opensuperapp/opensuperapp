@@ -13,34 +13,34 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
+import BrandIcon from "@/components/brand/BrandIcon";
+import PrimaryButton from "@/components/brand/PrimaryButton";
+import { textStyle, themes, type } from "@/constants/brand";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { useSignInWithAsgardeo } from "@/hooks/useSignInWithAsgardeo";
-import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useColorScheme,
-} from "react-native";
+import { StyleSheet, Text } from "react-native";
 
 /**
  * SignInMessage is a presentational component displayed inside the sign-in modal.
  * It shows a sign-in icon, informative text, and a button to trigger the sign-in flow using Asgardeo.
  *
- * If the sign-in request is not ready, a loading spinner is shown instead of the button text.
+ * While the sign-in request is in flight the button shows the Wheel loader.
+ * `onArtwork` draws it over the always-dark sign-in artwork: no icon (the logo
+ * above it carries the screen) and the dark tokens whatever the OS theme.
  */
 const SignInMessage = React.memo(
   ({
     title = "Sign in Required",
     message = "Please sign in to continue using the app",
+    onArtwork = false,
   }: {
     title?: string;
     message?: string;
+    onArtwork?: boolean;
   }) => {
-    const colorScheme = useColorScheme();
-    const styles = createStyles(colorScheme ?? "light");
+    const theme = useBrandTheme();
+    const colors = onArtwork ? themes.dark : theme.colors;
     const [isLoading, setIsLoading] = useState(false);
 
     const performSignIn = useSignInWithAsgardeo();
@@ -58,41 +58,34 @@ const SignInMessage = React.memo(
 
     return (
       <>
-        {/* Sign-in icon */}
-        <Ionicons
-          name="log-in-outline"
-          size={40}
-          color={Colors.companyOrange}
-          style={styles.icon}
-        />
+        {!onArtwork && (
+          <BrandIcon
+            name="user"
+            size={40}
+            color={colors.accent}
+            strokeWidth={1.5}
+          />
+        )}
 
         {/* Title */}
-        <Text style={styles.title} accessibilityRole="header">
+        <Text
+          style={[styles.title, { color: colors.text }]}
+          accessibilityRole="header"
+        >
           {title}
         </Text>
 
         {/* Description */}
-        <Text style={styles.message}>{message}</Text>
+        <Text style={[styles.message, { color: colors.text2 }]}>
+          {message}
+        </Text>
 
-        {/* Sign-in button or loading indicator */}
-        <TouchableOpacity
-          disabled={isLoading}
-          accessibilityRole="button"
-          accessibilityLabel="Sign in"
-          accessibilityState={{ busy: isLoading }}
-          style={styles.button}
+        <PrimaryButton
+          title="Sign In"
           onPress={handleSignInPress}
-          activeOpacity={0.5}
-        >
-          {isLoading ? (
-            <ActivityIndicator
-              size="small"
-              color={Colors[colorScheme ?? "light"].primaryBackgroundColor}
-            />
-          ) : (
-            <Text style={styles.buttonText}>Sign In</Text>
-          )}
-        </TouchableOpacity>
+          loading={isLoading}
+          style={styles.button}
+        />
       </>
     );
   }
@@ -100,42 +93,19 @@ const SignInMessage = React.memo(
 
 export default SignInMessage;
 
-/**
- * Generates themed styles based on the current color scheme.
- *
- * @param {("light" | "dark")} colorScheme - The current theme mode.
- * @returns {object} A StyleSheet object containing the component's styles.
- */
-const createStyles = (colorScheme: "light" | "dark") =>
-  StyleSheet.create({
-    icon: {
-      marginBottom: 8,
-    },
-    title: {
-      fontSize: 18,
-      fontWeight: "bold",
-      color: Colors[colorScheme].text,
-      marginBottom: 10,
-    },
-    message: {
-      fontSize: 16,
-      textAlign: "center",
-      marginBottom: 30,
-      color: Colors[colorScheme].primaryTextColor,
-    },
-    button: {
-      backgroundColor: Colors.companyOrange,
-      alignItems: "center",
-      justifyContent: "center",
-      borderRadius: 12,
-      paddingVertical: 12,
-      width: "80%",
-      marginBottom: 10,
-    },
-    buttonText: {
-      fontSize: 16,
-      lineHeight: 20,
-      color: Colors[colorScheme].primaryBackgroundColor,
-      fontWeight: "600",
-    },
-  });
+const styles = StyleSheet.create({
+  title: {
+    ...textStyle(type.sectionHeading),
+    textAlign: "center",
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  message: {
+    ...textStyle({ ...type.excerpt, size: 15 }),
+    textAlign: "center",
+    marginBottom: 28,
+  },
+  button: {
+    alignSelf: "stretch",
+  },
+});

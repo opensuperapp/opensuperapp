@@ -13,21 +13,21 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import { radius } from "@/constants/brand";
 import type { NativeStackNavigationOptions } from "@react-navigation/native-stack";
 
 /**
  * A native Android bottom sheet sized to its content, so the expiry reads as an
  * interruption the user can swipe or back away from rather than a page they navigated to.
  *
- * There is no contentStyle background here: options are static, so they can't follow the
- * color scheme. The sheet clips its content to the rounded shape, so the sheet component
- * paints the surface color itself.
+ * There is no contentStyle background here: the sheet clips its content to the rounded
+ * shape, so the sheet component paints the sign-in artwork itself.
  */
 export const signInSheetOptions: NativeStackNavigationOptions = {
   presentation: "formSheet",
   headerShown: false,
   sheetAllowedDetents: "fitToContents",
-  // Material 3 extra-large shape. Documented as iOS-only, but react-native-screens
+  // The brand sheet top radius. Documented as iOS-only, but react-native-screens
   // applies it to the Android sheet too.
-  sheetCornerRadius: 28,
+  sheetCornerRadius: radius.sheetTop,
 };

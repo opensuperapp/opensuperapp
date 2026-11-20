@@ -13,7 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
+import { radius, soraFamily, themes } from "@/constants/brand";
 import { BusinessCardData } from "@/types/businessCard.types";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
@@ -82,6 +82,7 @@ export const detailRows = (data: BusinessCardData): DetailRow[] => {
 
 const WalletPassDetails = ({ data, colorScheme }: Props) => {
   const styles = createStyles(colorScheme);
+  const colors = themes[colorScheme];
 
   return (
     <View style={styles.sheet}>
@@ -90,7 +91,7 @@ const WalletPassDetails = ({ data, colorScheme }: Props) => {
           <Ionicons
             name={row.icon}
             size={20}
-            color={Colors[colorScheme].secondaryTextColor}
+            color={colors.text2}
             style={styles.icon}
           />
           <View style={styles.rowText}>
@@ -107,14 +108,13 @@ const WalletPassDetails = ({ data, colorScheme }: Props) => {
 
 export default WalletPassDetails;
 
-// Material surface, not the pass orange: Google draws the expanded view on the
+// App surface, not the pass colour: Google draws the expanded view on the
 // app's own background below the card.
 const createStyles = (colorScheme: "light" | "dark") =>
   StyleSheet.create({
     sheet: {
-      backgroundColor: Colors[colorScheme].secondaryBackgroundColor,
-      // Material 3 large shape.
-      borderRadius: 16,
+      backgroundColor: themes[colorScheme].card,
+      borderRadius: radius.card,
       paddingHorizontal: 16,
       paddingVertical: 4,
     },
@@ -131,12 +131,15 @@ const createStyles = (colorScheme: "light" | "dark") =>
       flex: 1,
     },
     label: {
+      fontFamily: soraFamily[400],
       fontSize: 12,
-      color: Colors[colorScheme].secondaryTextColor,
+      letterSpacing: 0.24,
+      color: themes[colorScheme].text3,
     },
     value: {
       marginTop: 2,
+      fontFamily: soraFamily[500],
       fontSize: 16,
-      color: Colors[colorScheme].text,
+      color: themes[colorScheme].text,
     },
   });

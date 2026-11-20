@@ -14,13 +14,13 @@
 // specific language governing permissions and limitations
 // under the License.
 import { createMarkdownStyles } from "@/components/businessCard/walletDisclaimerStyles";
-import { Colors } from "@/constants/Colors";
+import BrandIcon from "@/components/brand/BrandIcon";
+import { textStyle, themes } from "@/constants/brand";
 import { Styles } from "@/constants/Styles";
 import {
   APPLE_WALLET_DISCLAIMER_MD,
   APPLE_WALLET_DISCLAIMER_TITLE,
 } from "@/constants/WalletDisclaimer";
-import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
   Linking,
@@ -89,11 +89,7 @@ const WalletDisclaimerSheet = ({ visible, onClose }: Props) => {
             accessibilityLabel="close_wallet_disclaimer"
             accessibilityHint="Closes the wallet disclaimer"
           >
-            <Ionicons
-              name="close"
-              size={24}
-              color={Colors[colorScheme].secondaryTextColor}
-            />
+            <BrandIcon name="close" size={24} color={themes[colorScheme].text} />
           </Pressable>
         </View>
 
@@ -119,7 +115,7 @@ const createStyles = (colorScheme: "light" | "dark") =>
   StyleSheet.create({
     sheet: {
       flex: 1,
-      backgroundColor: Colors[colorScheme].primaryBackgroundColor,
+      backgroundColor: themes[colorScheme].sheet,
     },
     header: {
       flexDirection: "row",
@@ -129,12 +125,11 @@ const createStyles = (colorScheme: "light" | "dark") =>
       paddingTop: 14,
       paddingBottom: 10,
       borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: Colors[colorScheme].borderColor,
+      borderBottomColor: themes[colorScheme].line,
     },
     title: {
-      fontSize: 17,
-      fontWeight: "600",
-      color: Colors[colorScheme].text,
+      ...textStyle({ size: 18, weight: 600, tracking: -0.025 }),
+      color: themes[colorScheme].text,
       // The title is longer than "Cancel" ever was, and the close control has
       // to keep its corner.
       flexShrink: 1,

@@ -13,136 +13,109 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
+import ChoreoLabsLogo from "@/components/brand/ChoreoLabsLogo";
+import PrimaryButton from "@/components/brand/PrimaryButton";
+import SignInArtwork from "@/components/signIn/SignInArtwork";
+import { radius, size, textStyle, themes, type } from "@/constants/brand";
 import { useSignInSheet } from "@/hooks/useSignInSheet";
-import { Ionicons } from "@expo/vector-icons";
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from "react-native";
+import Constants from "expo-constants";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+// The sheet sits on the always-dark sign-in artwork, so it reads the dark tokens.
+const colors = themes.dark;
+
 /**
- * The sign-in sheet laid out as a Material 3 modal bottom sheet.
+ * The sign-in sheet laid out as a modal bottom sheet over the sign-in artwork.
  */
 const SignInSheet = () => {
   const { title, message, isSigningIn, signIn, dismiss } =
     useSignInSheet();
-  const styles = createStyles(useColorScheme() ?? "light");
   // The app draws edge to edge, so the sheet runs under the navigation bar.
   const { bottom } = useSafeAreaInsets();
+  const version = Constants.expoConfig?.version;
 
   return (
-    <View style={[styles.sheet, { paddingBottom: bottom + 8 }]}>
+    <SignInArtwork style={[styles.sheet, { paddingBottom: bottom + 8 }]}>
       {/* react-native-screens only draws a grabber on iOS. Swipe-down and back
           already dismiss, so the handle is decoration for TalkBack. */}
       <View style={styles.handle} importantForAccessibility="no" />
-      <Ionicons
-        name="log-in-outline"
-        size={32}
-        color={Colors.companyOrange}
-        style={styles.icon}
-        importantForAccessibility="no"
-      />
+      <View style={styles.logo} importantForAccessibility="no-hide-descendants">
+        <ChoreoLabsLogo width={168} color="#FFFFFF" />
+      </View>
       <Text style={styles.title} accessibilityRole="header">
         {title}
       </Text>
       <Text style={styles.message}>{message}</Text>
-      <Pressable
-        style={styles.signInButton}
-        android_ripple={{ color: styles.signInText.color, foreground: true }}
+      <PrimaryButton
+        title="Sign In"
         onPress={signIn}
-        disabled={isSigningIn}
-        accessibilityRole="button"
-        accessibilityLabel="Sign in"
-        accessibilityState={{ busy: isSigningIn, disabled: isSigningIn }}
-      >
-        {isSigningIn ? (
-          <ActivityIndicator color={styles.signInText.color} />
-        ) : (
-          <Text style={styles.signInText}>Sign In</Text>
-        )}
-      </Pressable>
+        loading={isSigningIn}
+        style={styles.signInButton}
+      />
       <Pressable
         style={styles.notNowButton}
-        android_ripple={{ color: Colors.companyOrange20, foreground: true }}
+        android_ripple={{ color: colors.card2, foreground: true }}
         onPress={dismiss}
         accessibilityRole="button"
       >
         <Text style={styles.notNowText}>Not now</Text>
       </Pressable>
-    </View>
+      <Text style={styles.version}>version {version}</Text>
+    </SignInArtwork>
   );
 };
 
-const createStyles = (colorScheme: "light" | "dark") =>
-  StyleSheet.create({
-    sheet: {
-      // A raised surface, so the sheet's edge reads against the screen behind it.
-      backgroundColor: Colors[colorScheme].secondaryBackgroundColor,
-      paddingHorizontal: 24,
-      alignItems: "center",
-    },
-    handle: {
-      width: 32,
-      height: 4,
-      borderRadius: 2,
-      marginTop: 16,
-      marginBottom: 24,
-      backgroundColor: Colors[colorScheme].icon,
-      opacity: 0.4,
-    },
-    icon: {
-      marginBottom: 16,
-    },
-    title: {
-      fontSize: 22,
-      lineHeight: 28,
-      fontWeight: "600",
-      color: Colors[colorScheme].text,
-      textAlign: "center",
-      marginBottom: 8,
-    },
-    message: {
-      fontSize: 14,
-      lineHeight: 20,
-      color: Colors[colorScheme].primaryTextColor,
-      textAlign: "center",
-      marginBottom: 24,
-    },
-    signInButton: {
-      alignSelf: "stretch",
-      height: 48,
-      borderRadius: 24,
-      // Keeps the ripple inside the pill.
-      overflow: "hidden",
-      backgroundColor: Colors.companyOrange,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    signInText: {
-      fontSize: 16,
-      fontWeight: "600",
-      color: Colors[colorScheme].primaryBackgroundColor,
-    },
-    notNowButton: {
-      alignSelf: "stretch",
-      height: 48,
-      marginTop: 8,
-      borderRadius: 24,
-      overflow: "hidden",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    notNowText: {
-      fontSize: 16,
-      fontWeight: "600",
-      color: Colors.companyOrange,
-    },
-  });
+const styles = StyleSheet.create({
+  sheet: {
+    paddingHorizontal: 24,
+    alignItems: "center",
+  },
+  handle: {
+    width: 40,
+    height: 5,
+    borderRadius: 3,
+    marginTop: 8,
+    marginBottom: 32,
+    backgroundColor: colors.line2,
+  },
+  logo: {
+    marginBottom: 28,
+  },
+  title: {
+    ...textStyle(type.sectionHeading),
+    color: colors.text,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  message: {
+    ...textStyle({ ...type.excerpt, size: 15 }),
+    color: colors.text2,
+    textAlign: "center",
+    marginBottom: 24,
+  },
+  signInButton: {
+    alignSelf: "stretch",
+  },
+  notNowButton: {
+    alignSelf: "stretch",
+    height: 48,
+    marginTop: 8,
+    borderRadius: radius.buttonPrimary,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: size.minHitTarget,
+  },
+  notNowText: {
+    ...textStyle(type.storeRowName),
+    color: colors.accent,
+  },
+  version: {
+    ...textStyle({ size: 13, weight: 400, tracking: 0.02 }),
+    color: colors.text3,
+    marginTop: 6,
+  },
+});
 
 export default SignInSheet;

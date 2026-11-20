@@ -13,16 +13,18 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import { brand, radius } from "@/constants/brand";
 
 // No office address: the wallet service never defaults one either, so
 // hardcoding it here would show a row the installed pass does not have.
 export const CARD_ORGANIZATION = "WSO2 LLC";
 export const CARD_WEBSITE = "https://wso2.com";
 
-// Copied from the wallet service's pass.go. Not Colors.companyOrange
-// (#FF7300) — the signed pass ships this orange, and the Go constant is the
-// source of truth.
-export const PASS_BACKGROUND_COLOR = "#F14E23";
+// Brand Cobalt, the flat colour a signed pass can carry; the in-app preview
+// lays the business-card radial and dot texture over it. Must match the wallet
+// service's pass.go, which still ships the old orange (#F14E23) until it is
+// rebranded too.
+export const PASS_BACKGROUND_COLOR = brand.cobalt;
 export const PASS_FOREGROUND_COLOR = "#FFFFFF";
 export const PASS_LABEL_COLOR = "#FFFFFF";
 
@@ -36,11 +38,10 @@ export const PASS = {
   contentPaddingH: 14,
   contentPaddingTop: 12,
   contentPaddingBottom: 14,
-  logoSize: 40,
   thumbnailSize: 70,
   thumbnailRingFraction: 0.04,
   rowGap: 12,
   barcodeSize: 140,
   barcodePadding: 10,
-  barcodeCornerRadius: 10,
+  barcodeCornerRadius: radius.qr,
 } as const;

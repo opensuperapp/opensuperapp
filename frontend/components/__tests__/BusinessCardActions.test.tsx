@@ -154,7 +154,9 @@ describe("BusinessCardActions (iOS) — PKAddPassButton", () => {
     // Apple restricts the badge to "web pages and emails, or printed
     // materials" and says apps must use PKAddPassButton, so no transcribed
     // artwork may come back: the system draws and localises this control.
-    expect(root.root.findAllByType(Svg)).toHaveLength(0);
+    expect(
+      root.root.findByType(AddToAppleWalletButton).findAllByType(Svg),
+    ).toHaveLength(0);
   });
 
   it("asks for one of the two styles PassKit defines", () => {

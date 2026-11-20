@@ -14,25 +14,38 @@
 // specific language governing permissions and limitations
 // under the License.
 import Avatar from "@/components/Avatar";
+import BrandIcon from "@/components/brand/BrandIcon";
+import ChoreoLabsLogo from "@/components/brand/ChoreoLabsLogo";
 import BusinessCardSheet from "@/components/BusinessCardSheet";
 import BusinessCardHeaderButton from "@/components/headers/BusinessCardHeaderButton";
 import ProfileListItem from "@/components/ProfileListItem";
+import SignInArtwork from "@/components/signIn/SignInArtwork";
 import SignInMessage from "@/components/SignInMessage";
-import { Colors } from "@/constants/Colors";
+import {
+  brand,
+  radius,
+  size,
+  soraFamily,
+  spacing,
+  textStyle,
+  themes,
+  type,
+} from "@/constants/brand";
 import { SUPER_APP_DEVELOPER_GROUP } from "@/constants/Constants";
 import { Event } from "@/constants/enums/Event";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { selectIsSignedIn } from "@/context/slices/authSlice";
 import { getUserInfo } from "@/context/slices/userInfoSlice";
 import { AppDispatch, RootState } from "@/context/store";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { useTrackActiveScreen } from "@/hooks/useTrackActiveScreen";
 import { useWalletPassConfig } from "@/hooks/useWalletPassConfig";
 import { BasicUserInfo } from "@/types/basicUserInfo.types";
 import { DecodedAccessToken } from "@/types/decodeAccessToken.types";
 import { authEmitter } from "@/utils/eventEmitter";
 import { signOut } from "@/utils/signOut";
-import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "expo-router";
 import { jwtDecode } from "jwt-decode";
 import React, {
@@ -45,14 +58,17 @@ import React, {
 import {
   Alert,
   Image,
+  Pressable,
   SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  useColorScheme,
   View,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
+
+const AVATAR_SIZE = size.avatar.profile;
+const RING = size.profileAvatarRing;
 
 /**
  * Settings screen displays user profile information when authenticated,
@@ -64,8 +80,10 @@ const SettingsScreen = () => {
   const { accessToken } = useSelector((state: RootState) => state.auth);
   const isSignedIn = useSelector(selectIsSignedIn);
   const { userInfo } = useSelector((state: RootState) => state.userInfo);
-  const colorScheme = useColorScheme();
-  const styles = createStyles(colorScheme ?? "light");
+  const { colors } = useBrandTheme();
+  // The tab bar floats over the screen, so its height (which grows with the
+  // bottom safe-area inset) is cleared explicitly rather than guessed.
+  const tabBarHeight = useBottomTabBarHeight();
   const version = Constants.expoConfig?.version;
   const [basicUserInfo, setBasicUserInfo] = useState<BasicUserInfo>({
     firstName: "",
@@ -161,88 +179,106 @@ const SettingsScreen = () => {
 
   if (!isSignedIn) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.signInContainer}>
-          <View style={styles.overlay}>
-            <View style={styles.modal}>
-              <SignInMessage />
-            </View>
-          </View>
-          <View style={styles.bottomContainer}>
-            <View style={styles.versionContainer}>
-              <Text style={styles.versionText}>version {version}</Text>
-            </View>
-          </View>
+      <SignInArtwork
+        style={[styles.signIn, { paddingBottom: tabBarHeight + 24 }]}
+      >
+        <View style={styles.signInLogo}>
+          <ChoreoLabsLogo width={200} color="#FFFFFF" />
         </View>
-      </SafeAreaView>
+        <View style={styles.signInFoot}>
+          <SignInMessage onArtwork />
+          <Text style={[styles.versionText, { color: themes.dark.text3 }]}>
+            version {version}
+          </Text>
+        </View>
+      </SignInArtwork>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* User info */}
-      <View style={styles.topContainer}>
-        <View style={styles.avatarWrapper}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
+      <View
+        style={[
+          styles.content,
+          { paddingBottom: tabBarHeight + spacing.screen },
+        ]}
+      >
+        {/* User info */}
+        <View
+          style={[
+            styles.avatarRing,
+            { backgroundColor: colors.card, borderColor: colors.line },
+          ]}
+        >
           {basicUserInfo.avatarUri ? (
             <Image
               source={{ uri: basicUserInfo.avatarUri }}
-              style={styles.avatar}
+              style={[styles.avatar, { backgroundColor: colors.card2 }]}
             />
           ) : (
             <Avatar
               initials={`${basicUserInfo.firstName?.charAt(
                 0
               )}${basicUserInfo.lastName?.charAt(0)}`}
-              size={180}
+              size={AVATAR_SIZE}
             />
           )}
         </View>
 
-        <ProfileListItem
-          icon="person-outline"
-          title="Name"
-          value={`${basicUserInfo.firstName} ${basicUserInfo.lastName}`}
-        />
-
-        <ProfileListItem
-          icon="mail-outline"
-          title="Email"
-          value={basicUserInfo.workEmail}
-        />
-      </View>
-
-      <View style={styles.bottomContainer}>
-        <View style={styles.versionContainer}>
-          <Text style={styles.versionText}>version {version}</Text>
+        <View style={[styles.listCard, { backgroundColor: colors.card }]}>
+          <ProfileListItem
+            icon="user"
+            title="Name"
+            value={`${basicUserInfo.firstName} ${basicUserInfo.lastName}`}
+          />
+          <View style={[styles.divider, { backgroundColor: colors.line }]} />
+          <ProfileListItem
+            icon="mail"
+            title="Email"
+            value={basicUserInfo.workEmail}
+          />
         </View>
 
-        <TouchableOpacity
-          activeOpacity={0.5}
-          style={styles.logoutButton}
-          onPress={handleLogout}
-        >
-          <View style={styles.logoutRow}>
-            <Ionicons
-              name="log-out-outline"
-              size={20}
-              color={Colors[colorScheme ?? "light"].primaryBackgroundColor}
-              style={styles.logoutIcon}
-            />
-            <Text style={styles.logoutText}>Sign Out</Text>
-          </View>
-        </TouchableOpacity>
+        <View style={styles.foot}>
+          <Text style={[styles.versionText, { color: colors.text3 }]}>
+            version {version}
+          </Text>
 
-        {__DEV__ && isSuperAppDeveloper && (
-          <TouchableOpacity
-            activeOpacity={0.5}
-            style={styles.debugLogoutButton}
-            onPress={handleSimulateSilentLogout}
+          {/* The prototype's .btn with a leading icon, which PrimaryButton
+              doesn't take: Signal fill, Ink label, Flare while pressed. */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.logoutButton,
+              {
+                backgroundColor: pressed ? brand.flare : colors.primaryFill,
+              },
+            ]}
+            onPress={handleLogout}
+            accessibilityRole="button"
           >
-            <Text style={styles.debugLogoutText}>
-              DEV: Simulate Silent Logout (invalid_grant)
+            <BrandIcon
+              name="logout"
+              size={22}
+              strokeWidth={1.8}
+              color={colors.primaryText}
+            />
+            <Text style={[styles.logoutText, { color: colors.primaryText }]}>
+              Sign Out
             </Text>
-          </TouchableOpacity>
-        )}
+          </Pressable>
+
+          {__DEV__ && isSuperAppDeveloper && (
+            <TouchableOpacity
+              activeOpacity={0.5}
+              style={[styles.debugLogoutButton, { borderColor: colors.line2 }]}
+              onPress={handleSimulateSilentLogout}
+            >
+              <Text style={[styles.debugLogoutText, { color: colors.text2 }]}>
+                DEV: Simulate Silent Logout (invalid_grant)
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       <BusinessCardSheet
@@ -255,90 +291,81 @@ const SettingsScreen = () => {
 
 export default SettingsScreen;
 
-const createStyles = (colorScheme: "light" | "dark") =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: Colors[colorScheme].primaryBackgroundColor,
-      justifyContent: "space-between",
-    },
-    signInContainer: {
-      flex: 1,
-      justifyContent: "space-between",
-    },
-    overlay: {
-      flex: 1,
-      backgroundColor: Colors[colorScheme].primaryBackgroundColor,
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    modal: {
-      backgroundColor: Colors[colorScheme].primaryBackgroundColor,
-      padding: 30,
-      borderRadius: 16,
-      width: "90%",
-      alignItems: "center",
-    },
-    topContainer: {
-      marginLeft: 10,
-      marginTop: 15,
-    },
-    avatarWrapper: {
-      alignItems: "center",
-      marginTop: 24,
-      marginBottom: 12,
-    },
-    avatar: {
-      width: 160,
-      height: 160,
-      borderRadius: 100,
-      backgroundColor: Colors[colorScheme].libraryCardBackgroundColor,
-    },
-    bottomContainer: {
-      marginBottom: 80,
-    },
-    versionContainer: {
-      alignItems: "center",
-    },
-    versionText: {
-      color: Colors[colorScheme].text,
-    },
-    logoutButton: {
-      marginVertical: 20,
-      marginHorizontal: 60,
-      paddingVertical: 12,
-      backgroundColor: Colors.companyOrange,
-      borderRadius: 12,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    logoutRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    logoutIcon: {
-      marginRight: 8,
-    },
-    logoutText: {
-      fontSize: 16,
-      lineHeight: 20,
-      color: Colors[colorScheme].primaryBackgroundColor,
-      fontWeight: "600",
-    },
-    debugLogoutButton: {
-      marginHorizontal: 60,
-      paddingVertical: 12,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: Colors[colorScheme].borderColor,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    debugLogoutText: {
-      fontSize: 13,
-      lineHeight: 18,
-      color: Colors[colorScheme].mutedTextColor,
-      fontWeight: "600",
-    },
-  });
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: spacing.screen,
+    paddingTop: 16,
+  },
+  signIn: {
+    flex: 1,
+    paddingHorizontal: 24,
+  },
+  signInLogo: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  signInFoot: {
+    alignItems: "center",
+    gap: 14,
+  },
+  avatarRing: {
+    alignSelf: "center",
+    marginTop: 24 - RING,
+    marginBottom: 32 - RING,
+    padding: RING,
+    borderRadius: (AVATAR_SIZE + RING * 2) / 2,
+    // The prototype's outer 1px line hairline around the card-coloured ring.
+    borderWidth: 1,
+  },
+  avatar: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
+  },
+  listCard: {
+    borderRadius: radius.card,
+    paddingHorizontal: 18,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+  },
+  foot: {
+    marginTop: "auto",
+    paddingTop: 32,
+    alignItems: "center",
+    gap: 14,
+  },
+  versionText: {
+    ...textStyle({ size: 13, weight: 400, tracking: 0.02 }),
+  },
+  logoutButton: {
+    alignSelf: "stretch",
+    height: size.buttonPrimaryHeight,
+    borderRadius: radius.buttonPrimary,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  logoutText: {
+    ...textStyle({ ...type.storeRowName, tracking: -0.01 }),
+  },
+  debugLogoutButton: {
+    alignSelf: "stretch",
+    paddingVertical: 12,
+    borderRadius: radius.buttonSmall,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  debugLogoutText: {
+    fontFamily: soraFamily[600],
+    fontSize: 13,
+    lineHeight: 18,
+  },
+});

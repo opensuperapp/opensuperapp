@@ -13,7 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
+import { soraFamily, themes } from "@/constants/brand";
 import { StyleSheet } from "react-native";
 
 /**
@@ -27,7 +27,7 @@ import { StyleSheet } from "react-native";
  * This is a disclosure, so it is sized to actually be read: body copy at the
  * size of body copy, generous line height, and headings that separate "what
  * goes on the card" from "how it works" clearly enough that someone skimming
- * still lands on the right section. Links take the app's action colour so they
+ * still lands on the right section. Links take the card sheet's cobalt so they
  * read as tappable — the DPO address is the escape hatch this screen promises.
  *
  * @param colorScheme - The active colour scheme.
@@ -36,29 +36,32 @@ import { StyleSheet } from "react-native";
 export const createMarkdownStyles = (colorScheme: "light" | "dark") =>
   StyleSheet.create({
     body: {
+      fontFamily: soraFamily[400],
       fontSize: 15,
-      lineHeight: 22,
-      color: Colors[colorScheme].primaryTextColor,
+      lineHeight: 23,
+      color: themes[colorScheme].text2,
     },
     paragraph: {
       marginTop: 0,
       marginBottom: 12,
     },
     heading2: {
+      fontFamily: soraFamily[600],
       fontSize: 16,
-      fontWeight: "600",
-      color: Colors[colorScheme].text,
+      letterSpacing: -0.32,
+      color: themes[colorScheme].text,
       // Headings carry the separation between sections; the body paragraphs
       // above them already have their own bottom margin.
       marginTop: 16,
       marginBottom: 6,
     },
     strong: {
-      fontWeight: "600",
-      color: Colors[colorScheme].text,
+      fontFamily: soraFamily[600],
+      fontWeight: "normal",
+      color: themes[colorScheme].text,
     },
     link: {
-      color: Colors.actionButtonTextColor,
+      color: themes[colorScheme].cobalt,
     },
     bullet_list: {
       marginBottom: 12,

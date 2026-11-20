@@ -13,55 +13,76 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
+import { brand, soraFamily } from "@/constants/brand";
 import React from "react";
-import { StyleSheet, Text, useColorScheme, View } from "react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
 import { Skeleton } from "./Skeleton";
+
+const DOTS = require("@/assets/brand/blackout-dots.png");
+
+// The artwork is zoomed past the circle so only its dot field shows, as the
+// prototype's `background-size: 220–240%` does.
+const ARTWORK_SCALE = 2.3;
 
 interface AvatarProps {
   initials: string;
   size?: number;
 }
 
+/** Initials on the blackout-dots artwork, clipped to a circle. */
 const Avatar = React.memo(({ initials, size = 64 }: AvatarProps) => {
-  const colorScheme = useColorScheme();
-  const styles = createStyles(colorScheme ?? "light");
+  if (!initials) {
+    return <Skeleton width={size} height={size} circle />;
+  }
+
+  const artwork = size * ARTWORK_SCALE;
+  const fontSize = Math.round(size * 0.34);
 
   return (
-    <>
-      {initials ? (
-        <View
-          style={[
-            styles.avatar,
-            {
-              width: size,
-              height: size,
-              borderRadius: size / 2,
-            },
-          ]}
-        >
-          <Text style={[styles.initials, { fontSize: size / 2.2 }]}>
-            {initials}
-          </Text>
-        </View>
-      ) : (
-        <Skeleton width={160} height={160} circle />
-      )}
-    </>
+    <View
+      style={[
+        styles.avatar,
+        { width: size, height: size, borderRadius: size / 2 },
+      ]}
+    >
+      <Image
+        source={DOTS}
+        resizeMode="cover"
+        style={{
+          position: "absolute",
+          width: artwork,
+          height: artwork,
+          // 70% / 60% focal point, matching the profile and card avatars.
+          left: -(artwork - size) * 0.7,
+          top: -(artwork - size) * 0.6,
+        }}
+        accessibilityIgnoresInvertColors
+      />
+      <Text
+        style={[
+          styles.initials,
+          { fontSize, letterSpacing: -0.04 * fontSize },
+        ]}
+      >
+        {initials}
+      </Text>
+    </View>
   );
 });
 
-const createStyles = (colorScheme: "light" | "dark") =>
-  StyleSheet.create({
-    avatar: {
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: Colors[colorScheme].profileBackgroundColor,
-    },
-    initials: {
-      color: Colors[colorScheme].profileFontColor,
-      fontWeight: "600",
-    },
-  });
+const styles = StyleSheet.create({
+  avatar: {
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    backgroundColor: brand.ink,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+  },
+  initials: {
+    fontFamily: soraFamily[600],
+    color: "#FFFFFF",
+  },
+});
 
 export default Avatar;

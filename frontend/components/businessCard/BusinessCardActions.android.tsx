@@ -14,13 +14,14 @@
 // specific language governing permissions and limitations
 // under the License.
 import BusinessCardActionsFooter from "@/components/businessCard/BusinessCardActionsFooter";
+import PendingSpinner from "@/components/businessCard/PendingSpinner";
 import AddToGoogleWalletButton from "@/components/wallet/AddToGoogleWalletButton";
 import {
   GOOGLE_WALLET_BUTTON,
   GOOGLE_WALLET_BUTTON_ASPECT_RATIO,
 } from "@/constants/WalletButton";
 import React from "react";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
 type Props = {
   saving: boolean;
@@ -79,7 +80,7 @@ const BusinessCardActions = ({
           // replaces it with a spinner in a box of exactly the same footprint
           // instead of drawing over it.
           <View style={styles.pending}>
-            <ActivityIndicator />
+            <PendingSpinner />
           </View>
         ) : (
           // Google's unmodified official primary button, as vector artwork.

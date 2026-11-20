@@ -15,11 +15,12 @@
 // under the License.
 import BusinessCardActionsFooter from "@/components/businessCard/BusinessCardActionsFooter";
 import OpenInWalletButton from "@/components/businessCard/OpenInWalletButton";
+import PendingSpinner from "@/components/businessCard/PendingSpinner";
 import AddToAppleWalletButton from "@/components/wallet/AddToAppleWalletButton";
 import { APPLE_ADD_PASS_BUTTON } from "@/constants/WalletButton";
 import { isAppleWalletButtonAvailable } from "@/modules/apple-wallet-button";
 import React from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 type Props = {
   saving: boolean;
@@ -72,7 +73,7 @@ const BusinessCardActions = ({
           accessibilityLabel="save_business_card"
           accessibilityState={{ disabled: true }}
         >
-          <ActivityIndicator />
+          <PendingSpinner />
         </View>
       ) : isAppleWalletButtonAvailable ? (
         // No Pressable around it: the control handles its own touches and

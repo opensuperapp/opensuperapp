@@ -15,8 +15,14 @@
 // under the License.
 import { brand, radius, size, textStyle, type } from "@/constants/brand";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
-import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
-import WheelLoader from "./WheelLoader";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
 
 interface PrimaryButtonProps {
   title: string;
@@ -27,7 +33,10 @@ interface PrimaryButtonProps {
   testID?: string;
 }
 
-/** Signal fill, Ink text, 54 high, radius 16. Shows the Wheel while in progress. */
+/**
+ * Signal fill, Ink text, 54 high, radius 16. Shows the native spinner while in
+ * progress: the Choreo Wheel is kept for chat loading and the launch screen.
+ */
 export default function PrimaryButton({
   title,
   onPress,
@@ -53,7 +62,7 @@ export default function PrimaryButton({
       ]}
     >
       {loading ? (
-        <WheelLoader size={24} color={colors.primaryText} />
+        <ActivityIndicator color={colors.primaryText} />
       ) : (
         <Text style={[styles.label, { color: colors.primaryText }]}>{title}</Text>
       )}

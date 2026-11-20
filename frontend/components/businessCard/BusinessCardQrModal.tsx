@@ -13,20 +13,14 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
+import PrimaryButton from "@/components/brand/PrimaryButton";
+import { brand, textStyle } from "@/constants/brand";
 import { isIos } from "@/constants/Constants";
 import { BusinessCardData } from "@/types/businessCard.types";
 import { buildVCard } from "@/utils/vcard";
 import * as Brightness from "expo-brightness";
 import React, { useEffect, useRef } from "react";
-import {
-  Dimensions,
-  Modal,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Dimensions, Modal, StyleSheet, Text, View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 
 type Props = {
@@ -111,13 +105,7 @@ const BusinessCardQrModal = ({ visible, data, onClose }: Props) => {
           ecl="M"
         />
         <Text style={styles.name}>{fullName}</Text>
-        <TouchableOpacity
-          activeOpacity={0.5}
-          style={styles.close}
-          onPress={onClose}
-        >
-          <Text style={styles.closeText}>Close</Text>
-        </TouchableOpacity>
+        <PrimaryButton title="Close" onPress={onClose} style={styles.close} />
       </View>
     </Modal>
   );
@@ -125,6 +113,7 @@ const BusinessCardQrModal = ({ visible, data, onClose }: Props) => {
 
 export default BusinessCardQrModal;
 
+// Stays white in both themes: the code scans best at full brightness on white.
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -133,21 +122,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   name: {
+    ...textStyle({ size: 20, weight: 600, tracking: -0.03 }),
     marginTop: 24,
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#1F2937",
+    color: brand.ink,
   },
   close: {
     marginTop: 32,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    backgroundColor: Colors.companyOrange,
-    borderRadius: 12,
-  },
-  closeText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FFFFFF",
+    paddingHorizontal: 40,
   },
 });

@@ -19,11 +19,11 @@ import BusinessCardHeader from "@/components/businessCard/BusinessCardHeader";
 import BusinessCardPreview from "@/components/businessCard/BusinessCardPreview";
 import BusinessCardQrModal from "@/components/businessCard/BusinessCardQrModal";
 import WalletDisclaimerSheet from "@/components/businessCard/WalletDisclaimerSheet";
-import { Colors } from "@/constants/Colors";
 import { isIos } from "@/constants/Constants";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { useBusinessCardActions } from "@/hooks/useBusinessCardActions";
 import React from "react";
-import { Modal, StyleSheet, useColorScheme, View } from "react-native";
+import { Modal, StyleSheet, View } from "react-native";
 
 type Props = {
   visible: boolean;
@@ -31,8 +31,7 @@ type Props = {
 };
 
 const BusinessCardSheet = ({ visible, onClose }: Props) => {
-  const colorScheme = useColorScheme() ?? "light";
-  const styles = createStyles(colorScheme);
+  const { colors } = useBrandTheme();
   const {
     data,
     passRef,
@@ -58,7 +57,7 @@ const BusinessCardSheet = ({ visible, onClose }: Props) => {
       presentationStyle={isIos ? "pageSheet" : "fullScreen"}
       onRequestClose={onClose}
     >
-      <View style={styles.sheet}>
+      <View style={[styles.sheet, { backgroundColor: colors.sheet }]}>
         <BusinessCardHeader onClose={onClose} />
 
         {!data ? (
@@ -98,10 +97,8 @@ const BusinessCardSheet = ({ visible, onClose }: Props) => {
 
 export default BusinessCardSheet;
 
-const createStyles = (colorScheme: "light" | "dark") =>
-  StyleSheet.create({
-    sheet: {
-      flex: 1,
-      backgroundColor: Colors[colorScheme].primaryBackgroundColor,
-    },
-  });
+const styles = StyleSheet.create({
+  sheet: {
+    flex: 1,
+  },
+});

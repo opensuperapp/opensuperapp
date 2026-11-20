@@ -26,11 +26,11 @@ import { act, create } from "react-test-renderer";
 // and phone number that only the token carries.
 const payload = {
   jobtitle: "Software Engineer",
-  profile: "https://lh3.googleusercontent.com/a-/AAcHTtexampleavatartoken=s100",
+  profile: "https://photos.example.com/a-/AAcHTtexampleavatartoken=s100",
   given_name: "Jane",
   family_name: "Doe",
   phone_number: "+94771234567",
-  email: "jane.doe@wso2.com",
+  email: "jane.doe@example.com",
 };
 
 const base64Url = (value: object): string =>
@@ -47,7 +47,7 @@ const mockAccessToken = `${base64Url({ alg: "RS256" })}.${base64Url(payload)}.si
 const mockUserInfo = {
   firstName: "Jane",
   lastName: "Doe",
-  workEmail: "jane.doe@wso2.com",
+  workEmail: "jane.doe@example.com",
   employeeThumbnail: null,
 };
 
@@ -161,7 +161,7 @@ describe("BusinessCardSheet", () => {
     expect(text).toContain("Jane Doe");
     expect(text).toContain("Software Engineer");
     expect(text).toContain("+94771234567");
-    expect(text).toContain("jane.doe@wso2.com");
+    expect(text).toContain("jane.doe@example.com");
   });
 
   it("closes through the header control", () => {
