@@ -14,7 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 import {
-  CARD_ASPECT_RATIO,
   PASS,
   PASS_BACKGROUND_COLOR,
   PASS_FOREGROUND_COLOR,
@@ -23,7 +22,7 @@ import { StyleSheet } from "react-native";
 
 export const applePassStyles = StyleSheet.create({
   pass: {
-    aspectRatio: CARD_ASPECT_RATIO,
+    // Height comes from WalletPassView: at least 3:4, taller if the content is.
     backgroundColor: PASS_BACKGROUND_COLOR,
     borderRadius: PASS.cornerRadius,
     paddingHorizontal: PASS.contentPaddingH,

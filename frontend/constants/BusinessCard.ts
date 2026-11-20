@@ -28,8 +28,10 @@ export const PASS_BACKGROUND_COLOR = brand.cobalt;
 export const PASS_FOREGROUND_COLOR = "#FFFFFF";
 export const PASS_LABEL_COLOR = "#FFFFFF";
 
-// The card fills the width it is given, so this alone sets its height. Shorter than an
-// installed pass (about 2:3) by choice: the content fits, and the sheet has less to scroll.
+// The card fills the width it is given and is at least this tall for it. Shorter than an
+// installed pass (about 2:3) by choice, so the sheet has less to scroll. A minimum, not a
+// fixed height: on a 320pt-wide screen, or at large text sizes, the content needs
+// more, and the card grows to fit it instead of clipping the barcode.
 export const CARD_ASPECT_RATIO = 3 / 4;
 
 // Pass geometry in points, reproduced from the wallet service rather than
