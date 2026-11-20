@@ -13,14 +13,10 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from "react-native";
+import WheelLoader from "@/components/brand/WheelLoader";
+import { soraFamily, type ThemeColors } from "@/constants/brand";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
+import { StyleSheet, Text, View } from "react-native";
 
 interface NotificationsFooterProps {
   isFetchingNextPage: boolean;
@@ -31,21 +27,21 @@ export function NotificationsFooter({
   isFetchingNextPage,
   hasMore,
 }: NotificationsFooterProps) {
-  const colorScheme = useColorScheme() ?? "light";
-  const styles = createStyles(colorScheme);
+  const { colors } = useBrandTheme();
+  const styles = createStyles(colors);
 
   return (
     <View style={styles.footerContainer}>
       {isFetchingNextPage ? (
-        <ActivityIndicator size="small" />
+        <WheelLoader size={24} color={colors.text2} />
       ) : hasMore ? null : (
-        <Text style={styles.footerText}>You're all caught up! 🎉</Text>
+        <Text style={styles.footerText}>You're all caught up</Text>
       )}
     </View>
   );
 }
 
-const createStyles = (colorScheme: "light" | "dark") =>
+const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     footerContainer: {
       height: 50,
@@ -53,7 +49,8 @@ const createStyles = (colorScheme: "light" | "dark") =>
       justifyContent: "center",
     },
     footerText: {
+      fontFamily: soraFamily[400],
       fontSize: 12,
-      color: Colors[colorScheme].text,
+      color: colors.text3,
     },
   });

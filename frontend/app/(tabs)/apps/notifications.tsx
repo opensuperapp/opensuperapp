@@ -13,32 +13,26 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import ContentEmptyView from "@/components/ContentEmptyView";
+import EmptyState from "@/components/apps/EmptyState";
+import WheelLoader from "@/components/brand/WheelLoader";
 import { NotificationItem } from "@/components/notifications/NotificationItem";
 import { NotificationsFooter } from "@/components/notifications/NotificationsFooter";
-import { Colors } from "@/constants/Colors";
+import { spacing } from "@/constants/brand";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { Styles } from "@/constants/Styles";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { useLeaveWhenSessionEnds } from "@/hooks/useLeaveWhenSessionEnds";
 import { useLocalNotifications } from "@/hooks/useLocalNotifications";
 import { Notification, useNotifications } from "@/hooks/useNotifications";
 import { convertToUtc } from "@/utils/date";
-import { Ionicons } from "@expo/vector-icons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useIsFocused } from "@react-navigation/native";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  FlatList,
-  RefreshControl,
-  SafeAreaView,
-  useColorScheme,
-  View,
-} from "react-native";
+import { FlatList, RefreshControl, SafeAreaView, View } from "react-native";
 
 export default function Notifications() {
-  const colorScheme = useColorScheme() ?? "light";
+  const { colors } = useBrandTheme();
   const tabbarHeight = useBottomTabBarHeight();
 
   // Notifications are fetched only with a session; My Apps has the Sign In for it.
@@ -103,12 +97,7 @@ export default function Notifications() {
   };
 
   return (
-    <SafeAreaView
-      style={{
-        flex: 1,
-        backgroundColor: Colors[colorScheme].primaryBackgroundColor,
-      }}
-    >
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       {allNotifications.length > 0 ? (
         <FlatList
           data={allNotifications}
@@ -118,6 +107,9 @@ export default function Notifications() {
             <RefreshControl
               refreshing={isRefetching || isLoading}
               onRefresh={refresh}
+              tintColor={colors.text2}
+              colors={[colors.text2]}
+              progressBackgroundColor={colors.card}
             />
           }
           onEndReached={() => hasMore && loadMore()}
@@ -127,10 +119,11 @@ export default function Notifications() {
               hasMore={hasMore}
             />
           }
-          ListFooterComponentStyle={{
-            backgroundColor: Colors[colorScheme].primaryBackgroundColor,
-          }}
+          ListFooterComponentStyle={{ backgroundColor: colors.bg }}
           contentContainerStyle={{
+            paddingHorizontal: spacing.screen,
+            paddingTop: spacing.screen,
+            gap: 10,
             paddingBottom: tabbarHeight - Styles.Padding.default * 2,
           }}
           scrollIndicatorInsets={{
@@ -146,18 +139,12 @@ export default function Notifications() {
           }}
         >
           {isLoading ? (
-            <ActivityIndicator size="large" />
+            <WheelLoader size={44} color={colors.text2} />
           ) : (
-            <ContentEmptyView
-              header={
-                <Ionicons
-                  name="notifications"
-                  size={30}
-                  color={Colors.companyOrange}
-                />
-              }
-              title="No notifications yet."
-              description="You'll see your notifications here."
+            <EmptyState
+              icon="bell"
+              title="You're all caught up"
+              description="New notifications from your apps will appear here."
             />
           )}
         </View>

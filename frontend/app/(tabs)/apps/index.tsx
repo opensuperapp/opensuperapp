@@ -13,11 +13,12 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import AppGridItem from "@/components/apps/AppGridItem";
+import EmptyState from "@/components/apps/EmptyState";
 import SearchBar from "@/components/SearchBar";
 import SignInMessage from "@/components/SignInMessage";
 import SyncingModal from "@/components/SyncingModal";
-import Widget from "@/components/Widget";
-import { Colors } from "@/constants/Colors";
+import { spacing, type ThemeColors } from "@/constants/brand";
 import {
   APP_LIST_CONFIG_KEY,
   APP_UPDATE_CHECK_TIMESTAMP_KEY,
@@ -28,6 +29,7 @@ import { Directory, Paths } from "expo-file-system";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { MicroApp } from "@/context/slices/appSlice";
 import { selectIsSignedIn } from "@/context/slices/authSlice";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { getUserConfigurations } from "@/context/slices/userConfigSlice";
 import { AppDispatch, RootState } from "@/context/store";
 import { useReconnectCount } from "@/hooks/useReconnectCount";
@@ -49,8 +51,6 @@ import {
   Keyboard,
   SafeAreaView,
   StyleSheet,
-  Text,
-  useColorScheme,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -80,10 +80,13 @@ export default function HomeScreen() {
     (state: RootState) => state.userConfig.configurations
   );
   const [syncing, setSyncing] = useState(false);
-  const colorScheme = useColorScheme();
-  const styles = createStyles(colorScheme ?? "light");
+  const { colors } = useBrandTheme();
+  const styles = createStyles(colors);
   const version = Constants.expoConfig?.version;
-  const { height: windowHeight } = useWindowDimensions();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const { columns, columnGap } = spacing.appGrid;
+  const cellWidth =
+    (windowWidth - spacing.screen * 2 - columnGap * (columns - 1)) / columns;
   const tabBarHeight: number = useBottomTabBarHeight();
   const [currentAction, setCurrentAction] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ done: number; total: number }>({
@@ -318,12 +321,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView
-      style={{
-        flex: 1,
-        backgroundColor: Colors[colorScheme ?? "light"].primaryBackgroundColor,
-      }}
-    >
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       {/* Search Bar */}
       <SearchBar
         searchQuery={searchQuery}
@@ -341,13 +339,13 @@ export default function HomeScreen() {
         <FlatList
           data={filteredApps}
           keyExtractor={(item) => item.appId}
-          numColumns={4}
+          numColumns={columns}
+          columnWrapperStyle={styles.gridRow}
           renderItem={({ item }) => (
-            <Widget
-              iconUrl={item.iconUrl}
+            <AppGridItem
+              width={cellWidth}
               name={item.name}
               webViewUri={item.webViewUri ?? ""}
-              appName={item.name}
               clientId={item.clientId ?? ""}
               exchangedToken={item.exchangedToken ?? ""}
               exchangedIdToken={item.exchangedIdToken ?? ""}
@@ -360,31 +358,25 @@ export default function HomeScreen() {
           )}
           contentContainerStyle={{
             minHeight: windowHeight - 3 * tabBarHeight,
+            paddingHorizontal: spacing.screen,
+            paddingTop: 6,
             paddingBottom: tabBarHeight,
           }}
           showsVerticalScrollIndicator={false}
           onScrollBeginDrag={Keyboard.dismiss}
           ListEmptyComponent={
-            <>
-              {searchQuery.trim() === "" ? (
-                <View style={styles.emptyContainer}>
-                  <Text style={styles.emptyText}>
-                    No apps found{"\n"}Visit the{" "}
-                    <Text
-                      onPress={() => router.push(ScreenPaths.STORE)}
-                      style={{ color: Colors.companyOrange }}
-                    >
-                      Store
-                    </Text>{" "}
-                    to download apps
-                  </Text>
-                </View>
-              ) : (
-                <View style={styles.emptyAppsContainer}>
-                  <Text style={styles.emptyText}>No matching apps found</Text>
-                </View>
-              )}
-            </>
+            <EmptyState
+              icon="store"
+              title={
+                searchQuery.trim() === ""
+                  ? "No apps yet"
+                  : `No apps match “${searchQuery.trim()}”`
+              }
+              action={{
+                label: "Browse the Store",
+                onPress: () => router.push(ScreenPaths.STORE),
+              }}
+            />
           }
         />
       </View>
@@ -392,11 +384,11 @@ export default function HomeScreen() {
   );
 }
 
-const createStyles = (colorScheme: "light" | "dark") =>
+const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: Colors[colorScheme].primaryBackgroundColor,
+      backgroundColor: colors.bg,
       justifyContent: "space-between",
     },
     signInContainer: {
@@ -405,66 +397,19 @@ const createStyles = (colorScheme: "light" | "dark") =>
     },
     overlay: {
       flex: 1,
-      backgroundColor: Colors[colorScheme].primaryBackgroundColor,
+      backgroundColor: colors.bg,
       justifyContent: "center",
       alignItems: "center",
     },
     modal: {
-      backgroundColor: Colors[colorScheme].primaryBackgroundColor,
+      backgroundColor: colors.bg,
       padding: 30,
       borderRadius: 16,
       width: "90%",
       alignItems: "center",
     },
-    searchContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: Colors[colorScheme].secondaryBackgroundColor,
-      borderRadius: 10,
-      marginHorizontal: 16,
-      marginVertical: 12,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-    },
-    searchIcon: {
-      marginRight: 8,
-    },
-    searchInput: {
-      flex: 1,
-      color: Colors[colorScheme].text,
-      fontSize: 16,
-    },
-    emptyAppsContainer: {
-      flex: 1,
-      alignItems: "center",
-      paddingHorizontal: 40,
-      marginTop: 24,
-    },
-    emptyContainer: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-      paddingVertical: 40,
-    },
-    emptyText: {
-      color: Colors[colorScheme].secondaryTextColor,
-      fontSize: 16,
-      textAlign: "center",
-    },
-    columnWrapper: {
-      justifyContent: "space-between",
-      marginBottom: 16,
-    },
-    floatingButton: {
-      height: 55,
-      width: 55,
-      backgroundColor: Colors.companyOrange,
-      position: "absolute",
-      bottom: 16,
-      right: 16,
-      borderRadius: "50%",
-      alignItems: "center",
-      justifyContent: "center",
-      elevation: 3,
+    gridRow: {
+      gap: spacing.appGrid.columnGap,
+      marginBottom: spacing.appGrid.rowGap,
     },
   });

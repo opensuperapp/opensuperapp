@@ -13,20 +13,20 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { Colors } from "@/constants/Colors";
+import BrandIcon from "@/components/brand/BrandIcon";
+import { brand, soraFamily, textStyle, type } from "@/constants/brand";
 import { MY_APPS_TAB_NAME } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { selectIsSignedIn } from "@/context/slices/authSlice";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { useNotifications } from "@/hooks/useNotifications";
-import { Ionicons } from "@expo/vector-icons";
 import { router, Stack } from "expo-router";
 import { useEffect, useRef } from "react";
 import {
   Animated,
   Easing,
-  Pressable,
+  Text,
   TouchableOpacity,
-  useColorScheme,
   View,
 } from "react-native";
 import { useSelector } from "react-redux";
@@ -34,7 +34,7 @@ import { useSelector } from "react-redux";
 export default function AppsStack() {
   const { hasUnread } = useNotifications();
   const isSignedIn = useSelector(selectIsSignedIn);
-  const colorScheme = useColorScheme() ?? "light";
+  const { colors } = useBrandTheme();
 
   const shakeAnimation = useRef(new Animated.Value(0)).current;
 
@@ -84,38 +84,58 @@ export default function AppsStack() {
   });
 
   return (
-    <Stack screenOptions={{ headerShown: true }}>
+    <Stack
+      screenOptions={{
+        headerShown: true,
+        headerStyle: { backgroundColor: colors.bg },
+        headerShadowVisible: false,
+        headerTintColor: colors.accent,
+        headerTitleAlign: "center",
+        headerTitleStyle: {
+          fontFamily: soraFamily[type.pushedTitle.weight],
+          fontSize: type.pushedTitle.size,
+          color: colors.text,
+        },
+        headerBackTitleStyle: { fontFamily: soraFamily[500], fontSize: 16 },
+        contentStyle: { backgroundColor: colors.bg },
+      }}
+    >
       <Stack.Screen
         name="index"
         options={{
-          headerTitle: MY_APPS_TAB_NAME,
-          headerRight: () => (
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 24 }}
+          // Tab roots are left-aligned; native-stack centres titles on iOS, so
+          // the title rides in headerLeft.
+          headerTitle: "",
+          headerLeft: () => (
+            <Text
+              style={{ ...textStyle(type.tabRootTitle), color: colors.text }}
+              accessibilityRole="header"
+              allowFontScaling={false}
             >
+              {MY_APPS_TAB_NAME}
+            </Text>
+          ),
+          headerRight: () => (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
               <TouchableOpacity
                 onPressIn={() => router.push(ScreenPaths.STORE)}
-                hitSlop={20}
+                style={headerAction}
+                accessibilityLabel="Store"
+                accessibilityRole="button"
               >
-                <Ionicons
-                  name="storefront-outline"
-                  size={24}
-                  color={Colors.companyOrange}
-                />
+                <BrandIcon name="store" size={24} color={colors.accent} />
               </TouchableOpacity>
 
               {isSignedIn ? (
                 <TouchableOpacity
                   onPressIn={() => router.push(ScreenPaths.NOTIFICATIONS)}
-                  hitSlop={20}
+                  style={headerAction}
+                  accessibilityLabel="Notifications"
+                  accessibilityRole="button"
                 >
                   <View>
                     <Animated.View style={{ transform: [{ rotate }] }}>
-                      <Ionicons
-                        name="notifications-outline"
-                        size={24}
-                        color={Colors.companyOrange}
-                      />
+                      <BrandIcon name="bell" size={24} color={colors.accent} />
                     </Animated.View>
                     {hasUnread && (
                       <View
@@ -127,9 +147,8 @@ export default function AppsStack() {
                           height: 10,
                           borderRadius: 5,
                           borderWidth: 2,
-                          borderColor:
-                            Colors[colorScheme].primaryBackgroundColor,
-                          backgroundColor: "red",
+                          borderColor: colors.bg,
+                          backgroundColor: brand.signal,
                         }}
                       />
                     )}
@@ -157,3 +176,10 @@ export default function AppsStack() {
     </Stack>
   );
 }
+
+const headerAction = {
+  width: 44,
+  height: 44,
+  alignItems: "center",
+  justifyContent: "center",
+} as const;

@@ -13,10 +13,12 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import EmptyState from "@/components/apps/EmptyState";
+import WheelLoader from "@/components/brand/WheelLoader";
 import ListItem from "@/components/ListItem";
 import SearchBar from "@/components/SearchBar";
 import SignInMessage from "@/components/SignInMessage";
-import { Colors } from "@/constants/Colors";
+import { spacing, type ThemeColors } from "@/constants/brand";
 import { NOT_DOWNLOADED } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { selectIsSignedIn } from "@/context/slices/authSlice";
@@ -25,6 +27,7 @@ import {
   updateDownloadProgress,
 } from "@/context/slices/appSlice";
 import { AppDispatch, RootState } from "@/context/store";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { useReconnectCount } from "@/hooks/useReconnectCount";
 import {
   downloadMicroApp,
@@ -35,14 +38,11 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   Keyboard,
   SafeAreaView,
   StyleSheet,
-  Text,
-  useColorScheme,
   View,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
@@ -72,9 +72,9 @@ const Store = () => {
   const isMountedRef = useRef(true);
   const activeDownloadsRef = useRef(new Set<string>());
 
-  const colorScheme = useColorScheme();
+  const { colors } = useBrandTheme();
   const tabBarHeight = useBottomTabBarHeight();
-  const styles = createStyles(colorScheme ?? "light", tabBarHeight);
+  const styles = createStyles(colors, tabBarHeight);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -221,12 +221,7 @@ const Store = () => {
   }
 
   return (
-    <SafeAreaView
-      style={{
-        backgroundColor: Colors[colorScheme ?? "light"].primaryBackgroundColor,
-        flex: 1,
-      }}
-    >
+    <SafeAreaView style={{ backgroundColor: colors.bg, flex: 1 }}>
       {/* Search Bar */}
       <SearchBar
         searchQuery={searchQuery}
@@ -238,7 +233,7 @@ const Store = () => {
         <View
           style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
         >
-          <ActivityIndicator color={Colors.companyOrange} size="large" />
+          <WheelLoader size={44} color={colors.text2} />
         </View>
       ) : (
         <FlatList
@@ -276,11 +271,7 @@ const Store = () => {
               )}
             </>
           )}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No apps found</Text>
-            </View>
-          }
+          ListEmptyComponent={<EmptyState icon="store" title="No apps found" />}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           onScrollBeginDrag={Keyboard.dismiss}
@@ -290,48 +281,20 @@ const Store = () => {
   );
 };
 
-const createStyles = (colorScheme: "light" | "dark", tabBarHeight: number) =>
+const createStyles = (colors: ThemeColors, tabBarHeight: number) =>
   StyleSheet.create({
-    searchContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: Colors[colorScheme].secondaryBackgroundColor,
-      borderRadius: 10,
-      marginHorizontal: 16,
-      marginVertical: 12,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-    },
-    searchIcon: {
-      marginRight: 8,
-    },
-    searchInput: {
-      flex: 1,
-      color: Colors[colorScheme].text,
-      fontSize: 16,
-    },
     horizontalLine: {
-      width: "95%",
-      alignSelf: "center",
       height: 1,
-      backgroundColor: Colors[colorScheme].secondaryBackgroundColor,
-    },
-    emptyContainer: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-      paddingVertical: 40,
-    },
-    emptyText: {
-      color: Colors[colorScheme].secondaryTextColor,
-      fontSize: 16,
+      backgroundColor: colors.line,
     },
     listContent: {
+      paddingHorizontal: spacing.screen,
+      paddingTop: 8,
       paddingBottom: tabBarHeight,
     },
     container: {
       flex: 1,
-      backgroundColor: Colors[colorScheme].primaryBackgroundColor,
+      backgroundColor: colors.bg,
       justifyContent: "space-between",
     },
     signInContainer: {
@@ -340,12 +303,12 @@ const createStyles = (colorScheme: "light" | "dark", tabBarHeight: number) =>
     },
     overlay: {
       flex: 1,
-      backgroundColor: Colors[colorScheme].primaryBackgroundColor,
+      backgroundColor: colors.bg,
       justifyContent: "center",
       alignItems: "center",
     },
     modal: {
-      backgroundColor: Colors[colorScheme].primaryBackgroundColor,
+      backgroundColor: colors.bg,
       padding: 30,
       borderRadius: 16,
       width: "90%",
