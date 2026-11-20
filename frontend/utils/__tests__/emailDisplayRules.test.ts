@@ -15,6 +15,7 @@
 // under the License.
 import {
   applyEmailDisplayRules,
+  assertAliasesSetForProductionUpdate,
   assertDomainRewriteComplete,
   EmailDisplayRules,
   NO_EMAIL_DISPLAY_RULES,
@@ -160,6 +161,37 @@ describe("assertDomainRewriteComplete", () => {
       assertDomainRewriteComplete({ ...swap, to: "" })
     ).not.toThrow(/example\.org/);
   });
+});
+
+describe("assertAliasesSetForProductionUpdate", () => {
+  const FILE = "/secrets/email-aliases.example.json";
+
+  it.each([undefined, "", "development"])(
+    "ignores a missing alias file outside a production update (%p)",
+    (channel) => {
+      expect(() =>
+        assertAliasesSetForProductionUpdate(channel, "")
+      ).not.toThrow();
+    }
+  );
+
+  it.each(["production", " Production "])(
+    "accepts a production update with the file set (%p)",
+    (channel) => {
+      expect(() =>
+        assertAliasesSetForProductionUpdate(channel, FILE)
+      ).not.toThrow();
+    }
+  );
+
+  it.each(["", "   "])(
+    "rejects a production update without the file (%p)",
+    (file) => {
+      expect(() =>
+        assertAliasesSetForProductionUpdate("production", file)
+      ).toThrow(/EMAIL_ALIASES_FILE is not set for a production update/);
+    }
+  );
 });
 
 describe("parseEmailAliases", () => {

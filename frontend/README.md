@@ -467,6 +467,8 @@ MESSAGE="1.0.1 bug fixes" npm run update:production
 
 `MESSAGE` is required and describes the update in the Expo dashboard.
 
+An update re-reads `app.config.ts` with the `.env` on the publishing machine, so it must carry the same display-email settings (`EMAIL_DOMAIN_REPLACE_*`, `EMAIL_ALIASES_FILE`) as the production build it targets. `update:production` sets `EAS_UPDATE_CHANNEL=production`, and with that set the config fails if `EMAIL_ALIASES_FILE` is unset rather than publishing an empty alias map. Point it to the same alias file the build used (a file holding `{}` to publish none on purpose). Publishing to `production` any other way (a bare `eas update --channel production`) skips this check, so use the script.
+
 The app checks for updates **on load** (`checkAutomatically: "ON_LOAD"` in `app.config.ts`). Users get the new bundle on the next cold start after the update is downloaded.
 
 ### When you need a new native build (not OTA)

@@ -29,6 +29,7 @@ import withUpdatesChannel from "./plugins/withUpdatesChannel";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import {
+  assertAliasesSetForProductionUpdate,
   assertDomainRewriteComplete,
   EmailDisplayRules,
   parseEmailAliases,
@@ -72,6 +73,10 @@ const UPDATES_CHANNEL = process.env.EXPO_PUBLIC_UPDATES_CHANNEL ?? ""; // Commen
 const EMAIL_DOMAIN_REPLACE_ENABLED_RAW =
   process.env.EMAIL_DOMAIN_REPLACE_ENABLED?.trim() ?? "";
 const EMAIL_ALIASES_FILE = process.env.EMAIL_ALIASES_FILE?.trim() ?? "";
+// Set by `npm run update:production` only; EAS itself sets nothing comparable
+// when publishing an update, and EXPO_PUBLIC_UPDATES_CHANNEL in a local .env is
+// usually "development".
+const EAS_UPDATE_CHANNEL = process.env.EAS_UPDATE_CHANNEL?.trim() ?? "";
 
 const readEmailAliasesFile = (path: string): string => {
   try {
@@ -99,6 +104,7 @@ const EMAIL_DISPLAY: EmailDisplayRules = {
     : {},
 };
 assertDomainRewriteComplete(EMAIL_DISPLAY.domain);
+assertAliasesSetForProductionUpdate(EAS_UPDATE_CHANNEL, EMAIL_ALIASES_FILE);
 
 // A fresh clone or CI job with nothing set must still build, so leaving the
 // toggle unset is not an error. For production it is worth a loud warning,
@@ -106,7 +112,9 @@ assertDomainRewriteComplete(EMAIL_DISPLAY.domain);
 // to the IdP addresses while the wallet pass keeps the swapped ones. Setting
 // EMAIL_DOMAIN_REPLACE_ENABLED=false silences it.
 if (
-  (profile === PRODUCTION || UPDATES_CHANNEL === PRODUCTION) &&
+  (profile === PRODUCTION ||
+    UPDATES_CHANNEL === PRODUCTION ||
+    EAS_UPDATE_CHANNEL === PRODUCTION) &&
   EMAIL_DOMAIN_REPLACE_ENABLED_RAW === ""
 ) {
   console.warn(

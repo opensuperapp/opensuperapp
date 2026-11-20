@@ -127,6 +127,29 @@ export const assertDomainRewriteComplete = (
 };
 
 /**
+ * Fails a production EAS Update published without EMAIL_ALIASES_FILE. The
+ * update re-evaluates `extra` from whatever env the publishing machine has, so
+ * a missing variable would ship an empty alias map and installed apps would
+ * fall back to the issued addresses. `npm run update:production` sets
+ * EAS_UPDATE_CHANNEL=production to switch this on. Builds and other channels
+ * are left alone. Names the variable only, never its value.
+ * @param updateChannel - EAS_UPDATE_CHANNEL as set by the update script
+ * @param aliasesFile - EMAIL_ALIASES_FILE, trimmed
+ */
+export const assertAliasesSetForProductionUpdate = (
+  updateChannel: string | undefined,
+  aliasesFile: string
+): void => {
+  if ((updateChannel ?? "").trim().toLowerCase() !== "production") return;
+  if (aliasesFile.trim() !== "") return;
+  throw new Error(
+    "EMAIL_ALIASES_FILE is not set for a production update, which would " +
+      "publish no aliases. Point it to the same alias file the production " +
+      "build used (a file holding {} to publish none on purpose)."
+  );
+};
+
+/**
  * Parses the alias file's contents. Errors name the entry by position, never
  * by address, because the addresses are personal data and build logs are not
  * private.
