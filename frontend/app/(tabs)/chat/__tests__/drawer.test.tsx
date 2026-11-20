@@ -1,0 +1,175 @@
+// Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+// The chat history drawer is an RN Modal, drawn over the whole window rather than
+// inside the chat tab, so it has to close whenever the chat screen loses focus;
+// otherwise a redirect away from chat leaves it covering the next tab.
+import ChatScreen from "@/app/(tabs)/chat";
+import React from "react";
+import { act, create, ReactTestRenderer } from "react-test-renderer";
+
+type HeaderLeft = () => React.ReactElement<{ onPress: () => void }>;
+let capturedHeaderLeft: HeaderLeft | undefined;
+const mockSetOptions = jest.fn(
+  (options: { headerLeft?: HeaderLeft }) =>
+    (capturedHeaderLeft = options.headerLeft),
+);
+// useFocusEffect's callback runs on focus and its cleanup on blur. The screen
+// may register more than one, so the suite keeps the latest of each by call
+// order (reset by useNavigation, which the screen calls first on every render)
+// and drives focus and blur across all of them by hand.
+type FocusEffect = () => void | (() => void);
+let mockFocusEffects: FocusEffect[] = [];
+let mockFocusSlot = 0;
+jest.mock("@react-navigation/native", () => ({
+  useNavigation: () => {
+    mockFocusSlot = 0;
+    return { setOptions: mockSetOptions };
+  },
+  useFocusEffect: (effect: FocusEffect) => {
+    mockFocusEffects[mockFocusSlot++] = effect;
+  },
+}));
+
+const mockNavigate = jest.fn();
+jest.mock("expo-router", () => ({
+  router: { navigate: (...args: unknown[]) => mockNavigate(...args) },
+}));
+
+let mockLeave: (() => void) | undefined;
+jest.mock("@/hooks/useLeaveWhenSessionEnds", () => ({
+  useLeaveWhenSessionEnds: (leave: () => void) => {
+    mockLeave = leave;
+  },
+}));
+jest.mock("@/hooks/useTrackActiveScreen", () => ({
+  useTrackActiveScreen: () => {},
+}));
+jest.mock("@/hooks/useBrandTheme", () => ({
+  useBrandTheme: () => ({ isDark: false }),
+}));
+jest.mock("@/components/chat/ChatSessionsContext", () => ({
+  useChatSessionsContext: () => ({
+    activeSessionId: "session-1",
+    isLoading: false,
+    error: null,
+    createNewSession: jest.fn(),
+  }),
+}));
+const mockChat = {
+  messages: [],
+  isGenerating: false,
+  error: null,
+  sendMessage: jest.fn(),
+  stopGeneration: jest.fn(),
+  retryMessage: jest.fn(),
+  editMessage: jest.fn(),
+};
+jest.mock("@/hooks/useChat", () => ({ useChat: () => mockChat }));
+
+jest.mock("@/components/chat/ChatSessionDrawer", () => "ChatSessionDrawer");
+jest.mock("@/components/chat/ChatMenuButton", () => "ChatMenuButton");
+jest.mock("@/components/chat/EditMessageModal", () => "EditMessageModal");
+jest.mock("@/components/chat/ChatComposer", () => "ChatComposer");
+jest.mock("@/components/chat/ChatEmptyState", () => "ChatEmptyState");
+jest.mock("@/components/chat/ChatMessageRow", () => "ChatMessageRow");
+jest.mock("@/components/brand/BrandIcon", () => "BrandIcon");
+jest.mock("@/components/brand/WheelLoader", () => "WheelLoader");
+
+jest.mock("expo-clipboard", () => ({ setStringAsync: jest.fn() }));
+jest.mock("react-native-keyboard-controller", () => ({
+  useReanimatedKeyboardAnimation: () => ({ height: { value: 0 } }),
+  useKeyboardController: () => ({ enabled: true, setEnabled: jest.fn() }),
+  KeyboardController: { setInputMode: jest.fn(), setDefaultMode: jest.fn() },
+  AndroidSoftInputModes: {},
+}));
+jest.mock("react-native-safe-area-context", () => {
+  const { createContext } = jest.requireActual("react");
+  return {
+    SafeAreaProvider: ({ children }: { children: React.ReactNode }) => children,
+    SafeAreaInsetsContext: createContext({
+      top: 0,
+      bottom: 34,
+      left: 0,
+      right: 0,
+    }),
+    useSafeAreaInsets: () => ({ top: 47, bottom: 34, left: 0, right: 0 }),
+  };
+});
+
+let root: ReactTestRenderer | undefined;
+
+const renderScreen = () => {
+  act(() => {
+    root = create(<ChatScreen />);
+  });
+  return root!;
+};
+
+const isDrawerVisible = (renderer: ReactTestRenderer) =>
+  renderer.root.find((node) => (node.type as unknown) === "ChatSessionDrawer")
+    .props.visible as boolean;
+
+const openDrawer = () => {
+  act(() => {
+    capturedHeaderLeft!().props.onPress();
+  });
+};
+
+afterEach(() => {
+  act(() => root?.unmount());
+  root = undefined;
+  capturedHeaderLeft = undefined;
+  mockFocusEffects = [];
+  mockLeave = undefined;
+  jest.clearAllMocks();
+});
+
+describe("Chat history drawer", () => {
+  it("opens from the header's history button", () => {
+    const renderer = renderScreen();
+    expect(isDrawerVisible(renderer)).toBe(false);
+    openDrawer();
+    expect(isDrawerVisible(renderer)).toBe(true);
+  });
+
+  it("closes when the chat screen loses focus", () => {
+    const renderer = renderScreen();
+    let blurs: (void | (() => void))[] = [];
+    act(() => {
+      blurs = mockFocusEffects.map((focus) => focus());
+    });
+    openDrawer();
+    expect(isDrawerVisible(renderer)).toBe(true);
+
+    act(() => {
+      blurs.forEach((blur) => typeof blur === "function" && blur());
+    });
+    expect(isDrawerVisible(renderer)).toBe(false);
+  });
+
+  it("closes when the session ends and the screen leaves for the feed", () => {
+    const renderer = renderScreen();
+    openDrawer();
+    expect(isDrawerVisible(renderer)).toBe(true);
+
+    act(() => {
+      mockLeave?.();
+    });
+    expect(isDrawerVisible(renderer)).toBe(false);
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+  });
+});

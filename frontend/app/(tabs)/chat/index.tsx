@@ -32,7 +32,7 @@ import { useChat } from "@/hooks/useChat";
 import { useLeaveWhenSessionEnds } from "@/hooks/useLeaveWhenSessionEnds";
 import { useTrackActiveScreen } from "@/hooks/useTrackActiveScreen";
 import { ChatMessage } from "@/types/chat.types";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -165,9 +165,16 @@ export default function ChatScreen(): JSX.Element {
 
   useTrackActiveScreen(ScreenPaths.CHAT);
 
-  // The tab is hidden once signed out, and there is no Sign In fallback here.
-  useLeaveWhenSessionEnds(() => router.navigate(ScreenPaths.FEED));
+  // The drawer is a Modal, drawn over the whole window rather than inside this tab, so
+  // it has to close whenever the screen loses focus (a notification tap, a tab
+  // redirect) or it stays over whatever tab comes next.
+  useFocusEffect(useCallback(() => () => setDrawerOpen(false), []));
 
+  // The tab is hidden once signed out, and there is no Sign In fallback here.
+  useLeaveWhenSessionEnds(() => {
+    setDrawerOpen(false);
+    router.navigate(ScreenPaths.FEED);
+  });
 
   const showSnackbar = useCallback(
     (text: string) => {
