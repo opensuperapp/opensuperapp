@@ -25,6 +25,48 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const isAbortError = (err: unknown): boolean =>
   err instanceof Error && err.name === "AbortError";
 
+// A reply's row is saved as Streaming with no content before its request goes out
+// and only settles when that request does. Rows still like that from before this
+// JS runtime started belong to a request that died with the app, so they would
+// otherwise show the Wave and "Thinking…" forever. Anything created since, or
+// still tracked as in flight, is left alone.
+const RUNTIME_STARTED_AT = Date.now();
+const inFlightReplyIds = new Set<string>();
+
+const isOrphanedReply = (message: ChatMessage): boolean =>
+  message.role === ChatRole.Assistant &&
+  (message.status === MessageStatus.Pending ||
+    message.status === MessageStatus.Streaming) &&
+  !message.content &&
+  message.createdAt < RUNTIME_STARTED_AT &&
+  !inFlightReplyIds.has(message.id);
+
+/**
+ * Marks replies cut off by the app being killed as failed, in the database and in
+ * the returned list, so they stop animating and show the error hint.
+ *
+ * @param {ChatMessage[]} loaded - Messages as read from the database.
+ * @returns {Promise<ChatMessage[]>} The same messages with orphaned replies failed.
+ */
+const failOrphanedReplies = async (
+  loaded: ChatMessage[]
+): Promise<ChatMessage[]> => {
+  const orphaned = loaded.filter(isOrphanedReply);
+  if (orphaned.length === 0) {
+    return loaded;
+  }
+
+  await Promise.all(
+    orphaned.map((m) =>
+      chatDatabase.updateMessage(m.id, { status: MessageStatus.Error })
+    )
+  );
+  const ids = new Set(orphaned.map((m) => m.id));
+  return loaded.map((m) =>
+    ids.has(m.id) ? { ...m, status: MessageStatus.Error } : m
+  );
+};
+
 /**
  * Manages messages and agent interactions for a single chat session.
  *
@@ -44,7 +86,9 @@ export const useChat = (sessionId: string | null) => {
     }
 
     try {
-      const loaded = await chatDatabase.listMessages(sessionId);
+      const loaded = await failOrphanedReplies(
+        await chatDatabase.listMessages(sessionId)
+      );
       setMessages(loaded);
       setError(null);
     } catch (err) {
@@ -103,6 +147,7 @@ export const useChat = (sessionId: string | null) => {
           content: "",
           status: MessageStatus.Streaming,
         });
+        inFlightReplyIds.add(assistantMessage.id);
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Failed to save message";
@@ -155,6 +200,7 @@ export const useChat = (sessionId: string | null) => {
           );
         }
       } finally {
+        inFlightReplyIds.delete(assistantMessage.id);
         abortRef.current = null;
         setIsGenerating(false);
       }
