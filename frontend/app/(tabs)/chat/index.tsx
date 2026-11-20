@@ -185,12 +185,20 @@ export default function ChatScreen(): JSX.Element {
 
   // The drawer is a Modal, drawn over the whole window rather than inside this tab, so
   // it has to close whenever the screen loses focus (a notification tap, a tab
-  // redirect) or it stays over whatever tab comes next.
-  useFocusEffect(useCallback(() => () => setDrawerOpen(false), []));
+  // redirect) or it stays over whatever tab comes next. It goes at once, without its
+  // closing slide: a new key remounts it closed, which drops its Modal in this commit.
+  // Kept up through the slide, the Modal would still be presented when the sign-in
+  // sheet is pushed after an expiry, and iOS refuses to present the sheet over it.
+  const [drawerKey, setDrawerKey] = useState(0);
+  const dismissDrawerNow = useCallback(() => {
+    setDrawerOpen(false);
+    setDrawerKey((key) => key + 1);
+  }, []);
+  useFocusEffect(useCallback(() => dismissDrawerNow, [dismissDrawerNow]));
 
   // The tab is hidden once signed out, and there is no Sign In fallback here.
   useLeaveWhenSessionEnds(() => {
-    setDrawerOpen(false);
+    dismissDrawerNow();
     router.navigate(ScreenPaths.FEED);
   });
 
@@ -458,6 +466,7 @@ export default function ChatScreen(): JSX.Element {
         onClose={() => setEditTarget(null)}
       />
       <ChatSessionDrawer
+        key={drawerKey}
         visible={isDrawerOpen}
         theme={theme}
         onClose={() => setDrawerOpen(false)}

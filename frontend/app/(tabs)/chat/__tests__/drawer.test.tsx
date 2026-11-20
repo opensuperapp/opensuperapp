@@ -19,6 +19,7 @@
 // otherwise a redirect away from chat leaves it covering the next tab.
 import ChatScreen from "@/app/(tabs)/chat";
 import React from "react";
+import { Modal } from "react-native";
 import { act, create, ReactTestRenderer } from "react-test-renderer";
 
 type HeaderButton = () => React.ReactElement<{ onPress: () => void }>;
@@ -90,7 +91,18 @@ const mockChat = {
 };
 jest.mock("@/hooks/useChat", () => ({ useChat: () => mockChat }));
 
-jest.mock("@/components/chat/ChatSessionDrawer", () => "ChatSessionDrawer");
+// A stand-in by default; the suite that checks the drawer's Modal swaps the real one in.
+let mockRealDrawer = false;
+jest.mock("@/components/chat/ChatSessionDrawer", () => {
+  const { createElement } = jest.requireActual("react");
+  const { default: RealDrawer } = jest.requireActual(
+    "@/components/chat/ChatSessionDrawer",
+  );
+  return (props: object) =>
+    mockRealDrawer
+      ? createElement(RealDrawer, props)
+      : createElement("ChatSessionDrawer", props);
+});
 jest.mock("@/components/chat/ChatMenuButton", () => "ChatMenuButton");
 jest.mock("@/components/chat/EditMessageModal", () => "EditMessageModal");
 jest.mock("@/components/chat/ChatComposer", () => "ChatComposer");
@@ -152,6 +164,7 @@ afterEach(() => {
   mockSessions.error = null;
   mockSessions.sessions = [];
   mockLeave = undefined;
+  mockRealDrawer = false;
   jest.clearAllMocks();
 });
 
@@ -188,6 +201,54 @@ describe("Chat history drawer", () => {
     });
     expect(isDrawerVisible(renderer)).toBe(false);
     expect(mockNavigate).toHaveBeenCalledTimes(1);
+  });
+});
+
+// The drawer slides shut before its Modal goes. Once the session has ended, the
+// sign-in sheet is on its way, and iOS will not present it over a Modal that is still
+// up, so the Modal has to go in the same commit as the close.
+describe("Chat history drawer's Modal", () => {
+  const modalCount = (renderer: ReactTestRenderer) =>
+    renderer.root.findAll((node) => node.type === Modal).length;
+
+  beforeEach(() => {
+    mockRealDrawer = true;
+  });
+
+  it("is dropped at once, without the closing slide, when the session ends", () => {
+    const renderer = renderScreen();
+    openDrawer();
+    expect(modalCount(renderer)).toBe(1);
+
+    act(() => {
+      mockLeave?.();
+    });
+    expect(modalCount(renderer)).toBe(0);
+  });
+
+  it("is dropped at once when the chat screen loses focus", () => {
+    const renderer = renderScreen();
+    let blurs: (void | (() => void))[] = [];
+    act(() => {
+      blurs = mockFocusEffects.map((focus) => focus());
+    });
+    openDrawer();
+    expect(modalCount(renderer)).toBe(1);
+
+    act(() => {
+      blurs.forEach((blur) => typeof blur === "function" && blur());
+    });
+    expect(modalCount(renderer)).toBe(0);
+  });
+
+  it("opens again after being dropped", () => {
+    const renderer = renderScreen();
+    openDrawer();
+    act(() => {
+      mockLeave?.();
+    });
+    openDrawer();
+    expect(modalCount(renderer)).toBe(1);
   });
 });
 
