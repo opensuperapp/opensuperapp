@@ -249,6 +249,7 @@ const Store = () => {
               exchangedIdToken={item.exchangedIdToken}
               versions={item.versions}
               description={item.description}
+              iconUrl={item.iconUrl}
               status={item.status || NOT_DOWNLOADED}
               displayMode={item.displayMode}
               downloading={

@@ -43,6 +43,8 @@ type ListItemProps = {
   exchangedIdToken?: string | null;
   versions: Version[];
   description: string;
+  /** Remote icon shown on the tile; it falls back to the brand mark when missing. */
+  iconUrl: string;
   status: string;
   downloading: boolean;
   downloadProgress?: number;
