@@ -105,6 +105,11 @@ export const useChatSessions = (userId: string | null) => {
     setActiveSessionId(sessionId);
   }, []);
 
+  /**
+   * Creates and activates a new session. Resolves to null on failure; the caller
+   * reports it, so a failure is not written to the shared `error` (which would show
+   * it twice, and leave a stale message behind for the next caller).
+   */
   const createNewSession = useCallback(async () => {
     if (!userId) {
       return null;
@@ -116,7 +121,7 @@ export const useChatSessions = (userId: string | null) => {
       setActiveSessionId(session.id);
       return session;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create chat");
+      console.warn("[chat] could not create a session", err);
       return null;
     }
   }, [refreshSessions, userId]);

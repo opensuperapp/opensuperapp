@@ -281,7 +281,9 @@ export default function ChatScreen(): JSX.Element {
   const hasMessages = messages.length > 0;
 
   // One new chat per tap: a second tap while the first is still being created would
-  // leave an extra empty session behind. A failure surfaces through the snackbar.
+  // leave an extra empty session behind. A failure is reported here on every tap (the
+  // hook keeps create failures out of the shared `sessionsError`, so the error effect
+  // doesn't show it a second time).
   const creatingSessionRef = useRef(false);
   const startNewSession = useCallback(async () => {
     if (creatingSessionRef.current) {
@@ -289,11 +291,14 @@ export default function ChatScreen(): JSX.Element {
     }
     creatingSessionRef.current = true;
     try {
-      await createNewSession();
+      const session = await createNewSession();
+      if (!session) {
+        showSnackbar("Couldn't start a new chat. Try again.");
+      }
     } finally {
       creatingSessionRef.current = false;
     }
-  }, [createNewSession]);
+  }, [createNewSession, showSnackbar]);
 
   // Native bar buttons: history on the left, "new chat" once there is something to leave.
   useLayoutEffect(() => {

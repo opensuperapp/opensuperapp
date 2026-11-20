@@ -335,6 +335,43 @@ describe("Chat history drawer's new chat button", () => {
 });
 
 describe("Chat header's new chat button", () => {
+  const snackbarShows = (renderer: ReactTestRenderer, text: string) =>
+    renderer.root.findAll(
+      (node) => (node.type as unknown) === "Text" && node.props.children === text,
+    ).length > 0;
+
+  const tapHeaderNewChat = async () => {
+    await act(async () => {
+      capturedHeaderRight!().props.onPress();
+    });
+  };
+
+  it("shows a snackbar on every failed new chat, even without a stored error", async () => {
+    jest.useFakeTimers();
+    try {
+      mockCreateNewSession.mockResolvedValue(null);
+      mockChat.messages = [{ id: "message-1" }];
+      const renderer = renderScreen();
+      const failure = "Couldn't start a new chat. Try again.";
+
+      await tapHeaderNewChat();
+      expect(snackbarShows(renderer, failure)).toBe(true);
+
+      // Let it fade, then fail the same way again: it shows a second time.
+      act(() => {
+        jest.runAllTimers();
+      });
+      expect(snackbarShows(renderer, failure)).toBe(false);
+
+      await tapHeaderNewChat();
+      expect(mockCreateNewSession).toHaveBeenCalledTimes(2);
+      expect(snackbarShows(renderer, failure)).toBe(true);
+    } finally {
+      mockCreateNewSession.mockReset();
+      jest.useRealTimers();
+    }
+  });
+
   it("ignores a second tap while the first session is still being created", async () => {
     const pending = deferred<{ id: string } | null>();
     mockCreateNewSession.mockReturnValueOnce(pending.promise);
