@@ -67,20 +67,29 @@ const Library = () => {
   // The query whose first page is on screen. Refresh and paging reuse it, so a
   // short edit the search ignores doesn't swap in unfiltered articles.
   const appliedQuery = useRef("");
+  // Held by the next-page request in flight. onEndReached can fire again before
+  // it settles; a second request would fetch and append the same page.
+  const pageRequest = useRef<object | null>(null);
 
   const fetchArticles = async (
     isInitial: boolean = false,
     debouncedQuery: string = ""
   ) => {
     if (!hasMore && !isInitial) return;
+    if (!isInitial && pageRequest.current) return;
 
     const generation = isInitial
       ? ++requestGeneration.current
       : requestGeneration.current;
+    const pageToken = isInitial ? null : {};
 
     if (isInitial) {
+      // The pending page belongs to the old generation and will be dropped.
+      pageRequest.current = null;
+      setFetchingMore(false);
       setLoading(true);
     } else {
+      pageRequest.current = pageToken;
       setFetchingMore(true);
     }
 
@@ -108,7 +117,10 @@ const Library = () => {
       console.error(err);
     } finally {
       if (!isInitial) {
-        setFetchingMore(false);
+        if (pageRequest.current === pageToken) {
+          pageRequest.current = null;
+          setFetchingMore(false);
+        }
       } else if (generation === requestGeneration.current) {
         setLoading(false);
       }
