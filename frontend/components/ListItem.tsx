@@ -43,8 +43,6 @@ type ListItemProps = {
   exchangedIdToken?: string | null;
   versions: Version[];
   description: string;
-  /** Kept for callers; the Halo tile replaces the remote icon artwork. */
-  iconUrl: string;
   status: string;
   downloading: boolean;
   downloadProgress?: number;
