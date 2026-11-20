@@ -43,6 +43,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from
 import {
   Animated,
   FlatList,
+  Keyboard,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -320,7 +321,11 @@ export default function ChatScreen(): JSX.Element {
       headerLeft: () => (
         <ChatMenuButton
           theme={theme}
-          onPress={() => setDrawerOpen(true)}
+          onPress={() => {
+            // The drawer's Modal goes over the composer, not the keyboard.
+            Keyboard.dismiss();
+            setDrawerOpen(true);
+          }}
           accessibilityLabel="Open chat history"
         />
       ),

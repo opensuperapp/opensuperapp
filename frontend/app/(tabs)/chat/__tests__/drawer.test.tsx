@@ -19,7 +19,7 @@
 // otherwise a redirect away from chat leaves it covering the next tab.
 import ChatScreen from "@/app/(tabs)/chat";
 import React from "react";
-import { Modal } from "react-native";
+import { Keyboard, Modal } from "react-native";
 import { act, create, ReactTestRenderer } from "react-test-renderer";
 
 type HeaderButton = () => React.ReactElement<{ onPress: () => void }>;
@@ -174,6 +174,14 @@ describe("Chat history drawer", () => {
     expect(isDrawerVisible(renderer)).toBe(false);
     openDrawer();
     expect(isDrawerVisible(renderer)).toBe(true);
+  });
+
+  it("puts the keyboard away as it opens", () => {
+    const dismiss = jest.spyOn(Keyboard, "dismiss");
+    renderScreen();
+    openDrawer();
+    expect(dismiss).toHaveBeenCalledTimes(1);
+    dismiss.mockRestore();
   });
 
   it("closes when the chat screen loses focus", () => {
