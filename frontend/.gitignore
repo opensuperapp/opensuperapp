@@ -59,5 +59,8 @@ app.json
 # google service(s) configuration(s)
 google-services/
 
-# Display-email alias list (EMAIL_ALIASES_FILE): holds people's addresses
+# Display-email alias list (EMAIL_ALIASES_FILE): holds people's addresses.
+# Keep the real list here (e.g. email-aliases.json) or outside the repo; any
+# other in-repo path is NOT ignored. The example template is committed.
 email-aliases*.json
+!email-aliases.example.json
