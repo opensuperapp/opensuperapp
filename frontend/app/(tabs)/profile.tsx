@@ -45,6 +45,7 @@ import { DecodedAccessToken } from "@/types/decodeAccessToken.types";
 import { authEmitter } from "@/utils/eventEmitter";
 import { signOut } from "@/utils/signOut";
 import Constants from "expo-constants";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "expo-router";
 import { jwtDecode } from "jwt-decode";
 import React, {
@@ -80,6 +81,9 @@ const SettingsScreen = () => {
   const isSignedIn = useSelector(selectIsSignedIn);
   const { userInfo } = useSelector((state: RootState) => state.userInfo);
   const { colors } = useBrandTheme();
+  // The tab bar floats over the screen, so its height (which grows with the
+  // bottom safe-area inset) is cleared explicitly rather than guessed.
+  const tabBarHeight = useBottomTabBarHeight();
   const version = Constants.expoConfig?.version;
   const [basicUserInfo, setBasicUserInfo] = useState<BasicUserInfo>({
     firstName: "",
@@ -175,7 +179,9 @@ const SettingsScreen = () => {
 
   if (!isSignedIn) {
     return (
-      <SignInArtwork style={styles.signIn}>
+      <SignInArtwork
+        style={[styles.signIn, { paddingBottom: tabBarHeight + 24 }]}
+      >
         <View style={styles.signInLogo}>
           <ChoreoLabsLogo width={200} color="#FFFFFF" />
         </View>
@@ -191,7 +197,12 @@ const SettingsScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
-      <View style={styles.content}>
+      <View
+        style={[
+          styles.content,
+          { paddingBottom: tabBarHeight + spacing.screen },
+        ]}
+      >
         {/* User info */}
         <View
           style={[
@@ -288,13 +299,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.screen,
     paddingTop: 16,
-    // Clears the floating tab bar.
-    paddingBottom: 96,
   },
   signIn: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingBottom: 104,
   },
   signInLogo: {
     flex: 1,
