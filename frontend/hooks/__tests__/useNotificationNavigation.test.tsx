@@ -236,6 +236,17 @@ describe("useNotificationNavigation", () => {
       expect(mockRouter.push).toHaveBeenCalledTimes(2);
     });
 
+    // Android uses data.tag as the identifier, iOS the apns-collapse-id, and a local
+    // reminder the id its micro app chose: a later notification can reuse it.
+    it("navigates for a later tap that reuses an earlier one's identifier", async () => {
+      await render();
+      await deliver(tap("leave-updates", DEFAULT, 1));
+      await deliver(tap("leave-updates", DEFAULT, 2));
+
+      expect(mockRouter.navigate).toHaveBeenCalledTimes(2);
+      expect(mockRouter.push).toHaveBeenCalledTimes(2);
+    });
+
     it("stops listening on unmount", async () => {
       const root = await render();
       await act(async () => {
@@ -262,12 +273,13 @@ describe("useNotificationNavigation", () => {
       expect(mockRouter.push).not.toHaveBeenCalled();
     });
 
-    // The launching response can also reach the listener; it is one tap.
+    // The launching response can also reach the listener; it is one tap. Natively both
+    // are the same serialized response, so identifier and date match.
     it("navigates once when the listener repeats the launching tap", async () => {
       mockLaunchResponse = tap("n-1");
 
       await render();
-      await deliver(tap("n-1", DEFAULT, 2));
+      await deliver(tap("n-1"));
 
       expectOpenedNotifications();
     });

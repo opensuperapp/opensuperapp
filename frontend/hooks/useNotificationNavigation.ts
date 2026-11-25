@@ -36,13 +36,16 @@ export const APPS_LIST_WAIT_MS = 5000;
 
 // A tap, identified so the same one is never handled twice: the response that
 // launched the app can arrive both from getLastNotificationResponseAsync and from
-// the listener.
+// the listener, as the same serialized response. The identifier alone is not one
+// notification (Android uses data.tag, iOS the apns-collapse-id, a local reminder
+// the id its micro app chose), so a later notification can reuse it; its date tells
+// them apart.
 type Tap = { key: string; target: MicroAppTarget | null };
 
 const toTap = (response: Notifications.NotificationResponse): Tap | null =>
   response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER
     ? {
-        key: response.notification.request.identifier,
+        key: `${response.notification.request.identifier}:${response.notification.date}`,
         target: getMicroAppTarget(response),
       }
     : null;
