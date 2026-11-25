@@ -94,6 +94,10 @@ const deleteCall = (token: string) => ({
   url: `${TOKENS_URL}?fcmToken=${encodeURIComponent(token)}`,
   method: "DELETE",
 });
+// The registration keeps the fcmToken query parameter the current backend requires,
+// and adds the body the next backend reads the token type (and APNs environment) from.
+const postUrl = (token: string) =>
+  `${TOKENS_URL}?fcmToken=${encodeURIComponent(token)}`;
 const register = (pushToken: typeof FCM_1 | typeof FCM_2 | typeof APNS) =>
   run(registerPushToken(pushToken));
 
@@ -127,7 +131,7 @@ describe("registerPushToken", () => {
     await register(FCM_1);
 
     expect(mockApiRequest).toHaveBeenCalledWith({
-      url: TOKENS_URL,
+      url: postUrl(FCM_1.token),
       method: "POST",
       data: { token: FCM_1.token, tokenType: "fcm" },
     });
@@ -140,19 +144,22 @@ describe("registerPushToken", () => {
     await register(APNS);
 
     expect(mockApiRequest).toHaveBeenCalledWith({
-      url: TOKENS_URL,
+      url: postUrl(APNS.token),
       method: "POST",
       data: { token: APNS.token, tokenType: "apns", environment: "production" },
     });
   });
 
-  // Only old builds use the query parameter.
-  it("never sends the fcmToken query parameter", async () => {
+  // The current backend takes the token only as a required query parameter and answers
+  // 400 without it; the next one prefers the body when both are present.
+  it("sends the token both as the URL-encoded fcmToken query parameter and in the body", async () => {
     mockApiRequest.mockResolvedValueOnce({ status: 200, data: {} });
 
     await register(FCM_1);
 
-    expect(mockApiRequest.mock.calls[0][0].url).not.toContain("?");
+    const [{ url, data }] = mockApiRequest.mock.calls[0];
+    expect(url).toBe(`${TOKENS_URL}?fcmToken=test-fcm-token%3A1`);
+    expect(data).toEqual({ token: FCM_1.token, tokenType: "fcm" });
   });
 
   it("does not remember a token the server refused", async () => {
@@ -218,7 +225,7 @@ describe("syncPushToken", () => {
 
     expect(mockRequestPermission).toHaveBeenCalledTimes(1);
     expect(posts()).toEqual([
-      [{ url: TOKENS_URL, method: "POST", data: { token: APNS.token, tokenType: "apns", environment: "production" } }],
+      [{ url: postUrl(APNS.token), method: "POST", data: { token: APNS.token, tokenType: "apns", environment: "production" } }],
     ]);
   });
 
@@ -238,7 +245,7 @@ describe("syncPushToken", () => {
     await run(syncPushToken({ prompt: true }));
 
     expect(posts()).toEqual([
-      [{ url: TOKENS_URL, method: "POST", data: { token: FCM_2.token, tokenType: "fcm" } }],
+      [{ url: postUrl(FCM_2.token), method: "POST", data: { token: FCM_2.token, tokenType: "fcm" } }],
     ]);
     expect(mockStore["last-sent-push-token"]).toBe(FCM_2.token);
   });
@@ -301,7 +308,7 @@ describe("syncPushToken", () => {
 
       expect(deletes()).toEqual([]);
       expect(posts()).toEqual([
-        [{ url: TOKENS_URL, method: "POST", data: { token: FCM_1.token, tokenType: "fcm" } }],
+        [{ url: postUrl(FCM_1.token), method: "POST", data: { token: FCM_1.token, tokenType: "fcm" } }],
       ]);
       expect(mockStore["last-sent-fcm-token"]).toBeUndefined();
     });

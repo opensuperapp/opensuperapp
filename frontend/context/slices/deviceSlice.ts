@@ -43,11 +43,13 @@ const initialState: DeviceState = {
 const isSuccess = (status?: number) =>
   status !== undefined && status >= 200 && status < 300;
 
-const deviceTokensUrl = `${BASE_URL}/users/fcm-tokens`;
-const deleteTokenUrl = (token: string) =>
-  `${deviceTokensUrl}?fcmToken=${encodeURIComponent(token)}`;
+// The token as the fcmToken query parameter: DELETE takes it there, and so does the
+// current backend's POST, which answers 400 without it.
+const tokenUrl = (token: string) =>
+  `${BASE_URL}/users/fcm-tokens?fcmToken=${encodeURIComponent(token)}`;
 
-// The backend's request body: environment only for APNs tokens.
+// The registration body the next backend reads the token type from (and prefers over
+// the query parameter): environment only for APNs tokens.
 const toRequestBody = (pushToken: PushToken) =>
   pushToken.tokenType === "apns"
     ? {
@@ -101,7 +103,7 @@ export const cleanupLegacyFcmToken = createAsyncThunk(
     if (legacyToken !== currentToken) {
       try {
         const response = await apiRequest({
-          url: deleteTokenUrl(legacyToken),
+          url: tokenUrl(legacyToken),
           method: "DELETE",
         });
         answered = response !== undefined;
@@ -139,7 +141,7 @@ export const disablePushToken = createAsyncThunk(
         return rejectWithValue("No push token found");
       }
       const response = await apiRequest({
-        url: deleteTokenUrl(token),
+        url: tokenUrl(token),
         method: "DELETE",
       });
 
@@ -181,7 +183,7 @@ export const registerPushToken = createAsyncThunk(
   async (pushToken: PushToken, { dispatch, rejectWithValue }) => {
     try {
       const response = await apiRequest({
-        url: deviceTokensUrl,
+        url: tokenUrl(pushToken.token),
         method: "POST",
         data: toRequestBody(pushToken),
       });
