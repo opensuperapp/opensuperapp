@@ -15,6 +15,10 @@
 // under the License.
 import { PENDING_NOTIFICATION_NAVIGATION } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
+import {
+  selectIsSignedIn,
+  selectSessionStatus,
+} from "@/context/slices/authSlice";
 import type { RootState } from "@/context/store";
 import {
   getMicroAppTarget,
@@ -65,8 +69,10 @@ const openNotifications = () => {
  *
  * - A notification naming a micro app (`microAppId`, optional `launchData`) opens it
  *   the way the bridge's OPEN_MICRO_APP does, once the installed apps list is
- *   loaded. Not installed or not downloaded, or no list within APPS_LIST_WAIT_MS:
- *   Notifications instead, without asking anything.
+ *   loaded, and only when signed in. Signed out, not installed or not downloaded, or
+ *   no list within APPS_LIST_WAIT_MS: Notifications instead, without asking anything.
+ *   The apps list outlives a sign-out in storage, so it alone does not mean the app
+ *   may open; a tap waits for a session still being restored at startup.
  * - Any other notification opens Notifications (under My Apps).
  *
  * Nothing navigates before the tab bar has restored the last tab, which would
@@ -76,6 +82,8 @@ const openNotifications = () => {
 export const useNotificationNavigation = () => {
   const isStartupRouteSettled = useIsStartupRouteSettled();
   const apps = useSelector((state: RootState) => state.apps.apps);
+  const isSessionKnown = useSelector(selectSessionStatus) !== "restoring";
+  const isSignedIn = useSelector(selectIsSignedIn);
   const [pendingTap, setPendingTap] = useState<Tap | null>(null);
   const [hasWaitedForApps, setHasWaitedForApps] = useState(false);
   const handled = useRef(new Set<string>());
@@ -116,8 +124,10 @@ export const useNotificationNavigation = () => {
     };
   }, []);
 
+  const namesMicroApp = pendingTap?.target != null;
+  const needsSession = namesMicroApp && !isSessionKnown;
   const needsApps =
-    pendingTap?.target != null && apps.length === 0 && !hasWaitedForApps;
+    namesMicroApp && isSignedIn && apps.length === 0 && !hasWaitedForApps;
 
   // Bounded wait for the apps list; started only once navigation may happen.
   useEffect(() => {
@@ -132,13 +142,15 @@ export const useNotificationNavigation = () => {
   }, [isStartupRouteSettled, needsApps]);
 
   useEffect(() => {
-    if (!isStartupRouteSettled || !pendingTap || needsApps) return;
+    if (!isStartupRouteSettled || !pendingTap || needsSession || needsApps)
+      return;
     if (handled.current.has(pendingTap.key)) return;
     handled.current.add(pendingTap.key);
 
     const { target } = pendingTap;
     const opened =
       target !== null &&
+      isSignedIn &&
       openMicroApp({
         router,
         apps,
@@ -150,7 +162,9 @@ export const useNotificationNavigation = () => {
       });
     if (target && !opened) {
       console.warn(
-        `Notification tap: micro app ${target.microAppId} is not installed; opening Notifications instead.`
+        isSignedIn
+          ? `Notification tap: micro app ${target.microAppId} is not installed; opening Notifications instead.`
+          : `Notification tap: not signed in, so micro app ${target.microAppId} is not opened; opening Notifications instead.`
       );
     }
     if (!opened) openNotifications();
@@ -160,5 +174,12 @@ export const useNotificationNavigation = () => {
     Notifications.clearLastNotificationResponseAsync().catch((error) =>
       console.error("Error clearing the last notification response:", error)
     );
-  }, [pendingTap, isStartupRouteSettled, needsApps, apps]);
+  }, [
+    pendingTap,
+    isStartupRouteSettled,
+    needsSession,
+    needsApps,
+    isSignedIn,
+    apps,
+  ]);
 };

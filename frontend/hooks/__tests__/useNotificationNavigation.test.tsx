@@ -35,6 +35,8 @@ jest.mock("@react-native-async-storage/async-storage", () =>
 
 // The installed apps list as the store holds it; empty until restored at startup.
 let mockApps: unknown[] = [];
+// The session as the store holds it; "restoring" until it is known at startup.
+let mockSessionStatus = "authenticated";
 const mockRerenders = new Set<() => void>();
 jest.mock("react-redux", () => {
   const { useReducer, useEffect } = jest.requireActual("react");
@@ -47,13 +49,22 @@ jest.mock("react-redux", () => {
           mockRerenders.delete(rerender);
         };
       }, []);
-      return select({ apps: { apps: mockApps } });
+      return select({
+        apps: { apps: mockApps },
+        auth: { sessionStatus: mockSessionStatus },
+      });
     },
   };
 });
 const setApps = async (apps: unknown[]) => {
   await act(async () => {
     mockApps = apps;
+    mockRerenders.forEach((rerender) => rerender());
+  });
+};
+const setSessionStatus = async (status: string) => {
+  await act(async () => {
+    mockSessionStatus = status;
     mockRerenders.forEach((rerender) => rerender());
   });
 };
@@ -182,6 +193,7 @@ beforeEach(async () => {
   mockRouter.canDismiss.mockReturnValue(false);
   jest.useRealTimers();
   mockApps = [];
+  mockSessionStatus = "authenticated";
   jest.spyOn(console, "warn").mockImplementation(() => {});
   mockLaunchResponse = null;
   mockListener = undefined;
@@ -434,6 +446,58 @@ describe("useNotificationNavigation", () => {
       await deliver(androidMicroAppTap("m-1", { microAppId: APP_ID }));
 
       expect(mockRouter.push.mock.calls).toEqual(OPEN_EVENTS(undefined));
+    });
+
+    // The apps list survives sign-out in storage and is restored at cold start, so
+    // the previous user's apps are still listed as downloaded.
+    it.each(["signedOut", "expired"])(
+      "falls back to Notifications instead of opening the app when %s",
+      async (status) => {
+        mockSessionStatus = status;
+        mockApps = [installed()];
+        await render();
+
+        await deliver(androidMicroAppTap("m-1", { microAppId: APP_ID }));
+
+        expectOpenedNotifications();
+      }
+    );
+
+    it("signed out: does not wait for the apps list", async () => {
+      mockSessionStatus = "signedOut";
+      await render();
+
+      await deliver(androidMicroAppTap("m-1", { microAppId: APP_ID }));
+
+      expectOpenedNotifications();
+    });
+
+    // A launching tap can arrive before the session is restored; that is not signed out.
+    it("cold: waits for the session to be restored, then opens the app", async () => {
+      mockSessionStatus = "restoring";
+      mockApps = [installed()];
+      mockLaunchResponse = androidMicroAppTap("m-1", { microAppId: APP_ID });
+
+      await render();
+      expect(mockRouter.push).not.toHaveBeenCalled();
+      expect(mockRouter.navigate).not.toHaveBeenCalled();
+
+      await setSessionStatus("authenticated");
+
+      expect(mockRouter.push.mock.calls).toEqual(OPEN_EVENTS(undefined));
+    });
+
+    it("cold: falls back to Notifications when the restored session is signed out", async () => {
+      mockSessionStatus = "restoring";
+      mockApps = [installed()];
+      mockLaunchResponse = androidMicroAppTap("m-1", { microAppId: APP_ID });
+
+      await render();
+      expect(mockRouter.push).not.toHaveBeenCalled();
+
+      await setSessionStatus("signedOut");
+
+      expectOpenedNotifications();
     });
 
     it("does not wait for apps when the push names no micro app", async () => {
