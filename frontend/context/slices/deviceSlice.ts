@@ -82,9 +82,10 @@ export const loadLastSentPushToken = createAsyncThunk(
  * a token to delete. On iOS it is an FCM token where the device now registers its APNs
  * token, so it is deleted, or the device would get every push twice.
  *
- * Best effort: whatever the server answers, the stored token is forgotten so this never
- * runs again. Only a request that never reached the server (offline, or no session yet)
- * leaves it for the next attempt.
+ * The stored token is forgotten once the server deleted it (2xx) or does not know it
+ * (404). Any other answer (5xx, 401, 403), or a request that never reached the server
+ * (offline, or no session yet), leaves it for the next attempt, as the token may still
+ * be registered. Sign-out forgets it either way.
  *
  * @param currentToken - The raw token this device registers now.
  */
@@ -100,22 +101,22 @@ export const cleanupLegacyFcmToken = createAsyncThunk(
     }
     if (!legacyToken || legacyToken === currentToken) return;
 
-    let answered = true;
+    let retired = false;
     try {
       const response = await apiRequest({
         url: tokenUrl(legacyToken),
         method: "DELETE",
       });
-      answered = response !== undefined;
-      if (answered && !isSuccess(response?.status)) {
-        console.warn("Failed to delete the legacy FCM token:", response?.status);
+      retired = isSuccess(response?.status) || response?.status === 404;
+      if (response && !retired) {
+        console.warn("Failed to delete the legacy FCM token:", response.status);
       }
     } catch (error: any) {
-      answered = Boolean(error?.response);
+      retired = error?.response?.status === 404;
       console.warn("Failed to delete the legacy FCM token:", error);
     }
 
-    if (answered) {
+    if (retired) {
       try {
         await deleteItemAsync(LAST_SENT_FCM_TOKEN);
       } catch (error) {

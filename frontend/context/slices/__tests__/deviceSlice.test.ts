@@ -368,20 +368,43 @@ describe("cleanupLegacyFcmToken", () => {
     });
   });
 
+  // Deleted, or the backend no longer knows it: either way there is nothing left to retire.
   it.each([
-    ["rejects with a server error", () => mockApiRequest.mockRejectedValue(serverError())],
-    ["answers with a failure status", () => mockApiRequest.mockResolvedValue({ status: 500 })],
-  ])("tolerates a server that %s: logs, forgets the token, never retries", async (_, arrange) => {
+    ["deletes it", () => mockApiRequest.mockResolvedValue({ status: 200, data: {} })],
+    ["answers 404", () => mockApiRequest.mockResolvedValue({ status: 404 })],
+    ["rejects with 404", () => mockApiRequest.mockRejectedValue(serverError(404))],
+  ])("forgets the token and never retries when the server %s", async (_, arrange) => {
     mockStore["last-sent-fcm-token"] = LEGACY_FCM;
     arrange();
 
-    await expect(cleanup()).resolves.not.toThrow();
+    await cleanup();
     await cleanup();
 
     expect(mockApiRequest).toHaveBeenCalledTimes(1);
     expect(mockStore["last-sent-fcm-token"]).toBeUndefined();
-    expect(console.warn).toHaveBeenCalled();
   });
+
+  // The token may still be registered: a later attempt deletes it.
+  it.each([500, 503, 401, 403])(
+    "logs, keeps the token and retries next time when the server answers %i",
+    async (status) => {
+      mockStore["last-sent-fcm-token"] = LEGACY_FCM;
+      mockApiRequest
+        .mockResolvedValueOnce({ status })
+        .mockRejectedValueOnce(serverError(status))
+        .mockResolvedValueOnce({ status: 200, data: {} });
+
+      await expect(cleanup()).resolves.not.toThrow();
+      await expect(cleanup()).resolves.not.toThrow();
+      expect(mockStore["last-sent-fcm-token"]).toBe(LEGACY_FCM);
+      expect(console.warn).toHaveBeenCalled();
+
+      await cleanup();
+
+      expect(mockApiRequest).toHaveBeenCalledTimes(3);
+      expect(mockStore["last-sent-fcm-token"]).toBeUndefined();
+    }
+  );
 
   // Nothing reached the backend (offline, or apiRequest had no session to send), so
   // the next launch tries again.
