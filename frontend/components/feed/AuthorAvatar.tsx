@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   ring: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderWidth: 1,
     borderColor: themes.dark.line2,
   },

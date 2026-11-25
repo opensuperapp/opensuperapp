@@ -38,6 +38,7 @@ import { selectIsSignedIn } from "@/context/slices/authSlice";
 import { getUserInfo } from "@/context/slices/userInfoSlice";
 import { AppDispatch, RootState } from "@/context/store";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
+import { DEFAULT_MAX_CONTENT_WIDTH } from "@/hooks/useResponsiveLayout";
 import { useTrackActiveScreen } from "@/hooks/useTrackActiveScreen";
 import { useWalletPassConfig } from "@/hooks/useWalletPassConfig";
 import { BasicUserInfo } from "@/types/basicUserInfo.types";
@@ -338,9 +339,14 @@ const styles = StyleSheet.create({
   profileSection: {
     flex: 1,
   },
+  // Both blocks are capped and centred so they don't stretch across unfolded /
+  // landscape windows; identical on a compact phone.
   content: {
     paddingHorizontal: spacing.screen,
     paddingTop: 16,
+    width: "100%",
+    maxWidth: DEFAULT_MAX_CONTENT_WIDTH,
+    alignSelf: "center",
   },
   // Same layout as the signed-out My Apps and Store screens.
   signIn: {
@@ -379,6 +385,9 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     alignItems: "center",
     gap: 14,
+    width: "100%",
+    maxWidth: DEFAULT_MAX_CONTENT_WIDTH,
+    alignSelf: "center",
   },
   versionText: {
     ...textStyle({ size: 13, weight: 400, tracking: 0.02 }),

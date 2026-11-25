@@ -38,7 +38,7 @@ const mockSetOptions = jest.fn(
 type FocusEffect = () => void | (() => void);
 let mockFocusEffects: FocusEffect[] = [];
 let mockFocusSlot = 0;
-jest.mock("@react-navigation/native", () => ({
+jest.mock("expo-router/react-navigation", () => ({
   useNavigation: () => {
     mockFocusSlot = 0;
     return { setOptions: mockSetOptions };

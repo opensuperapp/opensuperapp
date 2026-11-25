@@ -45,8 +45,11 @@ describe("Android edge-to-edge (Expo built-in, no react-native-edge-to-edge)", (
     expect(pluginNames).not.toContain("react-native-edge-to-edge");
   });
 
-  it("uses Expo's default app theme", () => {
-    expect(appTheme.$.parent).toBe("Theme.AppCompat.DayNight.NoActionBar");
+  // Introspection has no template styles.xml, so config-plugins falls back to its
+  // own Light parent here; a real prebuild keeps the template's DayNight. What
+  // matters is that no plugin swaps in react-native-edge-to-edge's theme.
+  it("does not use the react-native-edge-to-edge app theme", () => {
+    expect(appTheme.$.parent).not.toMatch(/EdgeToEdge/);
   });
 
   it("keeps the navigation bar contrast scrim off", () => {

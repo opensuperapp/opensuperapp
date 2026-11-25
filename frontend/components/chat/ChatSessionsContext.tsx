@@ -16,7 +16,7 @@
 import { RootState } from "@/context/store";
 import { useChatSessions } from "@/hooks/useChatSessions";
 import { resolveChatUserId } from "@/utils/resolveChatUserId";
-import React, { createContext, ReactNode, useContext } from "react";
+import React, { createContext, JSX, ReactNode, useContext } from "react";
 import { useSelector } from "react-redux";
 
 type ChatSessionsValue = ReturnType<typeof useChatSessions>;

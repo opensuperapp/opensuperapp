@@ -27,9 +27,9 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  useColorScheme,
   View,
 } from "react-native";
+import { useColorScheme } from "@/hooks/useColorScheme";
 import Svg, { Path } from "react-native-svg";
 
 const SLIDE_DISTANCE = 24;

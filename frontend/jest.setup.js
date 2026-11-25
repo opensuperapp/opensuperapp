@@ -29,3 +29,31 @@ jest.mock("lottie-react-native", () => {
   const LottieView = (props) => <View testID={props.testID} />;
   return { __esModule: true, default: LottieView };
 });
+
+// WORKAROUND: reanimated 4.7.1 initialises JSReanimated under jest and then calls
+// its setCSSEventHandler, which throws; its own mock imports the same entry point.
+// Stub the APIs the app uses until upstream guards that call.
+jest.mock("react-native-reanimated", () => {
+  const { Easing, Text, View } = require("react-native");
+  const Animated = { View, Text };
+  const animation = () => ({
+    duration: () => animation(),
+    delay: () => animation(),
+    easing: () => animation(),
+  });
+  return {
+    __esModule: true,
+    default: Animated,
+    ...Animated,
+    Easing,
+    FadeIn: animation(),
+    FadeOut: animation(),
+    LayoutAnimationConfig: ({ children }) => children,
+    useAnimatedStyle: (updater) => updater(),
+    useReducedMotion: () => false,
+    useSharedValue: (value) => ({ value }),
+    withDelay: (_delay, value) => value,
+    withRepeat: (value) => value,
+    withTiming: (value) => value,
+  };
+});

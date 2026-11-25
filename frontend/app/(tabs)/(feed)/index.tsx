@@ -23,6 +23,7 @@ import { useAndroidTabBarClearance } from "@/hooks/useAndroidTabBarClearance";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
 import useEventsFeed from "@/hooks/useEventsFeed";
 import useNewsFeed from "@/hooks/useNewsFeed";
+import { DEFAULT_MAX_CONTENT_WIDTH } from "@/hooks/useResponsiveLayout";
 import { useTrackActiveScreen } from "@/hooks/useTrackActiveScreen";
 import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
@@ -115,6 +116,10 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     paddingBottom: 24,
+    // Centred column on unfolded / landscape windows; identical on a phone.
+    width: "100%",
+    maxWidth: DEFAULT_MAX_CONTENT_WIDTH,
+    alignSelf: "center",
   },
   header: {
     ...textStyle(type.sectionHeading),

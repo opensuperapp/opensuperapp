@@ -26,6 +26,7 @@ import {
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
 import useDebounce from "@/hooks/useDebounce";
+import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { useTrackActiveScreen } from "@/hooks/useTrackActiveScreen";
 import { fetchLibraryArticles } from "@/services/libraryService";
 import { LibraryArticle } from "@/types/library.types";
@@ -34,7 +35,6 @@ import { Stack } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Dimensions,
   FlatList,
   Linking,
   RefreshControl,
@@ -44,8 +44,11 @@ import {
 } from "react-native";
 import LibrarySkelton from "@/components/LibrarySkeleton";
 
-const screenWidth = Dimensions.get("window").width;
 const WEBINAR = "Webinar";
+const LIST_PADDING = 16;
+const GRID_GAP = 12;
+// Wider cap for the two-column grid on expanded windows.
+const GRID_MAX_CONTENT_WIDTH = 1080;
 
 const Library = () => {
   const [articles, setArticles] = useState<any[]>([]);
@@ -58,6 +61,18 @@ const Library = () => {
 
   const debouncedQuery = useDebounce(searchQuery, 500);
   const { colors } = useBrandTheme();
+  const { width, maxContentWidth, columns } = useResponsiveLayout();
+  const numColumns = columns({ compact: 1, medium: 1, expanded: 2 });
+  const listMaxWidth =
+    numColumns > 1 ? GRID_MAX_CONTENT_WIDTH : maxContentWidth;
+  // Measured list width wins over the window: a side rail/sidebar (unfolded
+  // Duo, iPad) narrows the list below the window width.
+  const [listWidth, setListWidth] = useState<number | null>(null);
+  const availableWidth = Math.min(listWidth ?? width, listMaxWidth);
+  const gridItemWidth =
+    numColumns > 1
+      ? (availableWidth - 2 * LIST_PADDING - GRID_GAP) / numColumns
+      : undefined;
 
   useTrackActiveScreen(ScreenPaths.LIBRARY);
 
@@ -177,7 +192,7 @@ const Library = () => {
     return (
       <PressableCard
         onPress={() => Linking.openURL(ARTICLE_BASE_URL + article.url)}
-        style={styles.card}
+        style={[styles.card, gridItemWidth ? { width: gridItemWidth } : null]}
         accessibilityLabel={`library_article_${index}`}
       >
         <CardMeta icon="doc" label={label} date={article.date} />
@@ -255,9 +270,17 @@ const Library = () => {
         }}
       />
       <FlatList
+        // numColumns cannot change on the fly; remount when it does.
+        key={`library-columns-${numColumns}`}
         accessibilityLabel="library_flat_list"
         style={{ backgroundColor: colors.bg }}
-        contentContainerStyle={styles.flatListContent}
+        onLayout={(e) => setListWidth(e.nativeEvent.layout.width)}
+        contentContainerStyle={[
+          styles.flatListContent,
+          { maxWidth: listMaxWidth },
+        ]}
+        numColumns={numColumns}
+        columnWrapperStyle={numColumns > 1 ? styles.gridRow : undefined}
         contentInsetAdjustmentBehavior="automatic"
         keyboardDismissMode="on-drag"
         data={loading && !refreshing ? [] : articles}
@@ -281,7 +304,7 @@ const Library = () => {
             <View style={styles.footerLoader}>
               <ActivityIndicator size="small" color={colors.text2} />
             </View>
-          ) : null
+          ) : undefined
         }
         ListEmptyComponent={
           loading && !refreshing ? (
@@ -308,7 +331,8 @@ const styles = StyleSheet.create({
   },
   featuredImage: {
     width: "100%",
-    height: (screenWidth - 70) * (20 / 35),
+    // Same height as before on a phone, and scales with the card in the grid.
+    aspectRatio: 35 / 20,
     borderRadius: 14,
     marginTop: 14,
   },
@@ -347,9 +371,14 @@ const styles = StyleSheet.create({
     ...textStyle({ size: 13, weight: 500 }),
   },
   flatListContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: LIST_PADDING,
     paddingTop: 4,
     paddingBottom: 24,
+    width: "100%",
+    alignSelf: "center",
+  },
+  gridRow: {
+    gap: GRID_GAP,
   },
   footerLoader: {
     alignItems: "center",

@@ -51,10 +51,16 @@ const mockRouter = {
   push: jest.fn(),
   dismissAll: jest.fn(),
 };
+let mockScreenOptions: Record<string, unknown> = {};
 jest.mock("expo-router", () => ({
   useLocalSearchParams: () => mockParams,
   useRouter: () => mockRouter,
-  Stack: { Screen: () => null },
+  Stack: {
+    Screen: ({ options }: { options: Record<string, unknown> }) => {
+      mockScreenOptions = options;
+      return null;
+    },
+  },
 }));
 
 // Every factory forwards to its jest.fn() instead of returning it: the factories run
@@ -198,6 +204,23 @@ describe("MicroApp when the session ends", () => {
     setStatus("degraded");
 
     expect(mockRouter.back).not.toHaveBeenCalled();
+  });
+});
+
+describe("MicroApp header", () => {
+  // iOS 26+ draws any headerRight, even one that renders nothing, as an empty glass button.
+  it("gives a regular micro app no header button", async () => {
+    await mount();
+
+    expect(mockScreenOptions.headerRight).toBeUndefined();
+  });
+
+  it("gives the developer app its App URL button", async () => {
+    mockParams = { ...PARAMS, appId: "developer" };
+
+    await mount();
+
+    expect(mockScreenOptions.headerRight).toEqual(expect.any(Function));
   });
 });
 

@@ -34,6 +34,7 @@ import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { getUserConfigurations } from "@/context/slices/userConfigSlice";
 import { AppDispatch, RootState } from "@/context/store";
 import { useReconnectCount } from "@/hooks/useReconnectCount";
+import { useResponsiveLayout } from "@/hooks/useResponsiveLayout";
 import { useTrackActiveScreen } from "@/hooks/useTrackActiveScreen";
 import {
   downloadMicroApp,
@@ -41,7 +42,7 @@ import {
   removeMicroApp,
 } from "@/services/appStoreService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router/react-navigation";
 import Constants from "expo-constants";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -51,7 +52,6 @@ import {
   Keyboard,
   SafeAreaView,
   StyleSheet,
-  useWindowDimensions,
   View,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
@@ -87,8 +87,14 @@ export default function HomeScreen() {
   const androidTabBarClearance = useAndroidTabBarClearance();
   const styles = createStyles(colors);
   const version = Constants.expoConfig?.version;
-  const { width: windowWidth } = useWindowDimensions();
-  const { columns, columnGapRatio } = spacing.appGrid;
+  const { width: windowWidth, columns: columnsFor } = useResponsiveLayout();
+  const { columnGapRatio } = spacing.appGrid;
+  // Widen the grid on unfolded / landscape windows instead of spacing icons out.
+  const columns = columnsFor({
+    compact: spacing.appGrid.columns,
+    medium: 5,
+    expanded: 6,
+  });
   // The slots fill the row edge to edge with a gap that is a fixed share of a slot, so
   // both scale with the screen; the tile inside a slot stops growing at the design size.
   // A cell is its slot plus LABEL_OVERHANG a side, for the label, so an edge label
@@ -335,6 +341,8 @@ export default function HomeScreen() {
     <>
       {/* The grid is the screen root, so the large title collapses as it scrolls */}
       <FlatList
+        // numColumns can't change on a mounted FlatList; remount on resize.
+        key={`grid-${columns}`}
         data={filteredApps}
         keyExtractor={(item) => item.appId}
         numColumns={columns}

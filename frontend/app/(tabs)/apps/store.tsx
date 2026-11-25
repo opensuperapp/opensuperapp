@@ -28,6 +28,7 @@ import {
 import { AppDispatch, RootState } from "@/context/store";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { useReconnectCount } from "@/hooks/useReconnectCount";
+import { DEFAULT_MAX_CONTENT_WIDTH } from "@/hooks/useResponsiveLayout";
 import {
   downloadMicroApp,
   loadMicroAppDetails,
@@ -290,6 +291,11 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: spacing.screen,
       paddingTop: 8,
       paddingBottom: spacing.screen,
+      // Cap the list on unfolded / landscape windows; the scroll view itself
+      // stays full width so it still scrolls edge to edge.
+      width: "100%",
+      maxWidth: DEFAULT_MAX_CONTENT_WIDTH,
+      alignSelf: "center",
     },
     container: {
       flex: 1,

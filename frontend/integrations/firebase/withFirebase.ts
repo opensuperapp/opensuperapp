@@ -22,6 +22,8 @@ import path from "path";
 const FIREBASE_PLUGINS = [
   "@react-native-firebase/app",
   "@react-native-firebase/messaging",
+  // RNFB 23.x cannot place FirebaseApp.configure() in the SDK 58 AppDelegate.
+  "./plugins/withFirebaseAppDelegate.ts",
 ];
 
 /**

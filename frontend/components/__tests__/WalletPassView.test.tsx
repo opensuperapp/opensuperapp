@@ -48,7 +48,7 @@ const baseData: BusinessCardData = {
 };
 
 const render = (data: BusinessCardData, onBarcodePress?: () => void) => {
-  const ref = React.createRef<View>();
+  const ref = React.createRef<React.ComponentRef<typeof View>>();
   let root: ReturnType<typeof create> | undefined;
   act(() => {
     root = create(

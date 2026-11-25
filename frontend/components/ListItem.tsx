@@ -173,7 +173,7 @@ const createStyles = (colors: ThemeColors) =>
       opacity: 0.4,
     },
     updateOverlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       justifyContent: "center",
       alignItems: "center",
       backgroundColor: colors.backdrop,

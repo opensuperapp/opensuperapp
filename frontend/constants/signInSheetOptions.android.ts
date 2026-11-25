@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 import type { BrandTheme } from "@/hooks/useBrandTheme";
-import type { NativeStackNavigationOptions } from "@react-navigation/native-stack";
+import type { NativeStackNavigationOptions } from "expo-router/native-stack";
 
 /**
  * A native Android bottom sheet sized to its content, so the expiry reads as an

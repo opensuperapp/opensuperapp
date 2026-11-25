@@ -19,7 +19,7 @@ import WalletPassView from "@/components/WalletPassView";
 import { easing, textStyle, type } from "@/constants/brand";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { BusinessCardData } from "@/types/businessCard.types";
-import React, { RefObject, useState } from "react";
+import React, { ComponentRef, RefObject, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, {
   Easing,
@@ -35,7 +35,7 @@ const PERSPECTIVE = 1400;
 
 type Props = {
   data: BusinessCardData;
-  passRef: RefObject<View | null>;
+  passRef: RefObject<ComponentRef<typeof View> | null>;
   onBarcodePress: () => void;
 };
 
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     backfaceVisibility: "hidden",
   },
   back: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   hint: {
     flexDirection: "row",

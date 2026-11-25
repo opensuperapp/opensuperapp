@@ -18,14 +18,14 @@ import WalletPassView from "@/components/WalletPassView";
 import { textStyle, type } from "@/constants/brand";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
 import { BusinessCardData } from "@/types/businessCard.types";
-import React, { RefObject } from "react";
+import React, { ComponentRef, RefObject } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 const CONTENT_PADDING_H = 16;
 
 type Props = {
   data: BusinessCardData;
-  passRef: RefObject<View | null>;
+  passRef: RefObject<ComponentRef<typeof View> | null>;
   onBarcodePress: () => void;
 };
 

@@ -27,7 +27,7 @@ import { ChatThemePalette } from "@/constants/ChatTheme";
 import { ChatRole, MessageStatus } from "@/constants/enums/Chat";
 import { ChatMessage } from "@/types/chat.types";
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import React, { JSX } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 

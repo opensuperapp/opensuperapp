@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 import { useBrandTheme } from "@/hooks/useBrandTheme";
-import { NavigationContext } from "@react-navigation/native";
+import { NavigationContext } from "expo-router/react-navigation";
 import { useContext, useEffect, useLayoutEffect, useRef } from "react";
 
 interface HeaderSearchOptions {

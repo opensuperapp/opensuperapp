@@ -19,7 +19,7 @@ import { CHAT_INPUT_PLACEHOLDER } from "@/constants/Constants";
 import { ChatThemePalette } from "@/constants/ChatTheme";
 import { MAX_MESSAGE_LENGTH } from "@/types/chat.types";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React, { JSX, useState } from "react";
 import {
   StyleSheet,
   TextInput,

@@ -22,7 +22,7 @@ Pod::Spec.new do |s|
   s.author         = 'WSO2 LLC.'
   s.homepage       = 'https://github.com/opensuperapp'
   s.platforms      = {
-    :ios => '15.1'
+    :ios => '16.4'
   }
   s.source         = { git: '' }
   s.static_framework = true

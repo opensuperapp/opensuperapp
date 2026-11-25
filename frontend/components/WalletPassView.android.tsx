@@ -20,7 +20,7 @@ import { PASS_FOREGROUND_COLOR } from "@/constants/BusinessCard";
 import { GOOGLE_PASS } from "@/constants/GooglePass";
 import { BusinessCardData } from "@/types/businessCard.types";
 import { buildVCard } from "@/utils/vcard";
-import React, { forwardRef } from "react";
+import React, { ComponentRef, forwardRef } from "react";
 import { Pressable, Text, View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 
@@ -38,7 +38,7 @@ type Props = {
 // as a copy of the Apple card: the logo and card title share the top row, the
 // subheader sits above the header, the text modules follow, and the card is as
 // tall as its content instead of a fixed 2:3.
-const WalletPassView = forwardRef<View, Props>(
+const WalletPassView = forwardRef<ComponentRef<typeof View>, Props>(
   ({ data, onBarcodePress }, ref) => {
     const fullName = `${data.firstName} ${data.lastName}`.trim();
     const frontPhone = data.workPhone ?? data.mobile;

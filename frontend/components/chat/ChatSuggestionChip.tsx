@@ -15,7 +15,7 @@
 // under the License.
 import { radius, textStyle } from "@/constants/brand";
 import { ChatThemePalette } from "@/constants/ChatTheme";
-import React from "react";
+import React, { JSX } from "react";
 import { StyleSheet, Text, TouchableOpacity } from "react-native";
 
 export interface ChatSuggestionChipProps {

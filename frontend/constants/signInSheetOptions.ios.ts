@@ -15,7 +15,7 @@
 // under the License.
 import type { BrandTheme } from "@/hooks/useBrandTheme";
 import { PlatformColor } from "react-native";
-import type { NativeStackNavigationOptions } from "@react-navigation/native-stack";
+import type { NativeStackNavigationOptions } from "expo-router/native-stack";
 
 /**
  * The system sheet background in light mode. In dark, the theme's lightest navy

@@ -22,7 +22,7 @@ import {
 } from "@/constants/Constants";
 import { size, textStyle, type } from "@/constants/brand";
 import { ChatThemePalette } from "@/constants/ChatTheme";
-import React from "react";
+import React, { JSX } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 export interface ChatEmptyStateProps {

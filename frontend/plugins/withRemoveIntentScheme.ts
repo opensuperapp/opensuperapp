@@ -17,7 +17,7 @@ import {
   AndroidConfig,
   ConfigPlugin,
   withAndroidManifest,
-} from "@expo/config-plugins";
+} from "expo/config-plugins";
 
 interface RemoveIntentSchemeProps {
   scheme: string;

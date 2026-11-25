@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
   },
   // Both marks share the disc's centre, so the crossfade happens in place.
   layer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
   },

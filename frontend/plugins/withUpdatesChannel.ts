@@ -17,7 +17,7 @@ import {
   ConfigPlugin,
   withAndroidManifest,
   withExpoPlist,
-} from "@expo/config-plugins";
+} from "expo/config-plugins";
 
 const ANDROID_META_DATA_NAME =
   "expo.modules.updates.UPDATES_CONFIGURATION_REQUEST_HEADERS_KEY";
