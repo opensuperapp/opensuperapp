@@ -34,7 +34,7 @@ onFlowComplete:
     commands:
       - setAirplaneMode: disabled
       - runFlow: common/launch-signed-out.yml
-      - tapOn: "tab_library"
+      - tapOn: "Library"
       - assertNotVisible: "No internet connection"
       - setAirplaneMode: enabled
       - extendedWaitUntil:

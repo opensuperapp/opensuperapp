@@ -21,12 +21,25 @@ name: smoke-launch
 tags: [smoke]
 ---
 - runFlow: common/launch-signed-out.yml
-- assertVisible: {id: "newspaper.*"}
-- assertVisible: {id: "books\\.vertical.*"}
-- assertVisible: {id: "square\\.grid\\.3x3.*"}
-- assertVisible: {id: "person\\.crop\\.circle.*"}
 # Chat is auth-only, so a signed-out user must not see it.
-- assertNotVisible: {id: "bubble\\.left\\.and\\.bubble\\.right.*"}
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - assertVisible: {id: "newspaper.*"}
+      - assertVisible: {id: "books\\.vertical.*"}
+      - assertVisible: {id: "square\\.grid\\.3x3.*"}
+      - assertVisible: {id: "person\\.crop\\.circle.*"}
+      - assertNotVisible: {id: "bubble\\.left\\.and\\.bubble\\.right.*"}
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - assertVisible: "Feed"
+      - assertVisible: "Library"
+      - assertVisible: "My Apps"
+      - assertVisible: "Profile"
+      - assertNotVisible: "Chat"
 # Release builds have no red box, but guard anyway; Android crash dialogs too.
 - assertNotVisible: ".*Unhandled JS Exception.*"
 - assertNotVisible: ".*keeps stopping.*"

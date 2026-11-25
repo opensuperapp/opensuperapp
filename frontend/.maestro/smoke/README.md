@@ -12,8 +12,8 @@ flow signs in or submits anything.
 | `04-signin-entry.yml` | Profile's Sign In hands off to the system auth session (auth session sheet on iOS, Custom Tab on Android); cancelling returns to the signed-out screen |
 | `05-offline.yml` | Android only: airplane mode shows the "No internet connection" toast (NetInfo); turning it off clears it. A no-op on iOS |
 
-`common/launch-signed-out.yml` is a subflow. It sits in a subfolder so running
-the folder does not run it on its own.
+`common/launch-signed-out.yml` and `common/tap-tab.yml` are subflows. They
+sit in a subfolder so running the folder does not run them on their own.
 
 ## Running
 
@@ -34,7 +34,8 @@ Then run the suite. `takeScreenshot` writes into the current directory
 (Maestro 1.41), so run from the folder that should hold the output:
 
 ```bash
-APP_ID=$(grep -E '^BUNDLE_IDENTIFIER=' "$FRONTEND/.env" | cut -d= -f2-)
+# Parse .env with dotenv, as app.config.ts does (strips quotes and comments)
+APP_ID=$(cd "$FRONTEND" && node -p "require('dotenv').config({ quiet: true }).parsed.BUNDLE_IDENTIFIER")
 mkdir -p "$OUT" && cd "$OUT"
 maestro --device <emulator-5554 | simulator UDID> test \
   -e BUNDLE_IDENTIFIER="$APP_ID" \
@@ -42,10 +43,12 @@ maestro --device <emulator-5554 | simulator UDID> test \
   "$FRONTEND/.maestro/smoke"
 ```
 
-Tabs are matched by their SF Symbol icon id (`newspaper`, `books.vertical`,
-`square.grid.3x3`, `person.crop.circle`, `bubble.left.and.bubble.right`):
-NativeTabs sets no testID. These ids are iOS only, so flows 01-04 need
-Android selectors before they run there again.
+On iOS, tabs are matched by their SF Symbol icon id (`newspaper`,
+`books.vertical`, `square.grid.3x3`, `person.crop.circle`,
+`bubble.left.and.bubble.right`): NativeTabs sets no testID, and text
+selectors stall Maestro 1.41 there. Android tabs use PNG icons with no id
+Maestro reads, so Android matches the tab label (`Feed`, `Library`, ...).
+`common/tap-tab.yml` picks the right selector per platform.
 
 On iOS 26 and 27 the sign-in flow taps the auth sheet's X by position, which
 depends on the device. It defaults to iPhone 17e (38,84). For iPhone Duo add

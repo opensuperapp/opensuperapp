@@ -23,7 +23,11 @@ name: smoke-signin-entry
 tags: [smoke]
 ---
 - runFlow: common/launch-signed-out.yml
-- tapOn: {id: "person\\.crop\\.circle.*"}
+- runFlow:
+    file: common/tap-tab.yml
+    env:
+      SF: "person\\.crop\\.circle.*"
+      LABEL: "Profile"
 - extendedWaitUntil:
     visible: "Sign in Required"
     timeout: 10000
@@ -65,14 +69,15 @@ tags: [smoke]
           commands:
             - tapOn: "Cancel"
 
-# Android: the authorize request opens in a Custom Tab, so the app's tab bar
-# goes away. Back out of it.
+# Android: the authorize request opens in a Custom Tab, so the app's screen
+# goes away. Wait for the signed-out prompt, visible before the tap, to
+# disappear before backing out of it.
 - runFlow:
     when:
       platform: Android
     commands:
       - extendedWaitUntil:
-          notVisible: "tab_profile"
+          notVisible: "Sign in Required"
           timeout: 15000
       - takeScreenshot: signin-android-browser
       - back
@@ -81,5 +86,15 @@ tags: [smoke]
 - extendedWaitUntil:
     visible: "Sign in Required"
     timeout: 15000
-- assertVisible: {id: "person\\.crop\\.circle.*"}
-- assertNotVisible: {id: "bubble\\.left\\.and\\.bubble\\.right.*"}
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - assertVisible: {id: "person\\.crop\\.circle.*"}
+      - assertNotVisible: {id: "bubble\\.left\\.and\\.bubble\\.right.*"}
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - assertVisible: "Profile"
+      - assertNotVisible: "Chat"

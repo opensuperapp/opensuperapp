@@ -23,10 +23,12 @@
 # launch animation, get "Application ... is not running", and report a crash.
 # A real crash still fails: it would fail every attempt.
 #
-# Tabs are matched by their SF Symbol icon id (the selected state adds
+# iOS matches tabs by their SF Symbol icon id (the selected state adds
 # ".fill"). NativeTabs exposes no testID, and a text selector here makes
 # Maestro 1.41 stall for the whole timeout on the first hierarchy after a
 # fresh install (CPU-bound in its text regex filter), so every flow failed.
+# Android tabs use PNG icons with no id Maestro reads, so Android matches the
+# tab label instead.
 appId: ${BUNDLE_IDENTIFIER}
 ---
 - retry:
@@ -35,6 +37,17 @@ appId: ${BUNDLE_IDENTIFIER}
       - launchApp:
           clearState: true
           stopApp: true
-      - extendedWaitUntil:
-          visible: {id: "books\\.vertical.*"}
-          timeout: 45000
+      - runFlow:
+          when:
+            platform: iOS
+          commands:
+            - extendedWaitUntil:
+                visible: {id: "books\\.vertical.*"}
+                timeout: 45000
+      - runFlow:
+          when:
+            platform: Android
+          commands:
+            - extendedWaitUntil:
+                visible: "Library"
+                timeout: 45000

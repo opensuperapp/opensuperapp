@@ -33,7 +33,11 @@ name: smoke-library
 tags: [smoke]
 ---
 - runFlow: common/launch-signed-out.yml
-- tapOn: {id: "books\\.vertical.*"}
+- runFlow:
+    file: common/tap-tab.yml
+    env:
+      SF: "books\\.vertical.*"
+      LABEL: "Library"
 - extendedWaitUntil:
     visible: ".*library_article_0.*"
     timeout: 30000

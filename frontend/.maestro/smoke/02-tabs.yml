@@ -24,7 +24,11 @@ tags: [smoke]
 
 # Feed: the header title is always there; the News section needs the network,
 # so it is waited for but not required.
-- tapOn: {id: "newspaper.*"}
+- runFlow:
+    file: common/tap-tab.yml
+    env:
+      SF: "newspaper.*"
+      LABEL: "Feed"
 - assertVisible: "Feed"
 - extendedWaitUntil:
     visible: "News"
@@ -33,7 +37,11 @@ tags: [smoke]
 - takeScreenshot: tab-feed
 
 # Library: the search bar renders before the list loads.
-- tapOn: {id: "books\\.vertical.*"}
+- runFlow:
+    file: common/tap-tab.yml
+    env:
+      SF: "books\\.vertical.*"
+      LABEL: "Library"
 - assertVisible: "Search by keywords"
 - extendedWaitUntil:
     visible: ".*library_article_0.*"
@@ -41,7 +49,11 @@ tags: [smoke]
 - takeScreenshot: tab-library
 
 # My Apps: signed out it shows the sign-in prompt instead of the app grid.
-- tapOn: {id: "square\\.grid\\.3x3.*"}
+- runFlow:
+    file: common/tap-tab.yml
+    env:
+      SF: "square\\.grid\\.3x3.*"
+      LABEL: "My Apps"
 - extendedWaitUntil:
     visible: "To view your apps, please sign in"
     timeout: 10000
@@ -50,7 +62,11 @@ tags: [smoke]
 
 # Profile: signed out it shows the sign-in prompt. The version line sits in
 # the signed-in foot (beside Sign Out), so it is not checked here.
-- tapOn: {id: "person\\.crop\\.circle.*"}
+- runFlow:
+    file: common/tap-tab.yml
+    env:
+      SF: "person\\.crop\\.circle.*"
+      LABEL: "Profile"
 - extendedWaitUntil:
     visible: "Sign in Required"
     timeout: 10000
