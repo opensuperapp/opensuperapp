@@ -1,0 +1,58 @@
+# Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
+#
+# WSO2 LLC. licenses this file to you under the Apache License,
+# Version 2.0 (the "License"); you may not use this file except
+# in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+# Tabs: visit every tab a signed-out user sees, assert something stable on
+# each and screenshot it.
+appId: ${BUNDLE_IDENTIFIER}
+name: smoke-tabs
+tags: [smoke]
+---
+- runFlow: common/launch-signed-out.yml
+
+# Feed: the header title is always there; the News section needs the network,
+# so it is waited for but not required.
+- tapOn: {id: "newspaper.*"}
+- assertVisible: "Feed"
+- extendedWaitUntil:
+    visible: "News"
+    timeout: 20000
+    optional: true
+- takeScreenshot: tab-feed
+
+# Library: the search bar renders before the list loads.
+- tapOn: {id: "books\\.vertical.*"}
+- assertVisible: "Search by keywords"
+- extendedWaitUntil:
+    visible: ".*library_article_0.*"
+    timeout: 30000
+- takeScreenshot: tab-library
+
+# My Apps: signed out it shows the sign-in prompt instead of the app grid.
+- tapOn: {id: "square\\.grid\\.3x3.*"}
+- extendedWaitUntil:
+    visible: "To view your apps, please sign in"
+    timeout: 10000
+- assertVisible: "Sign in"
+- takeScreenshot: tab-my-apps
+
+# Profile: signed out it shows the sign-in prompt. The version line sits in
+# the signed-in foot (beside Sign Out), so it is not checked here.
+- tapOn: {id: "person\\.crop\\.circle.*"}
+- extendedWaitUntil:
+    visible: "Sign in Required"
+    timeout: 10000
+- assertVisible: "To view your profile, please sign in"
+- takeScreenshot: tab-profile
