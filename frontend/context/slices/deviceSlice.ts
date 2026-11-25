@@ -77,9 +77,10 @@ export const loadLastSentPushToken = createAsyncThunk(
  * once per device.
  *
  * On Android that token is the FCM token expo-notifications reports too: it stays
- * registered (the following registration adds its type), only the stored copy is
- * dropped. On iOS it is an FCM token where the device now registers its APNs token,
- * so it is deleted, or the device would get every push twice.
+ * registered and stored here. The following registration adds its type and only then
+ * drops the stored copy (see registerPushToken), so a failed registration leaves sign-out
+ * a token to delete. On iOS it is an FCM token where the device now registers its APNs
+ * token, so it is deleted, or the device would get every push twice.
  *
  * Best effort: whatever the server answers, the stored token is forgotten so this never
  * runs again. Only a request that never reached the server (offline, or no session yet)
@@ -97,23 +98,21 @@ export const cleanupLegacyFcmToken = createAsyncThunk(
       console.error("Error reading the legacy FCM token:", error);
       return;
     }
-    if (!legacyToken) return;
+    if (!legacyToken || legacyToken === currentToken) return;
 
     let answered = true;
-    if (legacyToken !== currentToken) {
-      try {
-        const response = await apiRequest({
-          url: tokenUrl(legacyToken),
-          method: "DELETE",
-        });
-        answered = response !== undefined;
-        if (answered && !isSuccess(response?.status)) {
-          console.warn("Failed to delete the legacy FCM token:", response?.status);
-        }
-      } catch (error: any) {
-        answered = Boolean(error?.response);
-        console.warn("Failed to delete the legacy FCM token:", error);
+    try {
+      const response = await apiRequest({
+        url: tokenUrl(legacyToken),
+        method: "DELETE",
+      });
+      answered = response !== undefined;
+      if (answered && !isSuccess(response?.status)) {
+        console.warn("Failed to delete the legacy FCM token:", response?.status);
       }
+    } catch (error: any) {
+      answered = Boolean(error?.response);
+      console.warn("Failed to delete the legacy FCM token:", error);
     }
 
     if (answered) {
@@ -174,6 +173,18 @@ export const clearLastSentPushToken = createAsyncThunk(
   }
 );
 
+// Android: the token an RNFirebase build registered is the one just registered with its
+// type, so LAST_SENT_PUSH_TOKEN now records it and the legacy copy can go.
+const forgetLegacyFcmTokenIfSame = async (token: string) => {
+  try {
+    if ((await getItemAsync(LAST_SENT_FCM_TOKEN)) === token) {
+      await deleteItemAsync(LAST_SENT_FCM_TOKEN);
+    }
+  } catch (error) {
+    console.error("Error clearing the legacy FCM token:", error);
+  }
+};
+
 /**
  * Registers the raw push token, with its type, with the backend. Called when the user
  * is authenticated.
@@ -190,6 +201,7 @@ export const registerPushToken = createAsyncThunk(
 
       if (isSuccess(response?.status)) {
         await setItemAsync(LAST_SENT_PUSH_TOKEN, pushToken.token);
+        await forgetLegacyFcmTokenIfSame(pushToken.token);
         return response?.data;
       } else {
         console.warn("Failed to register push token");

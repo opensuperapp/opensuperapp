@@ -313,6 +313,28 @@ describe("syncPushToken", () => {
       expect(mockStore["last-sent-fcm-token"]).toBeUndefined();
     });
 
+    // Until the typed registration succeeds the legacy key is the only record of the
+    // registration RNFirebase made; without it sign-out would not unregister the device.
+    it.each([
+      ["the server refuses", () => mockApiRequest.mockResolvedValue({ status: 500 })],
+      ["the network is down", () => mockApiRequest.mockRejectedValue(networkError())],
+    ])("Android: keeps a legacy token equal to the device token when its registration fails (%s), so sign-out still deletes it", async (_, arrange) => {
+      mockStore["last-sent-fcm-token"] = FCM_1.token;
+      mockGetDevicePushToken.mockResolvedValue(FCM_1);
+      arrange();
+
+      await run(syncPushToken({ prompt: true }));
+
+      expect(mockStore["last-sent-fcm-token"]).toBe(FCM_1.token);
+      expect(mockStore["last-sent-push-token"]).toBeUndefined();
+
+      mockApiRequest.mockReset();
+      mockApiRequest.mockResolvedValue({ status: 200, data: {} });
+      await run(disablePushToken());
+
+      expect(deletes()).toEqual([[deleteCall(FCM_1.token)]]);
+    });
+
     it("Android: deletes a legacy token that differs from the device token", async () => {
       mockStore["last-sent-fcm-token"] = LEGACY_FCM;
       mockGetDevicePushToken.mockResolvedValue(FCM_1);
