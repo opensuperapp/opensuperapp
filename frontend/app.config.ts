@@ -203,6 +203,7 @@ let config: ExpoConfig = {
       tinted: "./assets/images/ios-tinted.png",
     },
   },
+  androidNavigationBar: { enforceContrast: false },
   android: {
     package: ANDROID_PACKAGE,
     permissions: [
@@ -285,15 +286,6 @@ let config: ExpoConfig = {
     [
       "@react-native-google-signin/google-signin",
       { iosUrlScheme: IOS_URL_SCHEME },
-    ],
-    [
-      "react-native-edge-to-edge",
-      {
-        android: {
-          parentTheme: "Default",
-          enforceNavigationBarContrast: false,
-        },
-      },
     ],
     // Brand orange for native Android alert buttons, cursors and selection handles
     // (matches colors.accent: Burn on light, Signal on dark). AppCompat's default is teal.
