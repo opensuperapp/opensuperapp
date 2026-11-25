@@ -1,0 +1,100 @@
+# Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
+#
+# WSO2 LLC. licenses this file to you under the Apache License,
+# Version 2.0 (the "License"); you may not use this file except
+# in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+# Sign-in entry: the Profile tab's Sign In button hands off to the system
+# auth session (react-native-app-auth). The flow only checks that the hand-off
+# happens and that cancelling returns to the signed-out screen. It never
+# enters credentials.
+appId: ${BUNDLE_IDENTIFIER}
+name: smoke-signin-entry
+tags: [smoke]
+---
+- runFlow: common/launch-signed-out.yml
+- runFlow:
+    file: common/tap-tab.yml
+    env:
+      SF: "person\\.crop\\.circle.*"
+      LABEL: "Profile"
+- extendedWaitUntil:
+    visible: "Sign in Required"
+    timeout: 10000
+- tapOn: "Sign in"
+
+# iOS: the auth session sheet opens straight on the IdP page (no consent
+# alert in this config). Cancel it from the sheet header.
+# iOS 18-26 label the sheet's dismiss button "Cancel". iOS 27 draws a round
+# glass X instead, and the sheet (a separate system process) is invisible to
+# Maestro: the hierarchy holds only the status bar. There, the app's own
+# content disappearing proves the hand-off, and the X is tapped by position.
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - extendedWaitUntil:
+          visible: "Cancel"
+          timeout: 20000
+          optional: true
+      - takeScreenshot: signin-ios-auth-session
+      # Order matters: each `when` is checked only when its step is reached.
+      # The iOS 27 branch goes first; once it closes the sheet, "Cancel" is
+      # still absent, so the branch below is skipped. The other way round,
+      # tapping "Cancel" would make this branch's notVisible true afterwards.
+      - runFlow:
+          when:
+            notVisible: "Cancel"
+          commands:
+            - assertNotVisible: "Sign in Required"
+            - assertNotVisible: {id: "person\\.crop\\.circle.*"}
+            # The sheet's X, in points. Its place depends on the device: top-left
+            # on iPhone 17e (38,84, the default); in the right-hand sidebar on
+            # iPhone Duo (411,199). Pass -e AUTH_SHEET_CLOSE_POINT=x,y for others.
+            - tapOn:
+                point: "${typeof AUTH_SHEET_CLOSE_POINT !== 'undefined' ? AUTH_SHEET_CLOSE_POINT : '38,84'}"
+      - runFlow:
+          when:
+            visible: "Cancel"
+          commands:
+            - tapOn: "Cancel"
+
+# Android: the authorize request opens in a Custom Tab, so the app's screen
+# goes away. Wait for the signed-out prompt, visible before the tap, to
+# disappear before backing out of it.
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - extendedWaitUntil:
+          notVisible: "Sign in Required"
+          timeout: 15000
+      - takeScreenshot: signin-android-browser
+      - back
+
+# Back on the signed-out Profile tab, still signed out.
+- extendedWaitUntil:
+    visible: "Sign in Required"
+    timeout: 15000
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - assertVisible: {id: "person\\.crop\\.circle.*"}
+      - assertNotVisible: {id: "bubble\\.left\\.and\\.bubble\\.right.*"}
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - assertVisible: "Profile"
+      - assertNotVisible: "Chat"

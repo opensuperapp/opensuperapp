@@ -1,0 +1,83 @@
+# Copyright (c) 2026 WSO2 LLC. (https://www.wso2.com).
+#
+# WSO2 LLC. licenses this file to you under the Apache License,
+# Version 2.0 (the "License"); you may not use this file except
+# in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+# Library: a search with no match shows the empty state, clearing it brings
+# the list back, and scrolling loads a second page. Trimmed from
+# ../library.yml: it does not open an article, since that leaves the app for
+# the browser.
+#
+# The empty state is a soft check: on the SDK 54 baseline (2026-11-17) the
+# live library returned unfiltered articles for a nonsense query, so it never
+# appeared. Compare the library-search screenshot across builds instead. The
+# hard checks are that the search round-trip does not crash or blank the
+# screen, and that erasing the query restores the list.
+#
+# The search runs first, on a fresh list. Searching after scrolling is not
+# deterministic: load-more (onEndReached) calls fetchArticles(false) without
+# the query, so it can append unfiltered articles over the empty state.
+appId: ${BUNDLE_IDENTIFIER}
+name: smoke-library
+tags: [smoke]
+---
+- runFlow: common/launch-signed-out.yml
+- runFlow:
+    file: common/tap-tab.yml
+    env:
+      SF: "books\\.vertical.*"
+      LABEL: "Library"
+- extendedWaitUntil:
+    visible: ".*library_article_0.*"
+    timeout: 30000
+- tapOn: "Search by keywords"
+- inputText: "zzqxjv"
+- extendedWaitUntil:
+    visible: ".*library_empty_text.*"
+    timeout: 15000
+    optional: true
+- takeScreenshot: library-search
+# The keyboard covers the tab bar on iOS, so check the header instead.
+- assertVisible: "Library"
+# Clear by erasing: on iOS the SearchBar's "Clear search" button is not
+# exposed in the accessibility tree, so Maestro cannot tap it by label.
+- eraseText: 10
+- extendedWaitUntil:
+    visible: ".*library_article_0.*"
+    timeout: 30000
+# On iOS, Maestro's hideKeyboard swipes a few points at the screen centre,
+# which lands as a tap on a library card and opens it in Safari. The native
+# search bar's Cancel button dismisses the keyboard without touching the list.
+# iOS 27 replaces that button with a glass X labelled "Close".
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn: "Cancel|Close"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard:
+          optional: true
+# The page size is 12, so index 12 only exists once the second page loaded.
+# Keep the swipe moderate: a full-speed fling on a loaded Android emulator
+# can land as a tap on a card, which opens the article in the browser.
+- scrollUntilVisible:
+    element: ".*library_article_12.*"
+    direction: DOWN
+    speed: 40
+    timeout: 90000
+- assertVisible: "Library"
+- takeScreenshot: library-paginated
