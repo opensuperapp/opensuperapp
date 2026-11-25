@@ -141,6 +141,9 @@ export const useNotificationNavigation = () => {
         apps,
         appId: target.microAppId,
         launchData: target.launchData,
+        // A micro app already open would stay mounted under this one and still
+        // receive what the shared QR scanner emits.
+        dismissAll: true,
       });
     if (target && !opened) {
       console.warn(

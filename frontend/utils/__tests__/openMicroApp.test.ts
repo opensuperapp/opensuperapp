@@ -79,6 +79,25 @@ describe("openMicroApp", () => {
     );
   });
 
+  // From a tab root there is nothing to dismiss; a bare dismissAll there only logs an
+  // unhandled POP_TO_TOP.
+  it("does not dismiss when the router has nothing to dismiss", () => {
+    const r = { ...router(), canDismiss: jest.fn(() => false) };
+
+    expect(openMicroApp({ router: r, apps: APPS, appId: "a", dismissAll: true })).toBe(true);
+
+    expect(r.dismissAll).not.toHaveBeenCalled();
+    expect(r.push).toHaveBeenCalledTimes(1);
+  });
+
+  it("dismisses when the router says it can", () => {
+    const r = { ...router(), canDismiss: jest.fn(() => true) };
+
+    openMicroApp({ router: r, apps: APPS, appId: "a", dismissAll: true });
+
+    expect(r.dismissAll).toHaveBeenCalledTimes(1);
+  });
+
   it.each([
     ["not downloaded", "b"],
     ["unknown", "zzz"],

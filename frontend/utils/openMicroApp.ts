@@ -30,6 +30,7 @@ export type MicroAppRoute = {
 export type MicroAppRouter = {
   push: (route: MicroAppRoute) => void;
   dismissAll?: () => void;
+  canDismiss?: () => boolean;
 };
 
 /**
@@ -69,8 +70,10 @@ export const microAppRoute = (
  * Opens a downloaded micro app, the one way both the bridge (OPEN_MICRO_APP) and a
  * notification tap do it.
  *
- * @param dismissAll - Close the screens above the root first (the bridge does, so
- *   one micro app replaces another instead of stacking on it).
+ * @param dismissAll - Close the screens above the root first, so one micro app
+ *   replaces another instead of stacking on it (the bridge and a notification tap
+ *   both do). Skipped when the router has nothing to dismiss: from a tab root a bare
+ *   dismissAll only logs an unhandled POP_TO_TOP.
  * @returns Whether it was opened; false when the app is unknown or not downloaded,
  *   leaving what to do then (offer the store, fall back) to the caller.
  */
@@ -89,7 +92,7 @@ export const openMicroApp = ({
 }): boolean => {
   const app = findDownloadedMicroApp(apps, appId);
   if (!app) return false;
-  if (dismissAll) router.dismissAll?.();
+  if (dismissAll && (router.canDismiss?.() ?? true)) router.dismissAll?.();
   router.push(microAppRoute(app, launchData));
   return true;
 };

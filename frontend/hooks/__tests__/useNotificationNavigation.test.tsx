@@ -179,6 +179,7 @@ const deliver = async (response: unknown) => {
 
 beforeEach(async () => {
   jest.clearAllMocks();
+  mockRouter.canDismiss.mockReturnValue(false);
   jest.useRealTimers();
   mockApps = [];
   jest.spyOn(console, "warn").mockImplementation(() => {});
@@ -319,6 +320,32 @@ describe("useNotificationNavigation", () => {
       await deliver(iosMicroAppTap("m-1", { microAppId: APP_ID, launchData: '{"eventId":"e1"}' }));
 
       expect(mockRouter.push.mock.calls).toEqual(OPEN_EVENTS('{"eventId":"e1"}'));
+    });
+
+    // Otherwise the open micro app stays mounted under the new one and both get
+    // whatever the shared QR scanner emits.
+    it("closes an open micro app before opening the named one", async () => {
+      mockRouter.canDismiss.mockReturnValue(true);
+      mockApps = [installed()];
+      await render();
+
+      await deliver(androidMicroAppTap("m-1", { microAppId: APP_ID }));
+
+      expect(mockRouter.dismissAll).toHaveBeenCalledTimes(1);
+      expect(mockRouter.dismissAll.mock.invocationCallOrder[0]).toBeLessThan(
+        mockRouter.push.mock.invocationCallOrder[0]
+      );
+      expect(mockRouter.push.mock.calls).toEqual(OPEN_EVENTS(undefined));
+    });
+
+    it("does not dismiss from a tab root before opening the named one", async () => {
+      mockApps = [installed()];
+      await render();
+
+      await deliver(androidMicroAppTap("m-1", { microAppId: APP_ID }));
+
+      expect(mockRouter.dismissAll).not.toHaveBeenCalled();
+      expect(mockRouter.push.mock.calls).toEqual(OPEN_EVENTS(undefined));
     });
 
     it("opens without launch data when the push has none", async () => {
