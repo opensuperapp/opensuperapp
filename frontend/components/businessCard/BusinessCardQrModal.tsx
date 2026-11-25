@@ -20,8 +20,16 @@ import { BusinessCardData } from "@/types/businessCard.types";
 import { buildVCard } from "@/utils/vcard";
 import * as Brightness from "expo-brightness";
 import React, { useEffect, useRef } from "react";
-import { Dimensions, Modal, StyleSheet, Text, View } from "react-native";
+import {
+  Modal,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import QRCode from "react-native-qrcode-svg";
+
+const QR_MAX_SIZE = 360;
 
 type Props = {
   visible: boolean;
@@ -30,6 +38,7 @@ type Props = {
 };
 
 const BusinessCardQrModal = ({ visible, data, onClose }: Props) => {
+  const { width, height } = useWindowDimensions();
   // What the screen was at before we took it over, kept in a ref so the effect
   // cleanup can read a value captured by the effect body.
   const previousBrightness = useRef<number | null>(null);
@@ -91,7 +100,8 @@ const BusinessCardQrModal = ({ visible, data, onClose }: Props) => {
     };
   }, [visible]);
 
-  const qrSize = Dimensions.get("window").width * 0.8;
+  // Shorter side keeps the code on-screen in landscape; cap for wide windows.
+  const qrSize = Math.min(Math.min(width, height) * 0.8, QR_MAX_SIZE);
   const fullName = `${data.firstName} ${data.lastName}`.trim();
 
   return (

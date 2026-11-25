@@ -28,7 +28,7 @@ jest.mock("@react-native-async-storage/async-storage", () =>
   require("@react-native-async-storage/async-storage/jest/async-storage-mock"),
 );
 // Focus is treated as mount: each screen here is the focused one.
-jest.mock("@react-navigation/native", () => ({
+jest.mock("expo-router/react-navigation", () => ({
   useFocusEffect: (effect: () => void) =>
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     require("react").useEffect(effect, [effect]),

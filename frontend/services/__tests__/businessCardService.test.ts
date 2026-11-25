@@ -53,8 +53,14 @@ jest.mock("expo-file-system", () => {
       mockCreate(options);
     }
 
-    write(content: unknown): void {
+    writeSync(content: unknown): void {
       mockWrite(content);
+    }
+
+    // SDK 58: File.write() became async (returns a Promise). The services must
+    // use writeSync(); calling write() here fails the test loudly.
+    write(): never {
+      throw new Error("File.write() is async from SDK 58; use writeSync()");
     }
   }
 

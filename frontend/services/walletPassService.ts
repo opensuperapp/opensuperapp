@@ -79,7 +79,7 @@ export const addToAppleWallet = async (enabled: boolean): Promise<boolean> => {
     // byte, so the pass handed to iOS is never empty.
     const file = new File(Paths.cache, "choreo-labs-business-card.pkpass");
     file.create({ overwrite: true });
-    file.write(new Uint8Array(response.data));
+    file.writeSync(new Uint8Array(response.data));
 
     return await presentApplePass(file.uri);
   } catch (error) {

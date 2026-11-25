@@ -28,6 +28,7 @@ import {
   TouchableOpacity,
   View,
   ViewStyle,
+  useWindowDimensions,
 } from "react-native";
 import CameraPermission from "./CameraPermission";
 
@@ -42,11 +43,15 @@ const Scanner = ({ onScan, message, style }: ScannerProps) => {
   const appState = useRef(AppState.currentState);
   const [facing, setFacing] = useState<CameraType>("back");
   const [permission, requestPermission] = useCameraPermissions();
+  const { width, height } = useWindowDimensions();
+  // 320 on a portrait phone; shrinks (keeping a 35pt margin each side) only
+  // on short landscape / split windows.
+  const viewfinderSize = Math.min(320, Math.min(width, height) - 2 * 35);
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextAppState) => {
       if (
-        appState.current.match(/inactive|background/) &&
+        appState.current?.match(/inactive|background/) &&
         nextAppState === "active"
       ) {
         qrLock.current = false;
@@ -86,7 +91,7 @@ const Scanner = ({ onScan, message, style }: ScannerProps) => {
     >
       {isAndroid ? <StatusBar hidden /> : null}
       <CameraView
-        style={[StyleSheet.absoluteFillObject, style]}
+        style={[StyleSheet.absoluteFill, style]}
         facing={facing}
         onBarcodeScanned={({ data }) => {
           if (data && !qrLock.current) {
@@ -130,7 +135,7 @@ const Scanner = ({ onScan, message, style }: ScannerProps) => {
         </View>
       </CameraView>
 
-      <View style={{ width: 320, height: 320 }}>
+      <View style={{ width: viewfinderSize, height: viewfinderSize }}>
         <View
           style={{
             width: 64,

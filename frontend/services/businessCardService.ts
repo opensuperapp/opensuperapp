@@ -45,7 +45,7 @@ export const shareVCard = async (data: BusinessCardData): Promise<boolean> => {
   try {
     const file = new File(Paths.cache, vCardFileName(data));
     file.create({ overwrite: true });
-    file.write(buildVCard(data));
+    file.writeSync(buildVCard(data));
 
     return await shareFile(
       file.uri,

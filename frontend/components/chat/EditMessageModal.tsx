@@ -17,7 +17,7 @@ import { size, textStyle, type } from "@/constants/brand";
 import { ChatThemePalette } from "@/constants/ChatTheme";
 import { isIos } from "@/constants/Constants";
 import { MAX_MESSAGE_LENGTH } from "@/types/chat.types";
-import React, { useEffect, useState } from "react";
+import React, { JSX, useEffect, useState } from "react";
 import {
   Dimensions,
   Keyboard,

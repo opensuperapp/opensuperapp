@@ -52,8 +52,8 @@ jest.mock("@/hooks/useTrackActiveScreen", () => ({
 jest.mock("@/hooks/useAndroidTabBarClearance", () => ({
   useAndroidTabBarClearance: () => 0,
 }));
-jest.mock("@react-navigation/native", () => ({
-  ...jest.requireActual("@react-navigation/native"),
+jest.mock("expo-router/react-navigation", () => ({
+  ...jest.requireActual("expo-router/react-navigation"),
   useFocusEffect: jest.fn(),
 }));
 jest.mock("@/hooks/useSignInWithAsgardeo", () => ({
@@ -70,7 +70,7 @@ jest.mock("react-redux", () => require("react-redux/alternate-renderers"));
 import SignInMessage from "@/components/SignInMessage";
 import { APP_UPDATE_CHECK_TIMESTAMP_KEY } from "@/constants/Constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router/react-navigation";
 import { SessionStatus } from "@/types/auth.types";
 import React from "react";
 import { FlatList } from "react-native";

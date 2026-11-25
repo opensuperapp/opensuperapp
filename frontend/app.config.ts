@@ -151,8 +151,10 @@ let config: ExpoConfig = {
   scheme: APP_SCHEME,
   version: APP_VERSION,
   owner: APP_OWNER,
-  newArchEnabled: true,
   userInterfaceStyle: "automatic",
+  // Resizable on foldables (iPhone Duo), split view and rotation; layouts
+  // adapt via hooks/useResponsiveLayout.
+  orientation: "default",
   updates: {
     url: `https://u.expo.dev/${EAS_PROJECT_ID}`,
     enabled: true,
@@ -164,7 +166,6 @@ let config: ExpoConfig = {
   },
   ios: {
     supportsTablet: true,
-    requireFullScreen: true,
     bundleIdentifier: BUNDLE_ID,
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
@@ -203,7 +204,6 @@ let config: ExpoConfig = {
       tinted: "./assets/images/ios-tinted.png",
     },
   },
-  androidNavigationBar: { enforceContrast: false },
   android: {
     package: ANDROID_PACKAGE,
     permissions: [
@@ -230,11 +230,15 @@ let config: ExpoConfig = {
         redirectUrls: [`${APP_SCHEME}://`],
       },
     ],
+    // Must come right AFTER react-native-app-auth: re-adds the open-URL and
+    // continue-user-activity overrides that its iOS mod patches, which the
+    // scene-based SDK 58 AppDelegate no longer declares (app-auth #1158).
+    "./plugins/withAppAuthAppDelegate.ts",
     [
       "expo-build-properties",
       {
         android: {
-          compileSdkVersion: 36,
+          // Play floor; compileSdk is left to SDK 58 (37), which its libraries require.
           targetSdkVersion: 36,
           minSdkVersion: 24,
           extraMavenRepos: [
@@ -293,6 +297,9 @@ let config: ExpoConfig = {
       "./plugins/withAndroidAccent.ts",
       { light: "#C43300", dark: "#FF4600" },
     ],
+    // Keep the Android navigation bar transparent: no contrast scrim behind it.
+    // SDK 58 dropped the top-level androidNavigationBar key for this plugin.
+    ["expo-navigation-bar", { enforceContrast: false }],
     // Raise the Gradle daemon heap/metaspace so release lint analysis does not OOM
     "./plugins/withGradleMemory.ts",
     // Remove the intent scheme from the AndroidManifest.xml as it is duplicated by the app auth plugin

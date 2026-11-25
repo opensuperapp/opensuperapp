@@ -41,7 +41,7 @@ import {
   setupBackgroundNotificationListeners,
   setupMessagingListener,
 } from "@/utils/push-notification";
-import { ThemeProvider } from "@react-navigation/native";
+import { ThemeProvider } from "expo-router/react-navigation";
 import {
   QueryClient,
   QueryClientProvider,
@@ -56,7 +56,6 @@ import {
 } from "@expo-google-fonts/sora";
 import { useFonts } from "expo-font";
 import { Stack, useSegments } from "expo-router";
-import { lockAsync, OrientationLock } from "expo-screen-orientation";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
@@ -199,19 +198,6 @@ export default function RootLayout() {
   }, [fontsLoaded, onAppLoadComplete]);
 
   const showSplash = !isAppReady || !isMinTimeElapsed;
-
-  // Lock screen orientation to portrait mode
-  useEffect(() => {
-    const lockOrientation = async () => {
-      try {
-        await lockAsync(OrientationLock.PORTRAIT_UP);
-      } catch (error) {
-        console.error("Error locking orientation:", error);
-      }
-    };
-
-    lockOrientation();
-  }, []);
 
   // The splash stays mounted after the app appears so it can play its exit over it.
   return (

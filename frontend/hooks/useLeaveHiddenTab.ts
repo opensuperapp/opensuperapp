@@ -18,7 +18,7 @@ import {
   getFocusedRouteNameFromRoute,
   useIsFocused,
   useRoute,
-} from "@react-navigation/native";
+} from "expo-router/react-navigation";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
 

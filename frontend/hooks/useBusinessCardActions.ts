@@ -21,7 +21,7 @@ import { useWalletPassPresence } from "@/hooks/useWalletPassPresence";
 import { shareCardImage, shareVCard } from "@/services/businessCardService";
 import { saveBusinessCardPass } from "@/services/walletPassService";
 import { toBusinessCardData } from "@/utils/businessCard";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { ComponentRef, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, View } from "react-native";
 import { captureRef } from "react-native-view-shot";
 import { useSelector } from "react-redux";
@@ -37,7 +37,7 @@ export const useBusinessCardActions = (visible: boolean) => {
   // Job title, phone number and avatar live in the token claims, not in
   // /user-info.
   const claims = useTokenClaims();
-  const passRef = useRef<View>(null);
+  const passRef = useRef<ComponentRef<typeof View>>(null);
   // `saving` only reaches the wallet badge on the render it schedules, and
   // taps queued while the JS thread is busy all arrive before that. A second
   // one through here is a second pass issued and a second audit row.

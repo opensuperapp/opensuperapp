@@ -23,7 +23,7 @@ import { useLeaveWhenSessionEnds } from "@/hooks/useLeaveWhenSessionEnds";
 import { useLocalNotifications } from "@/hooks/useLocalNotifications";
 import { Notification, useNotifications } from "@/hooks/useNotifications";
 import { convertToUtc } from "@/utils/date";
-import { useIsFocused } from "@react-navigation/native";
+import { useIsFocused } from "expo-router/react-navigation";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, FlatList, RefreshControl, View } from "react-native";

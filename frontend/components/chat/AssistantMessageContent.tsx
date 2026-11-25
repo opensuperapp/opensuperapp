@@ -16,7 +16,7 @@
 import BrandIcon from "@/components/brand/BrandIcon";
 import { soraFamily, textStyle, type } from "@/constants/brand";
 import { ChatThemePalette } from "@/constants/ChatTheme";
-import React, { ReactNode } from "react";
+import React, { JSX, ReactNode } from "react";
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Markdown from "react-native-markdown-display";
 

@@ -19,7 +19,7 @@ import {
 } from "@/constants/Constants";
 import BrandIcon from "@/components/brand/BrandIcon";
 import { ChatThemePalette } from "@/constants/ChatTheme";
-import React from "react";
+import React, { JSX } from "react";
 import { StyleSheet, TouchableOpacity } from "react-native";
 
 export interface ChatMenuButtonProps {

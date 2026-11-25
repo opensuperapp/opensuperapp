@@ -13,7 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { ConfigPlugin, withGradleProperties } from "@expo/config-plugins";
+import { ConfigPlugin, withGradleProperties } from "expo/config-plugins";
 
 const JVM_ARGS_KEY = "org.gradle.jvmargs";
 

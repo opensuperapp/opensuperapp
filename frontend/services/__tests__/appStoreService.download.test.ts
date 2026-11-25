@@ -93,7 +93,11 @@ jest.mock("expo-file-system", () => {
     }
     exists = true;
     size = 1024;
-    write = mockWrite;
+    writeSync = mockWrite;
+    // SDK 58: File.write() became async; the service must use writeSync().
+    write = () => {
+      throw new Error("File.write() is async from SDK 58; use writeSync()");
+    };
     base64 = async () => "zip-bytes";
     text = async () => JSON.stringify({ clientId: "micro-app-client" });
     get parentDirectory() {

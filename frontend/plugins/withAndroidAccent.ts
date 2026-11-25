@@ -19,7 +19,7 @@ import {
   withAndroidColors,
   withAndroidColorsNight,
   withAndroidStyles,
-} from "@expo/config-plugins";
+} from "expo/config-plugins";
 
 interface AndroidAccentProps {
   light: string;

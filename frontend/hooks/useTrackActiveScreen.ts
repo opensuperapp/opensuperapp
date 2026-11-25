@@ -16,7 +16,7 @@
 import { LAST_ACTIVE_PATH_KEY } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "expo-router/react-navigation";
 import { useCallback, useSyncExternalStore } from "react";
 
 // Shut until useRestoreLastTab has read the saved tab. The app always opens on Feed, so

@@ -29,11 +29,7 @@ import { useLeaveHiddenTab } from "@/hooks/useLeaveHiddenTab";
 import { useTabVisibilityRules } from "@/hooks/useRemoteConfig";
 import { useRestoreLastTab } from "@/hooks/useRestoreLastTab";
 import { shouldShowTab } from "@/utils/tabVisibility";
-import {
-  Icon,
-  Label,
-  NativeTabs,
-} from "expo-router/unstable-native-tabs";
+import { NativeTabs } from "expo-router/native-tabs";
 import type { ImageSourcePropType } from "react-native";
 import type { SFSymbol } from "sf-symbols-typescript";
 import { useSelector } from "react-redux";
@@ -165,6 +161,9 @@ export default function TabLayout() {
       backgroundColor={colors.barSolid}
       blurEffect="none"
       disableTransparentOnScrollEdge
+      // iOS 27+: tab bar on bar phones, side rail/sidebar when the window is
+      // wide (unfolded iPhone Duo, iPad). Older iOS ignores it.
+      preferredPlacement="automatic"
     >
       {TABS.map((tab) => (
         <NativeTabs.Trigger
@@ -172,8 +171,8 @@ export default function TabLayout() {
           name={tab.route}
           hidden={!isVisible(tab.rule) && tab.route !== leavingRoute}
         >
-          <Icon sf={tab.sf} androidSrc={tab.android} />
-          <Label>{tab.title}</Label>
+          <NativeTabs.Trigger.Icon sf={tab.sf} src={tab.android} />
+          <NativeTabs.Trigger.Label>{tab.title}</NativeTabs.Trigger.Label>
         </NativeTabs.Trigger>
       ))}
     </NativeTabs>

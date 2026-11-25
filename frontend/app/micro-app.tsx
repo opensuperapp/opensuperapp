@@ -86,10 +86,10 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  useColorScheme,
   useWindowDimensions,
   View,
 } from "react-native";
+import { useColorScheme } from "@/hooks/useColorScheme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 import { ShouldStartLoadRequest } from "react-native-webview/lib/WebViewTypes";
@@ -119,7 +119,9 @@ const MicroApp = () => {
   const { bottom: bottomSafeArea } = useSafeAreaInsets();
 
   const [hasError, setHasError] = useState(false);
-  const webviewRef = useRef<WebView>(null);
+  // react-native-webview 14 declares WebView<P = undefined>, which makes every
+  // prop `never`; spell the props type argument out (13.x defaulted it to {}).
+  const webviewRef = useRef<WebView<object>>(null);
   const dispatch = useDispatch();
   const router = useRouter();
   const [webUri, setWebUri] = useState<string>(
@@ -665,6 +667,19 @@ const MicroApp = () => {
     sendResponseToWeb("resolveDeviceScreenSize", screenSize);
   };
 
+  // The micro app only asks for the screen size once; tell it again whenever
+  // the window resizes (fold/unfold, rotation, split view). Skip the first
+  // render, which is what a request would already have reported.
+  const lastScreenSize = useRef({ width, height });
+  useEffect(() => {
+    const last = lastScreenSize.current;
+    if (last.width === width && last.height === height) return;
+    lastScreenSize.current = { width, height };
+    sendResponseToWeb("resolveDeviceScreenSize", { width, height });
+    // sendResponseToWeb only reads the webview ref.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [width, height]);
+
   // Function to get micro app version
   const handleMicroAppVersion = async () => {
     sendResponseToWeb("resolveMicroAppVersion", version || "unknown");
@@ -1029,7 +1044,7 @@ const MicroApp = () => {
             </View>
           )
         ) : (
-          <WebView
+          <WebView<object>
             ref={webviewRef}
             originWhitelist={["*"]}
             source={{ uri: microAppUri }}
@@ -1062,16 +1077,19 @@ const MicroApp = () => {
         options={{
           title: shouldShowHeader ? appName : "",
           headerShown: shouldShowHeader,
-          headerRight: () =>
-            isDeveloper &&
-            shouldShowHeader && (
-              <TouchableOpacity
-                onPressIn={() => setAppUrlDialogVisible(true)}
-                hitSlop={20}
-              >
-                <Text style={styles.headerText}>App URL</Text>
-              </TouchableOpacity>
-            ),
+          // Only set when there is a button: iOS 26+ draws any headerRight as a glass
+          // button, an empty one when it renders nothing.
+          headerRight:
+            isDeveloper && shouldShowHeader
+              ? () => (
+                  <TouchableOpacity
+                    onPressIn={() => setAppUrlDialogVisible(true)}
+                    hitSlop={20}
+                  >
+                    <Text style={styles.headerText}>App URL</Text>
+                  </TouchableOpacity>
+                )
+              : undefined,
         }}
       />
       <View style={styles.container}>

@@ -16,9 +16,9 @@
 import { Styles } from "@/constants/Styles";
 import { useQrScanner } from "@/context/QrScannerContext";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
-import Constants from "expo-constants";
 import { useGlobalSearchParams, useRouter } from "expo-router";
 import { View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Scanner from "../Scanner";
 import CloseButton from "../headers/CloseButton";
 import { QrScannerScreenProps } from "./QRScanner.ios";
@@ -30,6 +30,7 @@ const QrScanner = ({ message }: QrScannerScreenProps) => {
     message?: string;
   }>();
   const { colors } = useBrandTheme();
+  const insets = useSafeAreaInsets();
 
   const handleMessageScan = (qrCode: string) => {
     emitQrCode(qrCode);
@@ -37,7 +38,7 @@ const QrScanner = ({ message }: QrScannerScreenProps) => {
   };
 
   const displayMessage = message || routeMessage;
-  const paddingTop = Constants.statusBarHeight;
+  const paddingTop = insets.top;
 
   return (
     <View style={{ flex: 1, position: "relative" }}>

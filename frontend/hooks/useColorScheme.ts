@@ -13,4 +13,16 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-export { useColorScheme } from "react-native";
+import { useColorScheme as useRNColorScheme } from "react-native";
+
+export type AppColorScheme = "light" | "dark";
+
+/**
+ * The OS colour scheme, narrowed to the schemes the app has colours for.
+ * React Native 0.82+ can report "unspecified"; that, null and undefined all
+ * come back as null so callers can keep writing `scheme ?? "light"`.
+ */
+export function useColorScheme(): AppColorScheme | null {
+  const scheme = useRNColorScheme();
+  return scheme === "light" || scheme === "dark" ? scheme : null;
+}

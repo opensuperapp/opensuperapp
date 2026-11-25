@@ -166,7 +166,7 @@ const unzipFile = async (appId: string) => {
             const fileData = await entry.async("base64");
             const targetFile = fileInDirectory(extractedDir, relativePath);
             ensureDirectoryExists(targetFile.parentDirectory);
-            targetFile.write(fileData, { encoding: "base64" });
+            targetFile.writeSync(fileData, { encoding: "base64" });
           }
         })
     );

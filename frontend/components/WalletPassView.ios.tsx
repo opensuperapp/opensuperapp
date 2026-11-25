@@ -23,7 +23,7 @@ import {
 } from "@/constants/BusinessCard";
 import { BusinessCardData } from "@/types/businessCard.types";
 import { buildVCard } from "@/utils/vcard";
-import React, { forwardRef, useState } from "react";
+import React, { ComponentRef, forwardRef, useState } from "react";
 import {
   Image,
   LayoutChangeEvent,
@@ -42,7 +42,7 @@ type Props = {
   onBarcodePress?: () => void;
 };
 
-const WalletPassView = forwardRef<View, Props>(
+const WalletPassView = forwardRef<ComponentRef<typeof View>, Props>(
   ({ data, onBarcodePress }, ref) => {
     const fullName = `${data.firstName} ${data.lastName}`.trim();
     // Same precedence as pass.go's frontPhone: work number, then mobile.

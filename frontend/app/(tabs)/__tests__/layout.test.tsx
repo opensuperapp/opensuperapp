@@ -60,8 +60,8 @@ jest.mock("expo-router", () => ({ useRouter: () => mockRouter }));
 const TAB_ROUTES = ["(feed)", "library", "apps", "chat", "profile"];
 let mockFocusedTab = "chat";
 let mockTabsFocused = true;
-jest.mock("@react-navigation/native", () => ({
-  ...jest.requireActual("@react-navigation/native"),
+jest.mock("expo-router/react-navigation", () => ({
+  ...jest.requireActual("expo-router/react-navigation"),
   useRoute: () => ({
     key: "tabs",
     name: "(tabs)",
@@ -75,14 +75,16 @@ jest.mock("@react-navigation/native", () => ({
 }));
 
 const mockHidden: Record<string, boolean | undefined> = {};
-jest.mock("expo-router/unstable-native-tabs", () => {
+jest.mock("expo-router/native-tabs", () => {
   const Trigger = ({ name, hidden }: { name: string; hidden?: boolean }) => {
     mockHidden[name] = hidden;
     return null;
   };
   const NativeTabs = ({ children }: { children: React.ReactNode }) => children;
+  Trigger.Icon = () => null;
+  Trigger.Label = () => null;
   NativeTabs.Trigger = Trigger;
-  return { NativeTabs, Icon: () => null, Label: () => null };
+  return { NativeTabs };
 });
 
 type AuthState = {

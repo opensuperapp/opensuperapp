@@ -36,10 +36,10 @@ import { useChat } from "@/hooks/useChat";
 import { useLeaveWhenSessionEnds } from "@/hooks/useLeaveWhenSessionEnds";
 import { useTrackActiveScreen } from "@/hooks/useTrackActiveScreen";
 import { ChatMessage } from "@/types/chat.types";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "expo-router/react-navigation";
 import * as Clipboard from "expo-clipboard";
 import { router } from "expo-router";
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, { ComponentRef, JSX, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   Animated,
   FlatList,
@@ -62,6 +62,11 @@ import {
   SafeAreaProvider,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-screens/experimental";
+
+// Keeps chat clear of a side tab rail (unfolded iPhone Duo) or a landscape notch;
+// the header and composer already handle top and bottom.
+const SIDE_EDGES = { left: true, right: true } as const;
 
 // Composer padding over the tab bar, and the gap it keeps above the keyboard.
 const COMPOSER_GAP = 8;
@@ -136,7 +141,7 @@ export default function ChatScreen(): JSX.Element {
   // has to rise past before it covers anything. iOS only: on Android the screen runs
   // to the window's bottom edge, and measureInWindow there comes back short by the
   // status bar height, which would put the composer under the keyboard.
-  const screenRef = useRef<View>(null);
+  const screenRef = useRef<ComponentRef<typeof View>>(null);
   const [screenBottomGap, setScreenBottomGap] = useState(0);
   const { height: windowHeight } = useWindowDimensions();
   const measureScreen = useCallback(() => {
@@ -400,68 +405,69 @@ export default function ChatScreen(): JSX.Element {
           onLayout={measureScreen}
           style={[styles.screen, { backgroundColor: theme.background }]}
         >
-          <KeyboardLift screenBottomGap={screenBottomGap}>
-            <FlatList
-              ref={flatListRef}
-              // Scrolls under the translucent bar; iOS insets it for the header.
-              contentInsetAdjustmentBehavior="automatic"
-              keyboardDismissMode="interactive"
-              data={messages}
-              renderItem={renderMessage}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={[
-                styles.list,
-                !hasMessages && styles.listEmpty,
-              ]}
-              onContentSizeChange={() =>
-                flatListRef.current?.scrollToEnd({ animated: true })
-              }
-              ListEmptyComponent={
-                <ChatEmptyState
-                  theme={theme}
-                  onSuggestionPress={handleSuggestionPress}
-                  suggestionsDisabled={isGenerating}
-                />
-              }
-              showsVerticalScrollIndicator={false}
-            />
+          <SafeAreaView edges={SIDE_EDGES} style={styles.flex}>
+            <KeyboardLift screenBottomGap={screenBottomGap}>
+              <FlatList
+                ref={flatListRef}
+                // Scrolls under the translucent bar; iOS insets it for the header.
+                contentInsetAdjustmentBehavior="automatic"
+                keyboardDismissMode="interactive"
+                data={messages}
+                renderItem={renderMessage}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={[
+                  styles.list,
+                  !hasMessages && styles.listEmpty,
+                ]}
+                onContentSizeChange={() =>
+                  flatListRef.current?.scrollToEnd({ animated: true })
+                }
+                ListEmptyComponent={
+                  <ChatEmptyState
+                    theme={theme}
+                    onSuggestionPress={handleSuggestionPress}
+                    suggestionsDisabled={isGenerating}
+                  />
+                }
+                showsVerticalScrollIndicator={false}
+              />
 
-            <SafeAreaInsetsContext.Consumer>
-              {(tabInsets) => (
-                <ChatComposer
-                  theme={theme}
-                  value={inputText}
-                  onChangeText={setInputText}
-                  onSend={handleSend}
-                  onStop={stopGeneration}
-                  isGenerating={isGenerating}
-                  bottomInset={composerBottomInset(tabInsets?.bottom ?? 0)}
-                />
-              )}
-            </SafeAreaInsetsContext.Consumer>
-          </KeyboardLift>
+              <SafeAreaInsetsContext.Consumer>
+                {(tabInsets) => (
+                  <ChatComposer
+                    theme={theme}
+                    value={inputText}
+                    onChangeText={setInputText}
+                    onSend={handleSend}
+                    onStop={stopGeneration}
+                    isGenerating={isGenerating}
+                    bottomInset={composerBottomInset(tabInsets?.bottom ?? 0)}
+                  />
+                )}
+              </SafeAreaInsetsContext.Consumer>
+            </KeyboardLift>
 
-          {snackbarVisible && (
-            <Animated.View
-              style={[
-                styles.snackbar,
-                {
-                  opacity: snackbarOpacity,
-                  backgroundColor: theme.assistantText,
-                },
-              ]}
-            >
-              <Text
+            {snackbarVisible && (
+              <Animated.View
                 style={[
-                  styles.snackbarText,
-                  { color: theme.background },
+                  styles.snackbar,
+                  {
+                    opacity: snackbarOpacity,
+                    backgroundColor: theme.assistantText,
+                  },
                 ]}
               >
-                {snackbarText}
-              </Text>
-            </Animated.View>
-          )}
-
+                <Text
+                  style={[
+                    styles.snackbarText,
+                    { color: theme.background },
+                  ]}
+                >
+                  {snackbarText}
+                </Text>
+              </Animated.View>
+            )}
+          </SafeAreaView>
         </View>
       </SafeAreaProvider>
 

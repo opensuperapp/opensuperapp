@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     color: brand.azure,
   },
   hairline: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: radius.hero,
     borderWidth: 1,
     borderColor: HERO_COLORS.line,
