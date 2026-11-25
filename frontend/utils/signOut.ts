@@ -13,13 +13,13 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { disableFCMToken } from "@/context/slices/deviceSlice";
+import { disablePushToken } from "@/context/slices/deviceSlice";
 import { AppDispatch } from "@/context/store";
 import { endSession } from "@/utils/endSession";
 
 // Long enough for a healthy network to answer, short enough that a dead one does not
 // leave the user staring at a profile they asked to leave.
-const FCM_DISABLE_WAIT_MS = 3000;
+const PUSH_TOKEN_DISABLE_WAIT_MS = 3000;
 
 /** What the user's own Sign Out does. */
 export const signOut = async (dispatch: AppDispatch): Promise<void> => {
@@ -27,9 +27,9 @@ export const signOut = async (dispatch: AppDispatch): Promise<void> => {
   // clears, but only waited on for so long: signing out must not depend on the network.
   let timeout: ReturnType<typeof setTimeout> | undefined;
   await Promise.race([
-    dispatch(disableFCMToken()),
+    dispatch(disablePushToken()),
     new Promise<void>((resolve) => {
-      timeout = setTimeout(resolve, FCM_DISABLE_WAIT_MS);
+      timeout = setTimeout(resolve, PUSH_TOKEN_DISABLE_WAIT_MS);
     }),
   ]);
   clearTimeout(timeout);

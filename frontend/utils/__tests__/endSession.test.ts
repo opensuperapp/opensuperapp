@@ -74,7 +74,7 @@ jest.mock("@/context/slices/appSlice", () => ({
 }));
 jest.mock("@/context/slices/deviceSlice", () => ({
   clearDeviceState: () => ({ type: "device/clearDeviceState" }),
-  clearLastSentFcmToken: () => ({ type: "device/clearLastSentFcmToken" }),
+  clearLastSentPushToken: () => ({ type: "device/clearLastSentPushToken" }),
 }));
 // authSlice's own thunks reach for these; endSession does not.
 jest.mock("@/services/authService", () => ({ loadAuthData: jest.fn() }));
@@ -171,7 +171,7 @@ describe("endSession('signedOut')", () => {
         "auth/resetAll",
         "apps/setApps",
         "device/clearDeviceState",
-        "device/clearLastSentFcmToken",
+        "device/clearLastSentPushToken",
       ])
     );
     expect(actions.find((a) => a.type === "apps/setApps")?.payload).toEqual([]);

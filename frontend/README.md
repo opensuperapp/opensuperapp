@@ -336,6 +336,19 @@ EXPO_PUBLIC_BUSINESS_CARD_ALLOWED_GROUPS=wso2-employees
 
 Both are comma-separated allow-lists, matched case-insensitively: the email domain (the part after the last `@` in the access token's `email` claim) must be in `EXPO_PUBLIC_BUSINESS_CARD_ALLOWED_DOMAINS`, **and** the token's `groups` claim must contain at least one entry from `EXPO_PUBLIC_BUSINESS_CARD_ALLOWED_GROUPS`. Missing either the email or the groups claim fails the check. Left unset or blank, each falls back to its single default shown above. See `utils/businessCardAccess.ts` (`hasBusinessCardAccess`), wired into `hooks/useWalletPassConfig.ts`.
 
+#### 1.4. Push notifications
+
+Push and scheduled (local) notifications use [`expo-notifications`](https://docs.expo.dev/versions/latest/sdk/notifications/). After sign-in the app asks for notification permission, gets the raw device push token (`getDevicePushTokenAsync`: an FCM registration token on Android, an APNs device token on iOS) and registers it with the backend:
+
+- Android: `POST /users/fcm-tokens` with `{"token": "...", "tokenType": "fcm"}`
+- iOS: `POST /users/fcm-tokens` with `{"token": "...", "tokenType": "apns", "environment": "development" | "production"}`
+
+On sign-out it removes it (`DELETE /users/fcm-tokens?fcmToken=...`). The push service sends directly to FCM (Android) and APNs (iOS).
+
+- Android: set `EXPO_PUBLIC_ENABLE_FIREBASE=true` and provide `google-services.json` (FCM delivers Android pushes).
+- iOS: the push service needs an APNs key for the bundle id. The APNs environment comes from the build's provisioning profile (development/ad hoc builds), is `production` for App Store and TestFlight builds, and falls back to the EAS build profile.
+- Background FCM pushes are drawn on `EXPO_PUBLIC_NOTIFICATION_CHANNEL_ID` (default `default_superapp_notification_channel`), the Android channel the app creates.
+
 ### 2. Update the `app.config.ts` file with plugins
 
 If you use Firebase **OR** _any other library_ that requires `config plugins` or `custom native modules`, you must add the necessary plugins to your `app.config.ts` file. For specific instructions on the Firebase setup, refer to the official [React Native Firebase](https://rnfirebase.io/) documentation.
@@ -426,7 +439,7 @@ Set these in `.env` (see `.env.example`):
 
 | Variable | Purpose |
 | -------- | ------- |
-| `EAS_PROJECT_ID` | Links the app to your Expo project; used in `app.config.ts` for the updates URL (`https://u.expo.dev/<project-id>`). |
+| `EAS_PROJECT_ID` | Links the app to your Expo project; used in `app.config.ts` for the updates URL (`https://u.expo.dev/<project-id>`) |
 | `EXPO_PUBLIC_UPDATES_CHANNEL` | **`development`** or **`production`**. Required for **local** native builds so `plugins/withUpdatesChannel.ts` embeds the correct channel in the binary. EAS cloud builds set the channel from `eas.json` automatically. |
 
 `runtimeVersion` uses the **`appVersion`** policy (from `APP_VERSION` in `.env`). OTA updates only apply to binaries whose runtime version matches the update. Bump `APP_VERSION` and ship a new native build when you change native code or dependencies that require a rebuild.

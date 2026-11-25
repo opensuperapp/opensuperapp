@@ -21,7 +21,6 @@ import path from "path";
 // Only packages with app.plugin.js (remote-config autolinks without an Expo plugin).
 const FIREBASE_PLUGINS = [
   "@react-native-firebase/app",
-  "@react-native-firebase/messaging",
   // RNFB 23.x cannot place FirebaseApp.configure() in the SDK 58 AppDelegate.
   "./plugins/withFirebaseAppDelegate.ts",
 ];
@@ -72,17 +71,15 @@ export const withFirebase = (config: ExpoConfig) => {
           ...(buildPropertiesPlugin[1] as { ios?: Record<string, unknown> })
             .ios,
           useFrameworks: "static",
-          forceStaticLinking: [
-            "RNFBApp",
-            "RNFBMessaging",
-            "RNFBRemoteConfig",
-          ],
+          forceStaticLinking: ["RNFBApp", "RNFBRemoteConfig"],
         },
       };
     }
   }
 
-  // Add the Android google services file to the config.
+  // Add the Android google services file to the config. Besides Remote Config,
+  // expo-notifications needs it: Android pushes are delivered by FCM, so an
+  // Android build without it gets no push token.
   if (config.android) {
     config.android.googleServicesFile = androidJson;
   }

@@ -18,7 +18,7 @@ import { signOut } from "@/utils/signOut";
 
 jest.mock("@/context/store", () => ({}));
 jest.mock("@/context/slices/deviceSlice", () => ({
-  disableFCMToken: () => ({ type: "device/disableFCMToken" }),
+  disablePushToken: () => ({ type: "device/disablePushToken" }),
 }));
 jest.mock("@/utils/endSession", () => ({
   endSession: (end: unknown) => ({ type: "auth/endSession", payload: end }),
@@ -26,13 +26,13 @@ jest.mock("@/utils/endSession", () => ({
 
 // Telling the backend to stop pushing to this device needs the access token, so it has
 // to start before endSession clears it; it must not hold the sign-out behind the network.
-const SIGN_OUT_FCM_WAIT_MS = 3000;
+const SIGN_OUT_PUSH_TOKEN_WAIT_MS = 3000;
 
 const build = (disable: () => Promise<unknown>) => {
   const types: string[] = [];
   const dispatch = jest.fn((action: { type: string }) => {
     types.push(action.type);
-    return action.type === "device/disableFCMToken"
+    return action.type === "device/disablePushToken"
       ? disable()
       : Promise.resolve();
   });
@@ -55,7 +55,7 @@ describe("signOut", () => {
 
     await signOut(dispatch);
 
-    expect(types).toEqual(["device/disableFCMToken", "auth/endSession"]);
+    expect(types).toEqual(["device/disablePushToken", "auth/endSession"]);
     expect(dispatch).toHaveBeenLastCalledWith({
       type: "auth/endSession",
       payload: { status: "signedOut" },
@@ -75,11 +75,11 @@ describe("signOut", () => {
     const { dispatch, types } = build(() => new Promise(() => {}));
 
     const signingOut = signOut(dispatch);
-    await jest.advanceTimersByTimeAsync(SIGN_OUT_FCM_WAIT_MS - 1);
+    await jest.advanceTimersByTimeAsync(SIGN_OUT_PUSH_TOKEN_WAIT_MS - 1);
     expect(types).not.toContain("auth/endSession");
 
     await jest.advanceTimersByTimeAsync(1);
     await signingOut;
-    expect(types).toEqual(["device/disableFCMToken", "auth/endSession"]);
+    expect(types).toEqual(["device/disablePushToken", "auth/endSession"]);
   });
 });

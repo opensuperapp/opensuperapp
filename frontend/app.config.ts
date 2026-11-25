@@ -57,6 +57,17 @@ const IOS_URL_SCHEME = process.env.IOS_URL_SCHEME ?? "example.scheme";
 const ENABLE_FIREBASE = process.env.EXPO_PUBLIC_ENABLE_FIREBASE ?? FALSE;
 const ADD_ANDROID_NOTIFICATION_ICON =
   process.env.EXPO_PUBLIC_ADD_ANDROID_NOTIFICATION_ICON ?? FALSE;
+// Must match NOTIFICATION_CHANNEL_ID in constants/Constants.ts (same env, same
+// default): the app creates this channel, and background FCM pushes are drawn on it
+// (default channel below) unless the push service names another.
+const NOTIFICATION_CHANNEL_ID =
+  process.env.EXPO_PUBLIC_NOTIFICATION_CHANNEL_ID ??
+  "default_superapp_notification_channel";
+const NOTIFICATION_ACCENT_COLOR =
+  process.env.EXPO_PUBLIC_ANDROID_NOTIFICATION_SMALL_ICON_ACCENT_COLOR;
+// Also reported with every APNs token (extra.apsEnvironment), as the fallback when the
+// running build carries no provisioning profile to read it from.
+const APS_ENVIRONMENT = profile === PRODUCTION ? PRODUCTION : DEVELOPMENT;
 const APPLE_PASS_TYPE_ID = process.env.EXPO_PUBLIC_APPLE_PASS_TYPE_ID ?? "";
 const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID ?? ""; // Comment this if EAS is not used
 const UPDATES_CHANNEL = process.env.EXPO_PUBLIC_UPDATES_CHANNEL ?? ""; // Comment this if EAS is not used
@@ -173,7 +184,7 @@ let config: ExpoConfig = {
       UIDesignRequiresCompatibility: true,
     },
     entitlements: {
-      "aps-environment": profile === PRODUCTION ? PRODUCTION : DEVELOPMENT,
+      "aps-environment": APS_ENVIRONMENT,
       // PKPassLibrary reports only passes whose type identifier is listed
       // here. Without it the app can hand the business card to Wallet but can
       // never see that Wallet has it, so hasPass and viewInWallet both answer
@@ -210,8 +221,9 @@ let config: ExpoConfig = {
       "android.permission.CAMERA",
       "android.permission.RECORD_AUDIO",
       "android.permission.POST_NOTIFICATIONS",
+      "android.permission.SCHEDULE_EXACT_ALARM",
     ],
-    // Firebase (messaging/remote-config) pulls these in transitively via
+    // Firebase (remote-config) pulls these in transitively via
     // play-services-measurement. The app does not use the advertising ID,
     // so strip them to keep the Play Console declaration answerable as "No".
     blockedPermissions: [
@@ -241,10 +253,6 @@ let config: ExpoConfig = {
           // Play floor; compileSdk is left to SDK 58 (37), which its libraries require.
           targetSdkVersion: 36,
           minSdkVersion: 24,
-          extraMavenRepos: [
-            // https://github.com/invertase/notifee/issues/799#issuecomment-2569217836
-            "../../node_modules/@notifee/react-native/android/libs",
-          ],
         },
       },
     ],
@@ -287,6 +295,20 @@ let config: ExpoConfig = {
     ],
     ["expo-screen-orientation", { initialOrientation: "DEFAULT" }],
     ["expo-font", { fonts: ["./assets/fonts/SpaceMono-Regular.ttf"] }],
+    // Pushes (raw device tokens; the push service sends to FCM on Android and
+    // APNs on iOS) and scheduled micro-app sessions. On Android the FCM default channel and
+    // colour come from here; FCM credentials still come from
+    // google-services.json, which withFirebase adds.
+    [
+      "expo-notifications",
+      {
+        ...(ADD_ANDROID_NOTIFICATION_ICON === TRUE && {
+          icon: "./assets/images/notification-icon.png",
+        }),
+        ...(NOTIFICATION_ACCENT_COLOR && { color: NOTIFICATION_ACCENT_COLOR }),
+        defaultChannel: NOTIFICATION_CHANNEL_ID,
+      },
+    ],
     [
       "@react-native-google-signin/google-signin",
       { iosUrlScheme: IOS_URL_SCHEME },
@@ -313,6 +335,7 @@ let config: ExpoConfig = {
   experiments: { typedRoutes: true },
   extra: {
     router: { origin: false },
+    apsEnvironment: APS_ENVIRONMENT,
     eas: { projectId: EAS_PROJECT_ID }, // Comment this if EAS is not used
     emailDisplay: EMAIL_DISPLAY,
   },

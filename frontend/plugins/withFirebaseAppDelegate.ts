@@ -21,7 +21,7 @@ const { mergeContents } = CodeGenerator;
 // `factory.startReactNative(`. Expo SDK 58's scene-based template moved that
 // call into SceneDelegate, so RNFB's mod adds `import FirebaseCore`, warns
 // "Unable to determine correct Firebase insertion point" and skips the call:
-// Firebase (messaging, remote config) is then never configured on iOS.
+// Firebase (remote config) is then never configured on iOS.
 //
 // This plugin inserts the call above ExpoAppDelegate's didFinishLaunching,
 // the same anchor RNFB 27 uses. RNFB skips its insertion when the call is
