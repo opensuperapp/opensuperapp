@@ -18,6 +18,10 @@ import { ScreenPaths } from "@/constants/ScreenPaths";
 import { useRestoreLastTab } from "@/hooks/useRestoreLastTab";
 import { openTabTracking } from "@/hooks/useTrackActiveScreen";
 import { SessionStatus } from "@/types/auth.types";
+import {
+  isStartupRouteSettled,
+  resetStartupRouteForTests,
+} from "@/utils/startupRoute";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React from "react";
 import { Provider } from "react-redux";
@@ -44,6 +48,13 @@ jest.mock("expo-router", () => ({
 }));
 jest.mock("@/hooks/useTrackActiveScreen", () => ({
   openTabTracking: jest.fn(),
+}));
+
+// The tap that launched the app, if any; useNotificationNavigation acts on it.
+let mockPendingTap: { actionIdentifier: string } | null = null;
+jest.mock("expo-notifications", () => ({
+  DEFAULT_ACTION_IDENTIFIER: "expo.modules.notifications.actions.DEFAULT",
+  getLastNotificationResponse: () => mockPendingTap,
 }));
 
 type SetStatus = { type: "set"; sessionStatus: SessionStatus };
@@ -148,6 +159,8 @@ beforeEach(async () => {
   mockRouter.navigate.mockClear();
   jest.mocked(openTabTracking).mockClear();
   mockPathname = "/";
+  mockPendingTap = null;
+  resetStartupRouteForTests();
   await AsyncStorage.clear();
 });
 
@@ -260,5 +273,36 @@ describe("useRestoreLastTab", () => {
     await mount("authenticated", ScreenPaths.CHAT);
 
     expect(openTabTracking).toHaveBeenCalledTimes(1);
+  });
+
+  it("settles the startup route once it has restored", async () => {
+    const { setStatus } = await mount("restoring", ScreenPaths.CHAT);
+    expect(isStartupRouteSettled()).toBe(false);
+
+    await setStatus("authenticated");
+
+    expect(isStartupRouteSettled()).toBe(true);
+  });
+
+  it("leaves the first screen to a notification tap that launched the app", async () => {
+    mockPendingTap = {
+      actionIdentifier: "expo.modules.notifications.actions.DEFAULT",
+    };
+
+    await mount("authenticated", ScreenPaths.CHAT);
+
+    expect(mockRouter.navigate).not.toHaveBeenCalled();
+    expect(openTabTracking).toHaveBeenCalledTimes(1);
+    expect(isStartupRouteSettled()).toBe(true);
+  });
+
+  it("still restores when the last response was a dismissal", async () => {
+    mockPendingTap = {
+      actionIdentifier: "expo.modules.notifications.actions.DISMISSED",
+    };
+
+    await mount("authenticated", ScreenPaths.CHAT);
+
+    expect(mockRouter.navigate).toHaveBeenCalledWith(ScreenPaths.CHAT);
   });
 });

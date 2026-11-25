@@ -13,27 +13,146 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import { PENDING_NOTIFICATION_NAVIGATION } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
+import type { RootState } from "@/context/store";
+import {
+  getMicroAppTarget,
+  MicroAppTarget,
+} from "@/utils/notificationPayload";
+import { openMicroApp } from "@/utils/openMicroApp";
+import { useIsStartupRouteSettled } from "@/utils/startupRoute";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSelector } from "react-redux";
 
 /**
- * Hook to handle notification tap navigation.
- * The last notification response covers a tap from the foreground, from the
- * background and the one that launched the app.
+ * How long a tap that names a micro app waits for the installed apps list (restored
+ * from storage at startup) before giving up and opening Notifications instead.
+ */
+export const APPS_LIST_WAIT_MS = 5000;
+
+// A tap, identified so the same one is never handled twice: the response that
+// launched the app can arrive both from getLastNotificationResponseAsync and from
+// the listener.
+type Tap = { key: string; target: MicroAppTarget | null };
+
+const toTap = (response: Notifications.NotificationResponse): Tap | null =>
+  response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER
+    ? {
+        key: response.notification.request.identifier,
+        target: getMicroAppTarget(response),
+      }
+    : null;
+
+// A tap can arrive while a root-level screen (a micro app) is on top of the tabs.
+// Pushing the tab route from there stacked a second (tabs) and the follow-up push
+// landed on Feed, so close those screens first, then switch tab and push.
+const openNotifications = () => {
+  if (router.canDismiss()) router.dismissAll();
+  router.navigate(ScreenPaths.MY_APPS);
+  router.push(ScreenPaths.NOTIFICATIONS);
+};
+
+/**
+ * Handles a tap on a notification: in the foreground or background (response
+ * listener) or one that launched the app (last notification response).
+ *
+ * - A notification naming a micro app (`microAppId`, optional `launchData`) opens it
+ *   the way the bridge's OPEN_MICRO_APP does, once the installed apps list is
+ *   loaded. Not installed or not downloaded, or no list within APPS_LIST_WAIT_MS:
+ *   Notifications instead, without asking anything.
+ * - Any other notification opens Notifications (under My Apps).
+ *
+ * Nothing navigates before the tab bar has restored the last tab, which would
+ * otherwise replace the screen a launching tap opened; the restore leaves the first
+ * screen to a pending tap.
  */
 export const useNotificationNavigation = () => {
-  const lastResponse = Notifications.useLastNotificationResponse();
+  const isStartupRouteSettled = useIsStartupRouteSettled();
+  const apps = useSelector((state: RootState) => state.apps.apps);
+  const [pendingTap, setPendingTap] = useState<Tap | null>(null);
+  const [hasWaitedForApps, setHasWaitedForApps] = useState(false);
+  const handled = useRef(new Set<string>());
 
   useEffect(() => {
-    if (
-      lastResponse?.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER
-    ) {
-      return;
+    let isMounted = true;
+    const queue = (response: Notifications.NotificationResponse | null) => {
+      const tap = response ? toTap(response) : null;
+      if (isMounted && tap && !handled.current.has(tap.key)) {
+        setHasWaitedForApps(false);
+        setPendingTap(tap);
+      }
+    };
+
+    const subscription =
+      Notifications.addNotificationResponseReceivedListener(queue);
+
+    Notifications.getLastNotificationResponseAsync()
+      .then(queue)
+      .catch((error) =>
+        console.error("Error reading the last notification response:", error)
+      );
+
+    // A tap stored by a pre-expo-notifications (notifee) build before this update.
+    AsyncStorage.getItem(PENDING_NOTIFICATION_NAVIGATION)
+      .then(async (pending) => {
+        if (!pending) return;
+        await AsyncStorage.removeItem(PENDING_NOTIFICATION_NAVIGATION);
+        if (isMounted) setPendingTap({ key: `legacy:${pending}`, target: null });
+      })
+      .catch((error) =>
+        console.error("Error reading pending notification navigation:", error)
+      );
+
+    return () => {
+      isMounted = false;
+      subscription.remove();
+    };
+  }, []);
+
+  const needsApps =
+    pendingTap?.target != null && apps.length === 0 && !hasWaitedForApps;
+
+  // Bounded wait for the apps list; started only once navigation may happen.
+  useEffect(() => {
+    if (!isStartupRouteSettled || !needsApps) return;
+    const timer = setTimeout(() => {
+      console.warn(
+        `Notification tap: no installed apps list after ${APPS_LIST_WAIT_MS} ms; opening Notifications instead.`
+      );
+      setHasWaitedForApps(true);
+    }, APPS_LIST_WAIT_MS);
+    return () => clearTimeout(timer);
+  }, [isStartupRouteSettled, needsApps]);
+
+  useEffect(() => {
+    if (!isStartupRouteSettled || !pendingTap || needsApps) return;
+    if (handled.current.has(pendingTap.key)) return;
+    handled.current.add(pendingTap.key);
+
+    const { target } = pendingTap;
+    const opened =
+      target !== null &&
+      openMicroApp({
+        router,
+        apps,
+        appId: target.microAppId,
+        launchData: target.launchData,
+      });
+    if (target && !opened) {
+      console.warn(
+        `Notification tap: micro app ${target.microAppId} is not installed; opening Notifications instead.`
+      );
     }
-    router.push(ScreenPaths.MY_APPS);
-    router.push(ScreenPaths.NOTIFICATIONS);
-    Notifications.clearLastNotificationResponse();
-  }, [lastResponse]);
+    if (!opened) openNotifications();
+
+    setPendingTap(null);
+    // Otherwise a remount of the root layout would replay the launching tap.
+    Notifications.clearLastNotificationResponseAsync().catch((error) =>
+      console.error("Error clearing the last notification response:", error)
+    );
+  }, [pendingTap, isStartupRouteSettled, needsApps, apps]);
 };
