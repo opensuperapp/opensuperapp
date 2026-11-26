@@ -17,7 +17,9 @@ import { LAST_ACTIVE_PATH_KEY } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
 import { selectSessionStatus } from "@/context/slices/authSlice";
 import { openTabTracking } from "@/hooks/useTrackActiveScreen";
+import { markStartupRouteSettled } from "@/utils/startupRoute";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Notifications from "expo-notifications";
 import { usePathname, useRouter } from "expo-router";
 import { useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
@@ -40,9 +42,16 @@ const isValidPath = (path: string): path is ScreenPaths => {
 // The app always opens on the root of the Feed tab.
 const LAUNCH_PATHNAME = "/";
 
+// useNotificationNavigation holds a tap until the first screen is settled and then
+// opens Notifications, so a tap that launched the app is still pending here.
+const hasPendingNotificationTap = () =>
+  Notifications.getLastNotificationResponse()?.actionIdentifier ===
+  Notifications.DEFAULT_ACTION_IDENTIFIER;
+
 /**
  * Puts the user back on the tab they last had open, unless the tab bar would not show
- * it to them now: a signed-out user is not restored onto Chat.
+ * it to them now: a signed-out user is not restored onto Chat. A notification tap that
+ * launched the app wins: the tap opens Notifications instead.
  *
  * It only moves a user who is still where the app opened. By the time the saved tab is
  * read, the sign-in sheet for an expired session or a micro-app may be on top of the
@@ -74,6 +83,17 @@ export const useRestoreLastTab = (
     if (!isSessionKnown || !areRulesLoaded || hasStarted.current) return;
     hasStarted.current = true;
 
+    // Settling the startup route lets a held notification tap navigate.
+    const settle = () => {
+      openTabTracking();
+      markStartupRouteSettled();
+    };
+
+    if (hasPendingNotificationTap()) {
+      settle();
+      return;
+    }
+
     const canRestore = (path: ScreenPaths) => {
       const tabName = TAB_NAMES[path];
       return tabName === undefined || isTabVisibleRef.current(tabName);
@@ -81,7 +101,7 @@ export const useRestoreLastTab = (
 
     const goTo = (path: ScreenPaths) => {
       if (pathnameRef.current === LAUNCH_PATHNAME) router.navigate(path);
-      openTabTracking();
+      settle();
     };
 
     const restoreTab = async () => {
@@ -96,7 +116,7 @@ export const useRestoreLastTab = (
         }
       } catch (error) {
         console.error("Failed to restore last tab:", error);
-        openTabTracking();
+        settle();
       }
     };
 

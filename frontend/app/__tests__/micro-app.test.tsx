@@ -132,16 +132,17 @@ jest.mock("@/components/OfflineToast", () => ({
 
 type SetStatus = { type: "set"; sessionStatus: SessionStatus };
 type State = {
-  apps: { apps: never[] };
+  apps: { apps: unknown[] };
   appConfig: { appScopes: never[] };
   auth: { sessionStatus: SessionStatus };
 };
 
+let mockStoreApps: unknown[] = [];
 const buildStore = (sessionStatus: SessionStatus) =>
   createStore(
     (
       state: State = {
-        apps: { apps: [] },
+        apps: { apps: mockStoreApps },
         appConfig: { appScopes: [] },
         auth: { sessionStatus },
       },
@@ -175,6 +176,7 @@ const mount = async (sessionStatus: SessionStatus = "authenticated") => {
 beforeEach(() => {
   jest.clearAllMocks();
   mockParams = PARAMS;
+  mockStoreApps = [];
   mockTokenExchange.mockResolvedValue({
     accessToken: "exchanged-access",
     idToken: "exchanged-id",
@@ -366,5 +368,78 @@ describe("MicroApp token requests", () => {
     const { tree } = await mount();
 
     expect(texts(tree).join(" ")).not.toMatch(/try again/i);
+  });
+});
+
+// The OPEN_MICRO_APP bridge call goes through utils/openMicroApp now; its behaviour
+// must not change.
+describe("MicroApp open_micro_app bridge call", () => {
+  const TARGET = {
+    appId: "app-b",
+    name: "App B",
+    status: "downloaded",
+    webViewUri: "app-b/index.html",
+    clientId: "app-b-client",
+    exchangedToken: "test-b-token",
+    exchangedIdToken: "test-b-id-token",
+    displayMode: "default",
+  };
+  const openFromMicroApp = async (tree: ReactTestRenderer, appId: string, data: unknown) => {
+    await act(async () => {
+      await tree.root.findByType(WebView).props.onMessage({
+        nativeEvent: {
+          url: MICRO_APP_URI,
+          data: JSON.stringify({ topic: "open_micro_app", data: { appId, data } }),
+        },
+      });
+    });
+  };
+
+  it("dismisses the stack and opens a downloaded app with the launch data stringified", async () => {
+    mockStoreApps = [TARGET];
+    const { tree } = await mount();
+
+    await openFromMicroApp(tree, "app-b", { eventId: "e1" });
+
+    expect(mockRouter.dismissAll).toHaveBeenCalledTimes(1);
+    expect(mockRouter.push).toHaveBeenCalledWith({
+      pathname: "/micro-app",
+      params: {
+        webViewUri: "app-b/index.html",
+        appName: "App B",
+        clientId: "app-b-client",
+        exchangedToken: "test-b-token",
+        exchangedIdToken: "test-b-id-token",
+        appId: "app-b",
+        displayMode: "default",
+        launchData: '{"eventId":"e1"}',
+      },
+    });
+  });
+
+  it.each([
+    ["not downloaded", [{ ...TARGET, status: "not-downloaded" }]],
+    ["unknown", []],
+  ])("offers the store when the app is %s", async (_, apps) => {
+    mockStoreApps = apps;
+    const alert = jest
+      .spyOn(jest.requireActual("react-native").Alert, "alert")
+      .mockImplementation(() => {});
+    const { tree } = await mount();
+
+    await openFromMicroApp(tree, "app-b", null);
+
+    expect(mockRouter.push).not.toHaveBeenCalled();
+    expect(alert).toHaveBeenCalledWith(
+      "App not installed",
+      "Would you like to install it?",
+      expect.any(Array),
+      { cancelable: false },
+    );
+    const install = (alert.mock.calls[0][2] as { text: string; onPress?: () => void }[])
+      .find((b) => b.text === "Install")!;
+    install.onPress!();
+    expect(mockRouter.back).toHaveBeenCalledTimes(1);
+    expect(mockRouter.navigate).toHaveBeenCalledWith("/(tabs)/apps/store");
   });
 });

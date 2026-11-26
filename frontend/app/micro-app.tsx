@@ -23,7 +23,6 @@ import { Colors } from "@/constants/Colors";
 import {
   DEVELOPER_APP_ANDROID_DEFAULT_URL,
   DEVELOPER_APP_IOS_DEFAULT_URL,
-  DOWNLOADED,
   FULL_SCREEN_VIEWING_MODE,
   GOOGLE_ANDROID_CLIENT_ID,
   GOOGLE_IOS_CLIENT_ID,
@@ -34,6 +33,7 @@ import {
 } from "@/constants/Constants";
 import { Event } from "@/constants/enums/Event";
 import { ScreenPaths } from "@/constants/ScreenPaths";
+import { openMicroApp } from "@/utils/openMicroApp";
 import { RootState } from "@/context/store";
 import { useLeaveWhenSessionEnds } from "@/hooks/useLeaveWhenSessionEnds";
 import {
@@ -722,24 +722,15 @@ const MicroApp = () => {
 
   // Function to open another micro app
   const handleOpenMicroApp = async (targetAppId: string, data: any) => {
-    const targetApp = apps.find((app) => app.appId === targetAppId);
+    const opened = openMicroApp({
+      router,
+      apps,
+      appId: targetAppId,
+      launchData: JSON.stringify(data),
+      dismissAll: true,
+    });
 
-    if (targetApp?.status === DOWNLOADED) {
-      router.dismissAll();
-      router.push({
-        pathname: ScreenPaths.MICRO_APP,
-        params: {
-          webViewUri: targetApp.webViewUri,
-          appName: targetApp.name,
-          clientId: targetApp.clientId,
-          exchangedToken: targetApp.exchangedToken,
-          exchangedIdToken: targetApp.exchangedIdToken,
-          appId: targetApp.appId,
-          displayMode: targetApp.displayMode,
-          launchData: JSON.stringify(data),
-        },
-      });
-    } else {
+    if (!opened) {
       Alert.alert(
         "App not installed",
         "Would you like to install it?",
