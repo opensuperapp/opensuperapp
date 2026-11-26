@@ -26,7 +26,7 @@ import {
 } from "@/context/slices/authSlice";
 import {
   clearDeviceState,
-  clearLastSentFcmToken,
+  clearLastSentPushToken,
 } from "@/context/slices/deviceSlice";
 import { persistor } from "@/context/store";
 import { clearNotifications } from "@/services/scheduledNotifications";
@@ -103,8 +103,8 @@ export const endSession = createAsyncThunk<
       // Left behind, it would explain the next session's expiry as a lost rotation.
       ["clearing the interrupted-refresh marker", clearInterruptedRefresh],
       [
-        "clearing the last sent FCM token",
-        () => dispatch(clearLastSentFcmToken()),
+        "clearing the last sent push token",
+        () => dispatch(clearLastSentPushToken()),
       ],
     ];
     for (const [name, step] of clearingSteps) {

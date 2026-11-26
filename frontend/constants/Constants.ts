@@ -144,6 +144,11 @@ export const FULL_SCREEN_VIEWING_MODE = "fullscreen";
 export const DEFAULT_VIEWING_MODE = "default";
 
 // Keys for Secure Store
+// The raw device push token (FCM on Android, APNs on iOS) last registered with the
+// backend, with its type, through POST /users/fcm-tokens.
+export const LAST_SENT_PUSH_TOKEN = "last_sent_device_push_token";
+// Legacy: the FCM token RNFirebase-messaging builds registered without a type. Read
+// once to retire it (deleted on iOS, re-registered with its type on Android).
 export const LAST_SENT_FCM_TOKEN = "last_sent_fcm_token";
 export const ACCESS_TOKEN = "secure_access_token";
 export const REFRESH_TOKEN = "secure_refresh_token";

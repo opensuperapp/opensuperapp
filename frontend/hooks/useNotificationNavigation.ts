@@ -13,62 +13,27 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { PENDING_NOTIFICATION_NAVIGATION } from "@/constants/Constants";
 import { ScreenPaths } from "@/constants/ScreenPaths";
-import {
-  getInitialNotification,
-  setupForegroundNotificationListener,
-} from "@/utils/push-notification";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
-import { useCallback, useEffect } from "react";
+import { useEffect } from "react";
 
 /**
  * Hook to handle notification tap navigation.
- * Sets up foreground event listener, checks for initial notifications,
- * and processes pending navigation from background state.
+ * The last notification response covers a tap from the foreground, from the
+ * background and the one that launched the app.
  */
 export const useNotificationNavigation = () => {
-  const navigateToNotifications = useCallback(() => {
+  const lastResponse = Notifications.useLastNotificationResponse();
+
+  useEffect(() => {
+    if (
+      lastResponse?.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER
+    ) {
+      return;
+    }
     router.push(ScreenPaths.MY_APPS);
     router.push(ScreenPaths.NOTIFICATIONS);
-  }, []);
-
-  useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
-
-    const setupNotificationHandlers = async () => {
-      unsubscribe = setupForegroundNotificationListener(() => {
-        navigateToNotifications();
-      });
-    };
-
-    setupNotificationHandlers();
-
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
-  }, [navigateToNotifications]);
-
-  useEffect(() => {
-    const checkInitialAndPendingNotifications = async () => {
-      const initialNotification = await getInitialNotification();
-      if (initialNotification) {
-        navigateToNotifications();
-        return;
-      }
-
-      const pendingNav = await AsyncStorage.getItem(
-        PENDING_NOTIFICATION_NAVIGATION
-      );
-      if (pendingNav) {
-        navigateToNotifications();
-        await AsyncStorage.removeItem(PENDING_NOTIFICATION_NAVIGATION);
-      }
-    };
-
-    checkInitialAndPendingNotifications();
-  }, [navigateToNotifications]);
+    Notifications.clearLastNotificationResponse();
+  }, [lastResponse]);
 };

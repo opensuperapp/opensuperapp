@@ -13,74 +13,36 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import { ENABLE_FIREBASE } from "@/constants/Constants";
-import {
-  loadLastSentFCMToken,
-  pushFcmToken,
-} from "@/context/slices/deviceSlice"; // The async thunk
+import { syncPushToken } from "@/context/slices/deviceSlice";
 import { AppDispatch, RootState } from "@/context/store";
-import {
-  getFCMToken,
-  requestNotificationPermission,
-  setupTokenRefreshListener,
-} from "@/utils/push-notification";
+import { setupTokenRefreshListener } from "@/utils/push-notification";
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
 /**
- * A custom hook to manage the FCM push notification token lifecycle.
- * Automatically requests permission, gets the token, and sends it to the backend
- * as soon as the user is authenticated. It also handles token refreshes.
+ * Manages the device push token lifecycle. Once the user is authenticated it asks for
+ * permission, gets the raw device token (FCM/APNs) and registers it with the backend
+ * if it changed (retiring a legacy FCM registration once). When the device token
+ * rotates, the new token is registered.
  */
 export const usePushNotificationHandler = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { accessToken } = useSelector((state: RootState) => state.auth);
-  const { lastSentFCMToken } = useSelector((state: RootState) => state.device);
 
   useEffect(() => {
-    if (!ENABLE_FIREBASE) return;
-    dispatch(loadLastSentFCMToken());
-
-    if (accessToken) {
-      const getAndPushToken = async () => {
-        try {
-          await requestNotificationPermission();
-
-          const fcmToken = await getFCMToken();
-
-          if (fcmToken && fcmToken !== lastSentFCMToken) {
-            dispatch(pushFcmToken({ fcmToken }));
-          } else {
-            console.warn(
-              "No FCM token received or token is the same as the last sent token."
-            );
-          }
-        } catch (error) {
-          console.error("Error occurred during FCM token setup:", error);
-        }
-      };
-
-      getAndPushToken();
-
-      const unsubscribe = setupTokenRefreshListener((refreshedToken) => {
-        if (refreshedToken && refreshedToken !== lastSentFCMToken) {
-          dispatch(
-            pushFcmToken({
-              fcmToken: refreshedToken,
-            })
-          );
-        } else {
-          console.warn(
-            "Refreshed token was null/undefined or the same as the last sent token."
-          );
-        }
-      });
-
-      return () => {
-        unsubscribe();
-      };
-    } else {
+    if (!accessToken) {
       console.warn("No accessToken — push notification setup skipped.");
+      return;
     }
-  }, [accessToken, dispatch, lastSentFCMToken]);
+
+    dispatch(syncPushToken({ prompt: true }));
+
+    const unsubscribe = setupTokenRefreshListener((pushToken) => {
+      dispatch(syncPushToken({ prompt: false, pushToken }));
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [accessToken, dispatch]);
 };

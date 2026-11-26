@@ -35,7 +35,7 @@ jest.mock("@/components/SignInMessage", () => "SignInMessage");
 // profile.tsx imports these actions at module scope, which otherwise loads
 // the real @reduxjs/toolkit slice modules this suite never dispatches.
 jest.mock("@/context/slices/deviceSlice", () => ({
-  disableFCMToken: jest.fn(),
+  disablePushToken: jest.fn(),
 }));
 jest.mock("@/context/slices/userInfoSlice", () => ({
   getUserInfo: jest.fn(),
